@@ -15,15 +15,18 @@ type DB struct {
 }
 
 func NewConnection(cfg *config.Config) (*DB, error) {
-	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Database.Host,
-		cfg.Database.Port,
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.DBName,
-		cfg.Database.SSLMode,
-	)
+    dsn := cfg.Database.URL
+    if dsn == "" {
+        dsn = fmt.Sprintf(
+            "host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+            cfg.Database.Host,
+            cfg.Database.Port,
+            cfg.Database.User,
+            cfg.Database.Password,
+            cfg.Database.DBName,
+            cfg.Database.SSLMode,
+        )
+    }
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -153,35 +156,52 @@ CREATE TABLE IF NOT EXISTS properties (
     status VARCHAR(50) NOT NULL DEFAULT 'available' 
         CHECK (status IN ('available', 'sold', 'rented', 'under_negotiation')),
     broker_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_id UUID,
     
-    -- Denormalized broker info for admin queries and performance
+    -- Denormalized broker/client info for admin queries and performance
     broker_name VARCHAR(200),
     broker_city VARCHAR(100),
+    client_name VARCHAR(200),
     
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
+
+ALTER TABLE properties
+ADD COLUMN IF NOT EXISTS client_id UUID,
+ADD COLUMN IF NOT EXISTS client_name VARCHAR(200),
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
 
 -- Performance Indexes
 
 -- Primary broker query optimization (most common query pattern)
 CREATE INDEX IF NOT EXISTS idx_properties_broker_created 
-    ON properties(broker_id, created_at DESC);
+    ON properties(broker_id, created_at DESC)
+    WHERE deleted_at IS NULL;
 
 -- Filter combinations for broker dashboard
 CREATE INDEX IF NOT EXISTS idx_properties_broker_status 
-    ON properties(broker_id, status);
+    ON properties(broker_id, status)
+    WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_properties_broker_type 
-    ON properties(broker_id, type);
+    ON properties(broker_id, type)
+    WHERE deleted_at IS NULL;
 
 -- Admin dashboard queries
 CREATE INDEX IF NOT EXISTS idx_properties_status_created 
-    ON properties(status, created_at DESC);
+    ON properties(status, created_at DESC)
+    WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_properties_city_state 
-    ON properties(city, state);
+    ON properties(city, state)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_properties_client
+    ON properties(client_id)
+    WHERE client_id IS NOT NULL AND deleted_at IS NULL;
 
 -- Search functionality using trigram indexes for fuzzy text search
 CREATE INDEX IF NOT EXISTS idx_properties_title_trgm 
@@ -382,6 +402,67 @@ CREATE TRIGGER populate_client_broker_info_on_insert
 	_, err = db.Exec(clientsMigration)
 	if err != nil {
 		return fmt.Errorf("failed to run clients migration: %w", err)
+	}
+
+	propertyClientMigration := `
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'properties_client_id_fkey'
+    ) THEN
+        ALTER TABLE properties
+        ADD CONSTRAINT properties_client_id_fkey
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION populate_property_client_info()
+RETURNS TRIGGER AS $populate_property_client$
+BEGIN
+    IF NEW.client_id IS NOT NULL THEN
+        SELECT first_name || ' ' || last_name
+        INTO NEW.client_name
+        FROM clients
+        WHERE id = NEW.client_id;
+    ELSE
+        NEW.client_name = NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$populate_property_client$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS populate_property_client_info_on_write ON properties;
+CREATE TRIGGER populate_property_client_info_on_write
+    BEFORE INSERT OR UPDATE OF client_id ON properties
+    FOR EACH ROW
+    EXECUTE FUNCTION populate_property_client_info();
+
+CREATE OR REPLACE FUNCTION sync_client_info_to_properties()
+RETURNS TRIGGER AS $sync_property_client$
+BEGIN
+    UPDATE properties
+    SET
+        client_name = NEW.first_name || ' ' || NEW.last_name,
+        updated_at = NOW()
+    WHERE client_id = NEW.id;
+
+    RETURN NEW;
+END;
+$sync_property_client$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS sync_client_info_to_properties_trigger ON clients;
+CREATE TRIGGER sync_client_info_to_properties_trigger
+    AFTER UPDATE OF first_name, last_name ON clients
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_client_info_to_properties();
+`
+
+	_, err = db.Exec(propertyClientMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run property-client migration: %w", err)
 	}
 
 	// Migration 004: Create appointments table

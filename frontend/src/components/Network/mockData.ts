@@ -1,0 +1,127 @@
+import { Broker } from './types';
+
+export const mockBrokers: Broker[] = [
+  {
+    id: '1',
+    name: 'Rajesh Kumar',
+    company: 'Prime Real Estate',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    phone: '+91 98765 43210',
+    email: 'rajesh@primerealestate.com',
+    specialization: ['Residential', 'Commercial'],
+    experience: 8,
+    propertiesListed: 45,
+    rating: 4.8,
+    isVerified: true,
+    dealsClosed: 127
+  },
+  {
+    id: '2',
+    name: 'Priya Sharma',
+    company: 'Elite Properties',
+    city: 'Delhi',
+    state: 'Delhi',
+    phone: '+91 98765 43211',
+    email: 'priya@eliteproperties.com',
+    specialization: ['Luxury', 'Residential'],
+    experience: 6,
+    propertiesListed: 32,
+    rating: 4.6,
+    isVerified: true,
+    dealsClosed: 89
+  },
+  {
+    id: '3',
+    name: 'Amit Patel',
+    company: 'Urban Spaces',
+    city: 'Bangalore',
+    state: 'Karnataka',
+    phone: '+91 98765 43212',
+    email: 'amit@urbanspaces.com',
+    specialization: ['Commercial', 'Industrial'],
+    experience: 10,
+    propertiesListed: 58,
+    rating: 4.9,
+    isVerified: true,
+    dealsClosed: 156
+  },
+  {
+    id: '4',
+    name: 'Sneha Reddy',
+    company: 'Golden Key Realty',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    phone: '+91 98765 43213',
+    email: 'sneha@goldenkey.com',
+    specialization: ['Residential', 'Plots'],
+    experience: 5,
+    propertiesListed: 28,
+    rating: 4.5,
+    isVerified: true,
+    dealsClosed: 67
+  },
+  {
+    id: '5',
+    name: 'Vikram Singh',
+    company: 'Metro Properties',
+    city: 'Pune',
+    state: 'Maharashtra',
+    phone: '+91 98765 43214',
+    email: 'vikram@metroproperties.com',
+    specialization: ['Residential', 'Commercial'],
+    experience: 7,
+    propertiesListed: 41,
+    rating: 4.7,
+    isVerified: true,
+    dealsClosed: 103
+  },
+  {
+    id: '6',
+    name: 'Anjali Menon',
+    company: 'Heritage Realty',
+    city: 'Kochi',
+    state: 'Kerala',
+    phone: '+91 98765 43215',
+    email: 'anjali@heritagerealty.com',
+    specialization: ['Luxury', 'Residential'],
+    experience: 9,
+    propertiesListed: 36,
+    rating: 4.8,
+    isVerified: true,
+    dealsClosed: 112
+  },
+  {
+    id: '7',
+    name: 'Rahul Verma',
+    company: 'Skyline Properties',
+    city: 'Chennai',
+    state: 'Tamil Nadu',
+    phone: '+91 98765 43216',
+    email: 'rahul@skylineproperties.com',
+    specialization: ['Commercial', 'Residential'],
+    experience: 12,
+    propertiesListed: 62,
+    rating: 4.9,
+    isVerified: true,
+    dealsClosed: 178
+  },
+  {
+    id: '8',
+    name: 'Kavita Joshi',
+    company: 'Dream Home Realty',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    phone: '+91 98765 43217',
+    email: 'kavita@dreamhome.com',
+    specialization: ['Residential', 'Plots'],
+    experience: 4,
+    propertiesListed: 24,
+    rating: 4.4,
+    isVerified: true,
+    dealsClosed: 54
+  }
+];
+
+export const cities = ['All Cities', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Pune', 'Chennai', 'Kochi', 'Jaipur'];
+export const specializations = ['All Specializations', 'Residential', 'Commercial', 'Luxury', 'Plots', 'Industrial'];

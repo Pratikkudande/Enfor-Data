@@ -10,8 +10,8 @@ type Property struct {
 
 	// Basic Property Information
 	Title       string `json:"title" db:"title"`
-	Type        string `json:"type" db:"type"`                   // apartment, house, commercial, plot
-	ListingType string `json:"listing_type" db:"listing_type"`   // sale, rent
+	Type        string `json:"type" db:"type"`                 // apartment, house, commercial, plot
+	ListingType string `json:"listing_type" db:"listing_type"` // sale, rent
 
 	// Pricing and Size
 	Price float64 `json:"price" db:"price"`
@@ -32,16 +32,19 @@ type Property struct {
 	Amenities   []string `json:"amenities" db:"amenities"`
 
 	// Status and Ownership
-	Status   string `json:"status" db:"status"`       // available, sold, rented, under_negotiation
-	BrokerID string `json:"broker_id" db:"broker_id"`
+	Status   string  `json:"status" db:"status"` // available, sold, rented, under_negotiation
+	BrokerID string  `json:"broker_id" db:"broker_id"`
+	ClientID *string `json:"client_id,omitempty" db:"client_id"`
 
-	// Denormalized broker info for admin queries
+	// Denormalized broker and client info for admin queries
 	BrokerName *string `json:"broker_name,omitempty" db:"broker_name"`
 	BrokerCity *string `json:"broker_city,omitempty" db:"broker_city"`
+	ClientName *string `json:"client_name,omitempty" db:"client_name"`
 
 	// Timestamps
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt *time.Time `json:"-" db:"deleted_at"`
 }
 
 // CreatePropertyRequest represents the data required for creating a new property
@@ -68,6 +71,9 @@ type CreatePropertyRequest struct {
 	// Description and Features
 	Description string   `json:"description" validate:"required,min=20"`
 	Amenities   []string `json:"amenities"`
+
+	// Optional linked client
+	ClientID *string `json:"client_id,omitempty" validate:"omitempty"`
 }
 
 // UpdatePropertyRequest represents the data that can be updated for an existing property
@@ -94,6 +100,9 @@ type UpdatePropertyRequest struct {
 	// Description and Features
 	Description *string  `json:"description,omitempty" validate:"omitempty,min=20"`
 	Amenities   []string `json:"amenities,omitempty"`
+
+	// Optional linked client
+	ClientID *string `json:"client_id,omitempty" validate:"omitempty"`
 
 	// Status
 	Status *string `json:"status,omitempty" validate:"omitempty,oneof=available sold rented under_negotiation"`

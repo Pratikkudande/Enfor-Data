@@ -4,16 +4,16 @@ import (
 	"net/http"
 	"strings"
 
-	"enfor-data-backend/internal/services"
+	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthMiddleware struct {
-	authService *services.AuthService
+	authService *service.AuthService
 }
 
-func NewAuthMiddleware(authService *services.AuthService) *AuthMiddleware {
+func NewAuthMiddleware(authService *service.AuthService) *AuthMiddleware {
 	return &AuthMiddleware{
 		authService: authService,
 	}

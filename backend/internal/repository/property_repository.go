@@ -27,9 +27,9 @@ func (r *PropertyRepository) Create(property *models.Property) error {
 		INSERT INTO properties (
 			title, type, listing_type, price, area,
 			bedrooms, bathrooms, location, address, city, state,
-			description, amenities, status, broker_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-		RETURNING id, broker_name, broker_city, created_at, updated_at
+			description, amenities, status, broker_id, client_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		RETURNING id, broker_name, broker_city, client_name, created_at, updated_at
 	`
 
 	err := r.db.QueryRow(
@@ -49,10 +49,12 @@ func (r *PropertyRepository) Create(property *models.Property) error {
 		pq.Array(property.Amenities), // Handle PostgreSQL array type
 		property.Status,
 		property.BrokerID,
+		property.ClientID,
 	).Scan(
 		&property.ID,
 		&property.BrokerName,
 		&property.BrokerCity,
+		&property.ClientName,
 		&property.CreatedAt,
 		&property.UpdatedAt,
 	)
@@ -71,10 +73,10 @@ func (r *PropertyRepository) GetByBrokerID(brokerID string) ([]models.Property, 
 		SELECT 
 			id, title, type, listing_type, price, area,
 			bedrooms, bathrooms, location, address, city, state,
-			description, amenities, status, broker_id,
-			broker_name, broker_city, created_at, updated_at
+			description, amenities, status, broker_id, client_id,
+			broker_name, broker_city, client_name, created_at, updated_at
 		FROM properties
-		WHERE broker_id = $1
+		WHERE broker_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
 	`
 
@@ -106,8 +108,10 @@ func (r *PropertyRepository) GetByBrokerID(brokerID string) ([]models.Property, 
 			pq.Array(&property.Amenities), // Handle PostgreSQL array type
 			&property.Status,
 			&property.BrokerID,
+			&property.ClientID,
 			&property.BrokerName,
 			&property.BrokerCity,
+			&property.ClientName,
 			&property.CreatedAt,
 			&property.UpdatedAt,
 		)
@@ -138,10 +142,10 @@ func (r *PropertyRepository) GetByID(id string) (*models.Property, error) {
 		SELECT 
 			id, title, type, listing_type, price, area,
 			bedrooms, bathrooms, location, address, city, state,
-			description, amenities, status, broker_id,
-			broker_name, broker_city, created_at, updated_at
+			description, amenities, status, broker_id, client_id,
+			broker_name, broker_city, client_name, created_at, updated_at
 		FROM properties
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`
 
 	var property models.Property
@@ -163,8 +167,10 @@ func (r *PropertyRepository) GetByID(id string) (*models.Property, error) {
 		pq.Array(&property.Amenities), // Handle PostgreSQL array type
 		&property.Status,
 		&property.BrokerID,
+		&property.ClientID,
 		&property.BrokerName,
 		&property.BrokerCity,
+		&property.ClientName,
 		&property.CreatedAt,
 		&property.UpdatedAt,
 	)
@@ -177,4 +183,75 @@ func (r *PropertyRepository) GetByID(id string) (*models.Property, error) {
 	}
 
 	return &property, nil
+}
+
+// Update modifies an existing property in the database.
+func (r *PropertyRepository) Update(property *models.Property) error {
+	query := `
+		UPDATE properties SET
+			title = $1, type = $2, listing_type = $3, price = $4, area = $5,
+			bedrooms = $6, bathrooms = $7, location = $8, address = $9, city = $10,
+			state = $11, description = $12, amenities = $13, status = $14, client_id = $15
+		WHERE id = $16 AND deleted_at IS NULL
+		RETURNING broker_name, broker_city, client_name, created_at, updated_at
+	`
+
+	err := r.db.QueryRow(
+		query,
+		property.Title,
+		property.Type,
+		property.ListingType,
+		property.Price,
+		property.Area,
+		property.Bedrooms,
+		property.Bathrooms,
+		property.Location,
+		property.Address,
+		property.City,
+		property.State,
+		property.Description,
+		pq.Array(property.Amenities),
+		property.Status,
+		property.ClientID,
+		property.ID,
+	).Scan(
+		&property.BrokerName,
+		&property.BrokerCity,
+		&property.ClientName,
+		&property.CreatedAt,
+		&property.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("property not found")
+		}
+		return fmt.Errorf("failed to update property: %w", err)
+	}
+
+	return nil
+}
+
+// SoftDelete marks a property as deleted without removing it from the database.
+func (r *PropertyRepository) SoftDelete(id string) error {
+	query := `
+		UPDATE properties
+		SET deleted_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to soft delete property: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("property not found")
+	}
+
+	return nil
 }

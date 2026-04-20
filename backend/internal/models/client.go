@@ -64,7 +64,7 @@ type CreateClientRequest struct {
 	PostalCode        string `json:"postal_code" validate:"required,min=4,max=20"`
 
 	// Requirements/Enquiry
-	Requirements string `json:"requirements" validate:"required,min=5"`
+	Requirements string `json:"requirements" validate:"required,min=3"`
 
 	// Optional Fields
 	BudgetMin *float64 `json:"budget_min,omitempty" validate:"omitempty,gt=0"`
@@ -92,7 +92,7 @@ type UpdateClientRequest struct {
 	PostalCode        *string `json:"postal_code,omitempty" validate:"omitempty,min=4,max=20"`
 
 	// Requirements/Enquiry
-	Requirements *string `json:"requirements,omitempty" validate:"omitempty,min=5"`
+	Requirements *string `json:"requirements,omitempty" validate:"omitempty,min=3"`
 
 	// Optional Fields
 	BudgetMin *float64 `json:"budget_min,omitempty" validate:"omitempty,gt=0"`

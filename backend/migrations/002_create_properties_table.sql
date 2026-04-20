@@ -33,35 +33,43 @@ CREATE TABLE IF NOT EXISTS properties (
     status VARCHAR(50) NOT NULL DEFAULT 'available' 
         CHECK (status IN ('available', 'sold', 'rented', 'under_negotiation')),
     broker_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_id UUID,
     
-    -- Denormalized broker info for admin queries and performance
+    -- Denormalized broker/client info for admin queries and performance
     broker_name VARCHAR(200),
     broker_city VARCHAR(100),
+    client_name VARCHAR(200),
     
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Performance Indexes
 
 -- Primary broker query optimization (most common query pattern)
 CREATE INDEX IF NOT EXISTS idx_properties_broker_created 
-    ON properties(broker_id, created_at DESC);
+    ON properties(broker_id, created_at DESC)
+    WHERE deleted_at IS NULL;
 
 -- Filter combinations for broker dashboard
 CREATE INDEX IF NOT EXISTS idx_properties_broker_status 
-    ON properties(broker_id, status);
+    ON properties(broker_id, status)
+    WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_properties_broker_type 
-    ON properties(broker_id, type);
+    ON properties(broker_id, type)
+    WHERE deleted_at IS NULL;
 
 -- Admin dashboard queries
 CREATE INDEX IF NOT EXISTS idx_properties_status_created 
-    ON properties(status, created_at DESC);
+    ON properties(status, created_at DESC)
+    WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_properties_city_state 
-    ON properties(city, state);
+    ON properties(city, state)
+    WHERE deleted_at IS NULL;
 
 -- Search functionality using trigram indexes for fuzzy text search
 CREATE INDEX IF NOT EXISTS idx_properties_title_trgm 
