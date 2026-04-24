@@ -3,6 +3,7 @@ package service
 import (
 	"enfor-data-backend/internal/dto"
 	"fmt"
+	"time"
 
 	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/repository"
@@ -58,14 +59,25 @@ func (s *AppointmentService) CreateAppointment(req *dto.CreateAppointmentRequest
 	appointment := &models.Appointment{
 		Title:       req.Title,
 		Description: req.Description,
-		Date:        req.Date,
-		Time:        req.Time,
 		ClientID:    req.ClientID,
 		PropertyID:  req.PropertyID,
 		BrokerID:    brokerID,
 		Type:        req.Type,
 		Status:      "scheduled", // Default status
 	}
+
+	// Parse date string into time.Time; parse time string into time.Time
+	parsedDate, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format: %w", err)
+	}
+	appointment.Date = parsedDate
+
+	parsedTime, err := time.Parse("15:04", req.Time)
+	if err != nil {
+		return nil, fmt.Errorf("invalid time format: %w", err)
+	}
+	appointment.TimeVal = parsedTime
 
 	// Create appointment in database
 	err = s.appointmentRepo.Create(appointment)
@@ -151,11 +163,19 @@ func (s *AppointmentService) UpdateAppointment(id string, req *dto.UpdateAppoint
 	}
 
 	if req.Date != nil {
-		appointment.Date = *req.Date
+		parsedDate, err := time.Parse("2006-01-02", *req.Date)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format: %w", err)
+		}
+		appointment.Date = parsedDate
 	}
 
 	if req.Time != nil {
-		appointment.Time = *req.Time
+		parsedTime, err := time.Parse("15:04", *req.Time)
+		if err != nil {
+			return nil, fmt.Errorf("invalid time format: %w", err)
+		}
+		appointment.TimeVal = parsedTime
 	}
 
 	if req.Type != nil {

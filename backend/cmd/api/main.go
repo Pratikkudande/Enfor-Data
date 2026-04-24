@@ -81,15 +81,16 @@ func main() {
 			auth.POST("/signup", authHandler.Signup)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/logout", authHandler.Logout)
+			// Protected auth routes
+			auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
+			auth.POST("/refresh", authMiddleware.RequireAuth(), authHandler.RefreshToken)
 		}
 
 		// Protected routes (require authentication)
 		protected := api.Group("/")
 		protected.Use(authMiddleware.RequireAuth())
 		{
-			// User profile routes
-			protected.GET("/auth/me", authHandler.GetMe)
-			protected.POST("/auth/refresh", authHandler.RefreshToken)
+			// User profile routes (moved to auth group above)
 
 			// File upload routes
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)

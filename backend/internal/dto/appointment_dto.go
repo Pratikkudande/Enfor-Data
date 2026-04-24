@@ -25,6 +25,12 @@ type UpdateAppointmentRequest struct {
 
 // AppointmentStats represents appointment statistics for a broker
 type AppointmentStats struct {
+	Total                 int            `json:"total"`
+	Scheduled             int            `json:"scheduled"`
+	Completed             int            `json:"completed"`
+	Cancelled             int            `json:"cancelled"`
+	Today                 int            `json:"today"`
+	Upcoming              int            `json:"upcoming"`
 	TotalThisMonth        int            `json:"total_this_month"`
 	TodayAppointments     int            `json:"today_appointments"`
 	ScheduledAppointments int            `json:"scheduled_appointments"`

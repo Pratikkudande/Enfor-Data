@@ -43,7 +43,7 @@ func (h *ClientHandler) GetClients(c *gin.Context) {
 		// Return 500 if service call fails
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal server error",
-			Message: "Failed to retrieve clients",
+			Message: "Failed to retrieve clients: " + err.Error(),
 		})
 		return
 	}

@@ -134,3 +134,8 @@ func (s *AuthService) ValidateToken(tokenString string) (*utils.Claims, error) {
 func (s *AuthService) UpdateProfileImage(userID, imagePath string) error {
 	return s.userRepo.UpdateUserProfileImage(userID, imagePath)
 }
+
+// GenerateToken generates a new JWT token for a user
+func (s *AuthService) GenerateToken(userID, email, role string) (string, error) {
+	return s.jwtUtil.GenerateToken(userID, email, role)
+}

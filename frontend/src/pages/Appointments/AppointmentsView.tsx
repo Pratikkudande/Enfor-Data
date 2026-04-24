@@ -21,6 +21,13 @@ const AppointmentsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    window.setTimeout(() => setSuccessMessage(null), 3000);
+  };
 
   // Clients state for dropdown
   const [clients, setClients] = useState<Client[]>([]);
@@ -119,14 +126,17 @@ const AppointmentsView: React.FC = () => {
   const handleFormSubmit = async (appointmentData: CreateAppointmentRequest) => {
     try {
       setSubmitting(true);
+      setSubmitError(null);
       const response = await apiClient.createAppointment(appointmentData);
 
       if (response.data) {
         setAppointments(prev => [response.data!, ...prev]);
-        alert('✅ Appointment added successfully!');
+        showSuccess('Appointment added successfully!');
         setShowAddModal(false);
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create appointment';
+      setSubmitError(msg);
       console.error('Error creating appointment:', err);
     } finally {
       setSubmitting(false);
@@ -290,9 +300,19 @@ const AppointmentsView: React.FC = () => {
           clients={clients}
           loadingClients={loadingClients}
           submitting={submitting}
+          submitError={submitError}
           onSubmit={handleFormSubmit}
-          onCancel={() => setShowAddModal(false)}
+          onCancel={() => { setShowAddModal(false); setSubmitError(null); }}
         />
+      )}
+
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50">
+          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {successMessage}
+        </div>
       )}
     </div>
   );

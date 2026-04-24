@@ -35,7 +35,7 @@ func (r *AppointmentRepository) Create(appointment *models.Appointment) error {
 		appointment.Title,
 		appointment.Description,
 		appointment.Date,
-		appointment.Time,
+		appointment.TimeVal,
 		appointment.ClientID,
 		appointment.PropertyID,
 		appointment.BrokerID,
@@ -131,7 +131,7 @@ func (r *AppointmentRepository) GetByBrokerID(brokerID string, filters dto.Appoi
 			&appointment.Title,
 			&appointment.Description,
 			&appointment.Date,
-			&appointment.Time,
+			&appointment.TimeVal,
 			&appointment.ClientID,
 			&appointment.PropertyID,
 			&appointment.BrokerID,
@@ -184,7 +184,7 @@ func (r *AppointmentRepository) GetByID(id string) (*models.Appointment, error) 
 		&appointment.Title,
 		&appointment.Description,
 		&appointment.Date,
-		&appointment.Time,
+		&appointment.TimeVal,
 		&appointment.ClientID,
 		&appointment.PropertyID,
 		&appointment.BrokerID,
@@ -225,7 +225,7 @@ func (r *AppointmentRepository) Update(appointment *models.Appointment) error {
 		appointment.Title,
 		appointment.Description,
 		appointment.Date,
-		appointment.Time,
+		appointment.TimeVal,
 		appointment.ClientID,
 		appointment.PropertyID,
 		appointment.Type,
@@ -363,6 +363,14 @@ func (r *AppointmentRepository) GetStats(brokerID string) (*dto.AppointmentStats
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating appointment type rows: %w", err)
 	}
+
+	// Populate aliased fields for frontend compatibility
+	stats.Total = stats.TotalThisMonth
+	stats.Scheduled = stats.ScheduledAppointments
+	stats.Completed = stats.CompletedAppointments
+	stats.Cancelled = stats.CancelledAppointments
+	stats.Today = stats.TodayAppointments
+	stats.Upcoming = stats.ScheduledAppointments
 
 	return stats, nil
 }

@@ -129,7 +129,7 @@ func (h *AppointmentHandler) GetAppointments(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal server error",
-			Message: "Failed to retrieve appointments",
+			Message: "Failed to retrieve appointments: " + err.Error(),
 		})
 		return
 	}

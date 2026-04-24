@@ -21,6 +21,7 @@ interface ClientFormProps {
   selectedClientType: 'buyer' | 'seller' | 'tenant';
   editingClientId: string | null;
   submitting: boolean;
+  formError?: string | null;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   onTypeChange: (type: 'buyer' | 'seller' | 'tenant') => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -32,6 +33,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
   selectedClientType,
   editingClientId,
   submitting,
+  formError,
   onInputChange,
   onTypeChange,
   onSubmit,
@@ -285,6 +287,12 @@ const ClientForm: React.FC<ClientFormProps> = ({
               />
             </div>
           </div>
+
+          {formError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-700">{formError}</p>
+            </div>
+          )}
 
           <div className="flex space-x-4 pt-4">
             <button

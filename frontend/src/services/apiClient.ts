@@ -41,7 +41,6 @@ export class ApiClient {
         if (data.message) {
           errorMessage = `${errorMessage}: ${data.message}`;
         }
-        alert(`❌ Error: ${errorMessage}`);
         throw new Error(errorMessage);
       }
 
@@ -49,9 +48,7 @@ export class ApiClient {
     } catch (error) {
       console.error('API request failed:', error);
       if (error instanceof TypeError) {
-        const networkError = 'Network error: Unable to connect to server. Please check if the backend is running.';
-        alert(`❌ ${networkError}`);
-        throw new Error(networkError);
+        throw new Error('Network error: Unable to connect to server. Please check if the backend is running.');
       }
       throw error;
     }

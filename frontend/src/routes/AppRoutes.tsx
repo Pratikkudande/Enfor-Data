@@ -54,12 +54,12 @@ export const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path={ROUTES.HOME} element={<PublicRoute><LandingPage onGetStarted={() => {}} /></PublicRoute>} />
+      <Route path={ROUTES.HOME} element={<PublicRoute><LandingPage /></PublicRoute>} />
       
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
-        <Route path={ROUTES.LOGIN} element={<PublicRoute><LoginForm onToggleMode={() => {}} /></PublicRoute>} />
-        <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterForm onToggleMode={() => {}} /></PublicRoute>} />
+        <Route path={ROUTES.LOGIN} element={<PublicRoute><LoginForm /></PublicRoute>} />
+        <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterForm /></PublicRoute>} />
       </Route>
 
       {/* Protected Routes */}

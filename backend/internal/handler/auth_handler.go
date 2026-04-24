@@ -146,35 +146,17 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // RefreshToken generates a new JWT token
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	// Get token from header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
+	// user_id is already set by RequireAuth middleware
+	userID, exists := c.Get("user_id")
+	if !exists {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Authorization header missing",
+			Error: "Unauthorized",
 		})
 		return
 	}
 
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenString == authHeader {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Invalid token format",
-		})
-		return
-	}
-
-	// Validate current token
-	claims, err := h.authService.ValidateToken(tokenString)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error:   "Invalid token",
-			Message: err.Error(),
-		})
-		return
-	}
-
-	// Get user to ensure they still exist
-	user, err := h.authService.GetUserByID(claims.UserID)
+	// Get user to ensure they still exist and get fresh data
+	user, err := h.authService.GetUserByID(userID.(string))
 	if err != nil {
 		c.JSON(http.StatusNotFound, ErrorResponse{
 			Error: "User not found",
@@ -182,14 +164,20 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Generate new token
-	jwtUtil := h.authService.ValidateToken // Note: This needs to be refactored to access JWTUtil directly
-	_ = jwtUtil                            // TODO: Fix this implementation
+	// Generate a new token
+	newToken, err := h.authService.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: "Failed to generate token",
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Token refreshed successfully",
 		Data: gin.H{
-			"user": dto.ToPublicUser(user),
+			"token": newToken,
+			"user":  dto.ToPublicUser(user),
 		},
 	})
 }

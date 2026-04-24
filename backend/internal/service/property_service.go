@@ -197,6 +197,7 @@ func (s *PropertyService) resolvePropertyClient(clientID *string, brokerID strin
 		return nil, nil, nil
 	}
 
+	// Empty string means "clear the client link"
 	if *clientID == "" {
 		return nil, nil, nil
 	}
