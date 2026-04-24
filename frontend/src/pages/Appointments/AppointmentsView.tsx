@@ -5,8 +5,8 @@ import { apiClient, Appointment as ApiAppointment, CreateAppointmentRequest, Cli
 import AppointmentCard from './AppointmentCard';
 import AppointmentForm from './AppointmentForm';
 import AppointmentCalendar from './AppointmentCalendar';
-import LoadingState from '../common/LoadingState';
-import ErrorState from '../common/ErrorState';
+import LoadingState from '../../components/common/LoadingState';
+import ErrorState from '../../components/common/ErrorState';
 
 const AppointmentsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -103,15 +103,15 @@ const AppointmentsView: React.FC = () => {
 
     return appointments.filter(appointment => {
       const matchesSearch = appointment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (appointment.client_name && appointment.client_name.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+        (appointment.client_name && appointment.client_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
       const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
-      
+
       let matchesDate = true;
       if (filterDate === 'today') matchesDate = appointment.date === today;
       else if (filterDate === 'yesterday') matchesDate = appointment.date === yesterday;
       else if (filterDate === 'tomorrow') matchesDate = appointment.date === tomorrow;
-      
+
       return matchesSearch && matchesStatus && matchesDate;
     });
   };
@@ -120,7 +120,7 @@ const AppointmentsView: React.FC = () => {
     try {
       setSubmitting(true);
       const response = await apiClient.createAppointment(appointmentData);
-      
+
       if (response.data) {
         setAppointments(prev => [response.data!, ...prev]);
         alert('✅ Appointment added successfully!');
@@ -207,9 +207,9 @@ const AppointmentsView: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-4">
         {filterAppointments().map((appointment) => (
-          <AppointmentCard 
-            key={appointment.id} 
-            appointment={appointment} 
+          <AppointmentCard
+            key={appointment.id}
+            appointment={appointment}
             getStatusColor={getStatusColor}
             getTypeColor={getTypeColor}
           />
@@ -260,9 +260,8 @@ const AppointmentsView: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Icon className="h-4 w-4 mr-2" />
                   {tab.label}
@@ -276,7 +275,7 @@ const AppointmentsView: React.FC = () => {
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'list' && renderListView()}
           {activeTab === 'calendar' && (
-            <AppointmentCalendar 
+            <AppointmentCalendar
               currentDate={currentDate}
               setCurrentDate={setCurrentDate}
               appointments={appointments}
@@ -287,7 +286,7 @@ const AppointmentsView: React.FC = () => {
       </div>
 
       {showAddModal && (
-        <AppointmentForm 
+        <AppointmentForm
           clients={clients}
           loadingClients={loadingClients}
           submitting={submitting}

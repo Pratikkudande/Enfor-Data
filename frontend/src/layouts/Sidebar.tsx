@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Home, 
-  Building, 
-  Users, 
-  Calendar, 
-  MessageSquare, 
-  Network, 
-  FileText, 
+import {
+  Home,
+  Building,
+  Users,
+  Calendar,
+  MessageSquare,
+  Network,
+  FileText,
   Megaphone,
   PlusCircle,
   BarChart3,
@@ -14,7 +14,7 @@ import {
   UserCheck,
   Briefcase
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;

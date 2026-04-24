@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { ROUTES } from '../../routes/routePaths';
 
-interface LoginFormProps {
-  onToggleMode: () => void;
-}
-
-const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
+const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +12,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const [error, setError] = useState('');
 
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +21,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
 
     try {
       await login(email, password);
+      // AuthContext will handle redirect after login state updates
     } catch (err) {
       setError('Invalid email or password');
     } finally {
@@ -111,12 +111,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       <div className="mt-8 text-center">
         <p className="text-gray-600">
           Don't have an account?{' '}
-          <button
-            onClick={onToggleMode}
+          <Link
+            to={ROUTES.REGISTER}
             className="text-blue-600 hover:text-blue-700 font-medium"
           >
             Sign up here
-          </button>
+          </Link>
         </p>
       </div>
     </div>

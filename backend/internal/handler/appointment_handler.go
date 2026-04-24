@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"enfor-data-backend/internal/dto"
 	"net/http"
 	"strings"
 
-	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +38,7 @@ func (h *AppointmentHandler) CreateAppointment(c *gin.Context) {
 	}
 
 	// Parse and bind JSON request body to CreateAppointmentRequest
-	var req models.CreateAppointmentRequest
+	var req dto.CreateAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Invalid request body",
@@ -98,28 +98,28 @@ func (h *AppointmentHandler) GetAppointments(c *gin.Context) {
 	}
 
 	// Parse query parameters for filters
-	filters := models.AppointmentFilters{}
-	
+	filters := dto.AppointmentFilters{}
+
 	if status := c.Query("status"); status != "" {
 		filters.Status = &status
 	}
-	
+
 	if date := c.Query("date"); date != "" {
 		filters.Date = &date
 	}
-	
+
 	if appointmentType := c.Query("type"); appointmentType != "" {
 		filters.Type = &appointmentType
 	}
-	
+
 	if clientID := c.Query("client_id"); clientID != "" {
 		filters.ClientID = &clientID
 	}
-	
+
 	if startDate := c.Query("start_date"); startDate != "" {
 		filters.StartDate = &startDate
 	}
-	
+
 	if endDate := c.Query("end_date"); endDate != "" {
 		filters.EndDate = &endDate
 	}
@@ -229,7 +229,7 @@ func (h *AppointmentHandler) UpdateAppointment(c *gin.Context) {
 	appointmentID := c.Param("id")
 
 	// Parse and bind JSON request body to UpdateAppointmentRequest
-	var req models.UpdateAppointmentRequest
+	var req dto.UpdateAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Invalid request body",

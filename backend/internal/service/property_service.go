@@ -1,6 +1,7 @@
 package service
 
 import (
+	"enfor-data-backend/internal/dto"
 	"fmt"
 
 	"enfor-data-backend/internal/models"
@@ -24,7 +25,7 @@ func NewPropertyService(propertyRepo *repository.PropertyRepository, clientRepo 
 }
 
 // CreateProperty creates a new property with business logic validation
-func (s *PropertyService) CreateProperty(req *models.CreatePropertyRequest, brokerID string) (*models.Property, error) {
+func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerID string) (*models.Property, error) {
 	// Validate type-specific requirements
 	if err := validatePropertyTypeRequirements(req.Type, req.Bedrooms, req.Bathrooms); err != nil {
 		return nil, err
@@ -105,7 +106,7 @@ func (s *PropertyService) GetPropertyByID(id, brokerID string) (*models.Property
 }
 
 // UpdateProperty updates a property with ownership verification and type-aware validation.
-func (s *PropertyService) UpdateProperty(id string, req *models.UpdatePropertyRequest, brokerID string) (*models.Property, error) {
+func (s *PropertyService) UpdateProperty(id string, req *dto.UpdatePropertyRequest, brokerID string) (*models.Property, error) {
 	property, err := s.GetPropertyByID(id, brokerID)
 	if err != nil {
 		return nil, err

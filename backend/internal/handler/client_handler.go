@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"enfor-data-backend/internal/dto"
 	"net/http"
 	"strings"
 
-	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -69,7 +69,7 @@ func (h *ClientHandler) CreateClient(c *gin.Context) {
 	}
 
 	// Parse request body into CreateClientRequest
-	var req models.CreateClientRequest
+	var req dto.CreateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// Return 400 if JSON parsing fails
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -179,7 +179,7 @@ func (h *ClientHandler) UpdateClient(c *gin.Context) {
 	clientID := c.Param("id")
 
 	// Parse request body into UpdateClientRequest
-	var req models.UpdateClientRequest
+	var req dto.UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// Return 400 if JSON parsing fails
 		c.JSON(http.StatusBadRequest, ErrorResponse{

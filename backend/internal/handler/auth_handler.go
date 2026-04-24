@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"enfor-data-backend/internal/dto"
 	"net/http"
 	"strings"
 
-	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +25,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 
 // Signup handles user registration
 func (h *AuthHandler) Signup(c *gin.Context) {
-	var req models.SignupRequest
+	var req dto.SignupRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -65,14 +65,14 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		Message: "User registered successfully",
 		Data: gin.H{
 			"token": response.Token,
-			"user":  response.User.ToPublicUser(),
+			"user":  response.User,
 		},
 	})
 }
 
 // Login handles user authentication
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req models.LoginRequest
+	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -105,7 +105,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Message: "Login successful",
 		Data: gin.H{
 			"token": response.Token,
-			"user":  response.User.ToPublicUser(),
+			"user":  response.User,
 		},
 	})
 }
@@ -133,7 +133,7 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "User profile retrieved successfully",
-		Data:    user.ToPublicUser(),
+		Data:    dto.ToPublicUser(user),
 	})
 }
 
@@ -189,7 +189,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Token refreshed successfully",
 		Data: gin.H{
-			"user": user.ToPublicUser(),
+			"user": dto.ToPublicUser(user),
 		},
 	})
 }

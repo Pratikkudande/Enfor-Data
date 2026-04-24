@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"enfor-data-backend/internal/dto"
 	"database/sql"
 	"fmt"
 	"time"
@@ -60,7 +61,7 @@ func (r *AppointmentRepository) Create(appointment *models.Appointment) error {
 
 // GetByBrokerID retrieves all appointments for a specific broker with optional filters
 // Uses composite index (broker_id, date, time) for optimal query performance
-func (r *AppointmentRepository) GetByBrokerID(brokerID string, filters models.AppointmentFilters) ([]models.Appointment, error) {
+func (r *AppointmentRepository) GetByBrokerID(brokerID string, filters dto.AppointmentFilters) ([]models.Appointment, error) {
 	// Build dynamic query with filters
 	query := `
 		SELECT 
@@ -272,12 +273,12 @@ func (r *AppointmentRepository) Delete(id string) error {
 }
 
 // GetStats calculates appointment statistics for a broker
-func (r *AppointmentRepository) GetStats(brokerID string) (*models.AppointmentStats, error) {
+func (r *AppointmentRepository) GetStats(brokerID string) (*dto.AppointmentStats, error) {
 	now := time.Now()
 	firstDayOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	today := now.Format("2006-01-02")
 
-	stats := &models.AppointmentStats{
+	stats := &dto.AppointmentStats{
 		AppointmentsByType: make(map[string]int),
 	}
 

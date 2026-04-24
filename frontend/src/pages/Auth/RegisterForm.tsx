@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { ROUTES } from '../../routes/routePaths';
 import { indianStates } from '../../constants/options';
-import FormInput from '../common/FormInput';
+import FormInput from '../../components/common/FormInput';
 import RoleSelector from './RoleSelector';
 import ProfilePhotoUpload from './ProfilePhotoUpload';
 
-interface RegisterFormProps {
-  onToggleMode: () => void;
-}
-
-const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
+const RegisterForm: React.FC = () => {
   const [formData, setFormData] = useState({
     firmName: '',
     firstName: '',
@@ -29,7 +27,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
     confirmPassword: '',
     role: 'broker' as 'broker' | 'channel_partner' | 'admin'
   });
-  
+
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -39,6 +37,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const { register } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,24 +103,24 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       };
 
       await register(userData);
-      
+
     } catch (err: any) {
       console.error('Registration error:', err);
       let errorMessage = err.message || 'Registration failed. Please try again.';
-      
+
       if (err.message && err.message.includes('Field validation')) {
         const validationMatch = err.message.match(/Field validation for '(\w+)' failed on the '(\w+)' tag/);
         if (validationMatch) {
           const fieldName = validationMatch[1];
           const validationType = validationMatch[2];
-          
+
           const fieldMap: Record<string, string> = {
             'Email': 'email', 'Password': 'password', 'WhatsappNumber': 'whatsappNumber',
             'FirstName': 'firstName', 'LastName': 'lastName', 'FirmName': 'firmName',
             'DateOfBirth': 'dateOfBirth', 'PostalCode': 'postalCode', 'Address': 'address',
             'Location': 'location', 'City': 'city', 'State': 'state', 'Role': 'role'
           };
-          
+
           const mappedField = fieldMap[fieldName];
           const validationMessages: Record<string, string> = {
             'required': 'This field is required',
@@ -130,9 +129,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             'max': 'Value is too long',
             'oneof': 'Invalid value selected'
           };
-          
+
           const friendlyMessage = validationMessages[validationType] || `Validation failed: ${validationType}`;
-          
+
           if (mappedField) {
             setFieldErrors({ [mappedField]: friendlyMessage });
             errorMessage = `Validation error: ${fieldName} - ${friendlyMessage}`;
@@ -142,19 +141,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         const parts = err.message.split(':');
         const fieldName = parts[0].trim().toLowerCase().replace(/\s+/g, '_');
         const errorMsg = parts.slice(1).join(':').trim();
-        
+
         const fieldMap: Record<string, string> = {
           'email': 'email', 'password': 'password', 'whatsapp_number': 'whatsappNumber',
           'first_name': 'firstName', 'last_name': 'lastName', 'firm_name': 'firmName',
           'date_of_birth': 'dateOfBirth', 'postal_code': 'postalCode'
         };
-        
+
         const mappedField = fieldMap[fieldName];
         if (mappedField) {
           setFieldErrors({ [mappedField]: errorMsg });
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -203,9 +202,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         <p className="text-gray-600 mt-2">Join ENFOR DATA and grow your business</p>
       </div>
 
-      <RoleSelector 
-        role={formData.role} 
-        onChange={(role) => setFormData({ ...formData, role })} 
+      <RoleSelector
+        role={formData.role}
+        onChange={(role) => setFormData({ ...formData, role })}
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -297,7 +296,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
 
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Address Information</h3>
-          
+
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
               Address <span className="text-red-500">*</span>
@@ -308,9 +307,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               value={formData.address}
               onChange={handleChange}
               rows={3}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
-                fieldErrors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${fieldErrors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
               placeholder="Enter your complete address"
               required
             />
@@ -339,7 +337,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               placeholder="City"
               required
             />
-            
+
             <div>
               <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
                 State <span className="text-red-500">*</span>
@@ -349,9 +347,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                 name="state"
                 value={formData.state}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
-                  fieldErrors.state ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${fieldErrors.state ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 required
               >
                 <option value="">Select State</option>
@@ -375,10 +372,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
           </div>
         </div>
 
-        <ProfilePhotoUpload 
-          photoPreview={photoPreview} 
-          onUpload={handlePhotoUpload} 
-          onRemove={removePhoto} 
+        <ProfilePhotoUpload
+          photoPreview={photoPreview}
+          onUpload={handlePhotoUpload}
+          onRemove={removePhoto}
         />
 
         <FormInput
@@ -405,9 +402,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent pr-10 ${
-                  fieldErrors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent pr-10 ${fieldErrors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 placeholder="Create password"
                 required
               />
@@ -434,9 +430,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent pr-10 ${
-                  fieldErrors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent pr-10 ${fieldErrors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 placeholder="Confirm password"
                 required
               />
@@ -475,9 +470,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       <div className="mt-6 text-center">
         <p className="text-gray-600">
           Already have an account?{' '}
-          <button onClick={onToggleMode} className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link to={ROUTES.LOGIN} className="text-blue-600 hover:text-blue-700 font-medium">
             Sign in here
-          </button>
+          </Link>
         </p>
       </div>
     </div>

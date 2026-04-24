@@ -1,6 +1,7 @@
 package service
 
 import (
+	"enfor-data-backend/internal/dto"
 	"fmt"
 
 	"enfor-data-backend/internal/models"
@@ -22,7 +23,7 @@ func NewClientService(clientRepo *repository.ClientRepository, userRepo *reposit
 }
 
 // CreateClient creates a new client with validation and broker information
-func (s *ClientService) CreateClient(req *models.CreateClientRequest, brokerID string) (*models.Client, error) {
+func (s *ClientService) CreateClient(req *dto.CreateClientRequest, brokerID string) (*models.Client, error) {
 	// Validate budget range if both min and max provided
 	if err := s.validateBudgetRange(req.BudgetMin, req.BudgetMax); err != nil {
 		return nil, err
@@ -93,7 +94,7 @@ func (s *ClientService) GetClientByID(id, brokerID string) (*models.Client, erro
 }
 
 // UpdateClient updates a client with ownership verification and validation
-func (s *ClientService) UpdateClient(id string, req *models.UpdateClientRequest, brokerID string) (*models.Client, error) {
+func (s *ClientService) UpdateClient(id string, req *dto.UpdateClientRequest, brokerID string) (*models.Client, error) {
 	// Call GetClientByID to verify ownership (reuse existing logic)
 	client, err := s.GetClientByID(id, brokerID)
 	if err != nil {

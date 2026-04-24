@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/routePaths';
 import { 
   Building2, 
   Users, 
@@ -17,11 +19,13 @@ import {
   Zap
 } from 'lucide-react';
 
-interface LandingPageProps {
-  onGetStarted: () => void;
-}
+const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+  const handleGetStarted = () => {
+    navigate(ROUTES.LOGIN);
+  };
+
   const features = [
     {
       icon: Building2,
@@ -115,7 +119,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </div>
             </div>
             <button
-              onClick={onGetStarted}
+              onClick={handleGetStarted}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Get Started
@@ -137,7 +141,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <button
-                onClick={onGetStarted}
+                onClick={handleGetStarted}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-lg font-semibold"
               >
                 Start Free Trial
@@ -185,7 +189,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                       </li>
                     </ul>
                     <button
-                      onClick={onGetStarted}
+                      onClick={handleGetStarted}
                       className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                     >
                       Sign Up as Broker
@@ -226,7 +230,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                       </li>
                     </ul>
                     <button
-                      onClick={onGetStarted}
+                      onClick={handleGetStarted}
                       className="w-full bg-teal-600 text-white py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors font-semibold"
                     >
                       Sign Up as Channel Partner
@@ -239,7 +243,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <p className="text-gray-600">
                   Already have an account?{' '}
                   <button
-                    onClick={onGetStarted}
+                    onClick={handleGetStarted}
                     className="text-blue-600 hover:text-blue-700 font-semibold"
                   >
                     Sign In Here
@@ -449,7 +453,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             Join thousands of successful brokers and builders who are already using ENFOR DATA to grow their business.
           </p>
           <button
-            onClick={onGetStarted}
+            onClick={handleGetStarted}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-50 transition-colors text-lg font-semibold inline-flex items-center"
           >
             Start Your Free Trial Today

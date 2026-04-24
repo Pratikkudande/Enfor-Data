@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User } from 'lucide-react';
 import { apiClient, Client as ApiClient, CreateClientRequest } from '../../services/api';
-import LoadingState from '../common/LoadingState';
-import ErrorState from '../common/ErrorState';
+import LoadingState from '../../components/common/LoadingState';
+import ErrorState from '../../components/common/ErrorState';
 import ClientCard from './ClientCard';
 import ClientForm from './ClientForm';
 
@@ -76,8 +76,8 @@ const ClientsView: React.FC = () => {
     .map(client => ({ ...client, name: `${client.first_name} ${client.last_name}` }))
     .filter(client => {
       const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.preferred_location.toLowerCase().includes(searchTerm.toLowerCase());
+        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.preferred_location.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || client.type === filterType;
       return matchesSearch && matchesType;
     });
@@ -141,7 +141,7 @@ const ClientsView: React.FC = () => {
       const response = editingClientId
         ? await apiClient.updateClient(editingClientId, clientData)
         : await apiClient.createClient(clientData);
-      
+
       if (response.data) {
         if (editingClientId) {
           setRealClients(prev => prev.map(c => c.id === response.data!.id ? response.data! : c));
@@ -212,7 +212,7 @@ const ClientsView: React.FC = () => {
       {!loading && !error && (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredClients.map((client) => (
-            <ClientCard 
+            <ClientCard
               key={client.id}
               client={client}
               getTypeColor={getTypeColor}
@@ -223,7 +223,7 @@ const ClientsView: React.FC = () => {
               isDeleting={deletingClientId === client.id}
             />
           ))}
-          
+
           {filteredClients.length === 0 && (
             <div className="col-span-full text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
