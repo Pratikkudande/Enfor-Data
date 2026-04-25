@@ -1,7 +1,9 @@
 package service
 
 import (
+	"enfor-data-backend/internal/dto"
 	"fmt"
+	"time"
 
 	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/repository"
@@ -28,7 +30,7 @@ func NewAppointmentService(
 }
 
 // CreateAppointment creates a new appointment with business logic validation
-func (s *AppointmentService) CreateAppointment(req *models.CreateAppointmentRequest, brokerID string) (*models.Appointment, error) {
+func (s *AppointmentService) CreateAppointment(req *dto.CreateAppointmentRequest, brokerID string) (*models.Appointment, error) {
 	// Validate client_id exists and belongs to broker
 	client, err := s.clientRepo.GetByID(req.ClientID)
 	if err != nil {
@@ -57,14 +59,25 @@ func (s *AppointmentService) CreateAppointment(req *models.CreateAppointmentRequ
 	appointment := &models.Appointment{
 		Title:       req.Title,
 		Description: req.Description,
-		Date:        req.Date,
-		Time:        req.Time,
 		ClientID:    req.ClientID,
 		PropertyID:  req.PropertyID,
 		BrokerID:    brokerID,
 		Type:        req.Type,
 		Status:      "scheduled", // Default status
 	}
+
+	// Parse date string into time.Time; parse time string into time.Time
+	parsedDate, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format: %w", err)
+	}
+	appointment.Date = parsedDate
+
+	parsedTime, err := time.Parse("15:04", req.Time)
+	if err != nil {
+		return nil, fmt.Errorf("invalid time format: %w", err)
+	}
+	appointment.TimeVal = parsedTime
 
 	// Create appointment in database
 	err = s.appointmentRepo.Create(appointment)
@@ -76,7 +89,7 @@ func (s *AppointmentService) CreateAppointment(req *models.CreateAppointmentRequ
 }
 
 // GetBrokerAppointments retrieves all appointments for a broker with optional filters
-func (s *AppointmentService) GetBrokerAppointments(brokerID string, filters models.AppointmentFilters) ([]models.Appointment, error) {
+func (s *AppointmentService) GetBrokerAppointments(brokerID string, filters dto.AppointmentFilters) ([]models.Appointment, error) {
 	appointments, err := s.appointmentRepo.GetByBrokerID(brokerID, filters)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get broker appointments: %w", err)
@@ -101,7 +114,7 @@ func (s *AppointmentService) GetAppointmentByID(id, brokerID string) (*models.Ap
 }
 
 // UpdateAppointment updates an appointment with ownership verification and partial updates
-func (s *AppointmentService) UpdateAppointment(id string, req *models.UpdateAppointmentRequest, brokerID string) (*models.Appointment, error) {
+func (s *AppointmentService) UpdateAppointment(id string, req *dto.UpdateAppointmentRequest, brokerID string) (*models.Appointment, error) {
 	// Verify ownership by fetching the appointment
 	appointment, err := s.GetAppointmentByID(id, brokerID)
 	if err != nil {
@@ -150,11 +163,19 @@ func (s *AppointmentService) UpdateAppointment(id string, req *models.UpdateAppo
 	}
 
 	if req.Date != nil {
-		appointment.Date = *req.Date
+		parsedDate, err := time.Parse("2006-01-02", *req.Date)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format: %w", err)
+		}
+		appointment.Date = parsedDate
 	}
 
 	if req.Time != nil {
-		appointment.Time = *req.Time
+		parsedTime, err := time.Parse("15:04", *req.Time)
+		if err != nil {
+			return nil, fmt.Errorf("invalid time format: %w", err)
+		}
+		appointment.TimeVal = parsedTime
 	}
 
 	if req.Type != nil {
@@ -192,7 +213,7 @@ func (s *AppointmentService) DeleteAppointment(id, brokerID string) error {
 }
 
 // GetAppointmentStats retrieves appointment statistics for a broker
-func (s *AppointmentService) GetAppointmentStats(brokerID string) (*models.AppointmentStats, error) {
+func (s *AppointmentService) GetAppointmentStats(brokerID string) (*dto.AppointmentStats, error) {
 	stats, err := s.appointmentRepo.GetStats(brokerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get appointment stats: %w", err)

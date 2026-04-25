@@ -5,8 +5,8 @@ import { apiClient, Appointment as ApiAppointment, CreateAppointmentRequest, Cli
 import AppointmentCard from './AppointmentCard';
 import AppointmentForm from './AppointmentForm';
 import AppointmentCalendar from './AppointmentCalendar';
-import LoadingState from '../common/LoadingState';
-import ErrorState from '../common/ErrorState';
+import LoadingState from '../../components/common/LoadingState';
+import ErrorState from '../../components/common/ErrorState';
 
 const AppointmentsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -21,6 +21,13 @@ const AppointmentsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    window.setTimeout(() => setSuccessMessage(null), 3000);
+  };
 
   // Clients state for dropdown
   const [clients, setClients] = useState<Client[]>([]);
@@ -103,15 +110,15 @@ const AppointmentsView: React.FC = () => {
 
     return appointments.filter(appointment => {
       const matchesSearch = appointment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (appointment.client_name && appointment.client_name.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+        (appointment.client_name && appointment.client_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
       const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
-      
+
       let matchesDate = true;
       if (filterDate === 'today') matchesDate = appointment.date === today;
       else if (filterDate === 'yesterday') matchesDate = appointment.date === yesterday;
       else if (filterDate === 'tomorrow') matchesDate = appointment.date === tomorrow;
-      
+
       return matchesSearch && matchesStatus && matchesDate;
     });
   };
@@ -119,14 +126,17 @@ const AppointmentsView: React.FC = () => {
   const handleFormSubmit = async (appointmentData: CreateAppointmentRequest) => {
     try {
       setSubmitting(true);
+      setSubmitError(null);
       const response = await apiClient.createAppointment(appointmentData);
-      
+
       if (response.data) {
         setAppointments(prev => [response.data!, ...prev]);
-        alert('✅ Appointment added successfully!');
+        showSuccess('Appointment added successfully!');
         setShowAddModal(false);
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create appointment';
+      setSubmitError(msg);
       console.error('Error creating appointment:', err);
     } finally {
       setSubmitting(false);
@@ -207,9 +217,9 @@ const AppointmentsView: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-4">
         {filterAppointments().map((appointment) => (
-          <AppointmentCard 
-            key={appointment.id} 
-            appointment={appointment} 
+          <AppointmentCard
+            key={appointment.id}
+            appointment={appointment}
             getStatusColor={getStatusColor}
             getTypeColor={getTypeColor}
           />
@@ -260,9 +270,8 @@ const AppointmentsView: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Icon className="h-4 w-4 mr-2" />
                   {tab.label}
@@ -276,7 +285,7 @@ const AppointmentsView: React.FC = () => {
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'list' && renderListView()}
           {activeTab === 'calendar' && (
-            <AppointmentCalendar 
+            <AppointmentCalendar
               currentDate={currentDate}
               setCurrentDate={setCurrentDate}
               appointments={appointments}
@@ -287,13 +296,23 @@ const AppointmentsView: React.FC = () => {
       </div>
 
       {showAddModal && (
-        <AppointmentForm 
+        <AppointmentForm
           clients={clients}
           loadingClients={loadingClients}
           submitting={submitting}
+          submitError={submitError}
           onSubmit={handleFormSubmit}
-          onCancel={() => setShowAddModal(false)}
+          onCancel={() => { setShowAddModal(false); setSubmitError(null); }}
         />
+      )}
+
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50">
+          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {successMessage}
+        </div>
       )}
     </div>
   );

@@ -21,38 +21,6 @@ export const useAuth = () => {
   return context;
 };
 
-// Mock users for fallback when backend is not available
-const mockUsers: Array<{
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  firm_name: string;
-  city: string;
-  state: string;
-}> = [
-  {
-    email: 'broker@example.com',
-    password: 'password123',
-    first_name: 'John',
-    last_name: 'Smith',
-    role: 'broker',
-    firm_name: 'Smith Properties',
-    city: 'Mumbai',
-    state: 'Maharashtra'
-  },
-  {
-    email: 'builder@example.com',
-    password: 'password123',
-    first_name: 'Sarah',
-    last_name: 'Johnson',
-    role: 'channel_partner',
-    firm_name: 'Johnson Builders',
-    city: 'Delhi',
-    state: 'Delhi'
-  }
-];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

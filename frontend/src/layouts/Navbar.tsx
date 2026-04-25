@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, LogOut, Menu, User, Settings } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   onMenuToggle: () => void;

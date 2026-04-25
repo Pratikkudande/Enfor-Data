@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { CreateAppointmentRequest, Client } from '../../../services/api';
+import React, { useState, useEffect } from 'react';
+import { CreateAppointmentRequest, Client } from '../../services/api';
+import { apiClient } from '../../services/api';
+import { Property } from '../../types';
 
 interface AppointmentFormProps {
   clients: Client[];
   loadingClients: boolean;
   submitting: boolean;
+  submitError?: string | null;
   onSubmit: (data: CreateAppointmentRequest) => void;
   onCancel: () => void;
 }
 
-const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClients, submitting, onSubmit, onCancel }) => {
+const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClients, submitting, submitError, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -20,30 +23,71 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
     type: 'site_visit' as 'site_visit' | 'meeting' | 'call'
   });
 
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      setLoadingProperties(true);
+      try {
+        const response = await apiClient.getProperties();
+        setProperties(response.data || []);
+      } catch {
+        // non-critical, property selection is optional
+      } finally {
+        setLoadingProperties(false);
+      }
+    };
+    fetchProperties();
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    setFormData({ ...formData, [name]: value });
+    if (formError) setFormError(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     if (!formData.clientId) {
-      alert('Please select a client');
+      setFormError('Please select a client');
+      return;
+    }
+    if (!formData.title.trim() || formData.title.trim().length < 5) {
+      setFormError('Title must be at least 5 characters');
+      return;
+    }
+    if (!formData.date) {
+      setFormError('Please select a date');
+      return;
+    }
+    if (!formData.time) {
+      setFormError('Please select a time');
       return;
     }
 
-    onSubmit({
-      title: formData.title,
-      description: formData.description,
+    const payload: CreateAppointmentRequest = {
+      title: formData.title.trim(),
       date: formData.date,
       time: formData.time,
       type: formData.type,
       client_id: formData.clientId,
-      property_id: formData.propertyId || undefined,
-    });
+    };
+
+    // Only include description if non-empty
+    if (formData.description.trim()) {
+      payload.description = formData.description.trim();
+    }
+
+    // Only include property_id if a valid selection was made
+    if (formData.propertyId) {
+      payload.property_id = formData.propertyId;
+    }
+
+    onSubmit(payload);
   };
 
   return (
@@ -74,7 +118,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                   <button
                     key={type.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, type: type.value as any })}
+                    onClick={() => setFormData({ ...formData, type: type.value as any, propertyId: '' })}
                     className={`p-3 border-2 rounded-lg text-center transition-all ${
                       formData.type === type.value
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -185,24 +229,38 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
               )}
             </div>
 
-            {/* Property Selection - Optional for site visits */}
-            {formData.type === 'site_visit' && (
-              <div>
-                <label htmlFor="propertyId" className="block text-sm font-medium text-gray-700 mb-1">
-                  Property (Optional)
-                </label>
-                <input
-                  type="text"
+            {/* Property Selection — dropdown from broker's own properties */}
+            <div>
+              <label htmlFor="propertyId" className="block text-sm font-medium text-gray-700 mb-1">
+                Property <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              {loadingProperties ? (
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  Loading properties...
+                </div>
+              ) : (
+                <select
                   id="propertyId"
                   name="propertyId"
                   value={formData.propertyId}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter property ID"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Link this appointment to a specific property
-                </p>
+                >
+                  <option value="">-- No property linked --</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.title} — {property.location} ({property.type})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p className="text-xs text-gray-500 mt-1">Link this appointment to one of your properties</p>
+            </div>
+
+            {/* Error — local validation or server error from parent */}
+            {(formError || submitError) && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">{formError || submitError}</p>
               </div>
             )}
 

@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"enfor-data-backend/internal/dto"
 	"net/http"
 	"strings"
 
-	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -66,7 +66,7 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 	}
 
 	// Parse request body
-	var req models.CreatePropertyRequest
+	var req dto.CreatePropertyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Invalid request body",
@@ -162,7 +162,7 @@ func (h *PropertyHandler) UpdateProperty(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdatePropertyRequest
+	var req dto.UpdatePropertyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Invalid request body",

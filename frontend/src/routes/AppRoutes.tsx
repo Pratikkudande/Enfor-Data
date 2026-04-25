@@ -1,0 +1,113 @@
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ROUTES } from './routePaths';
+import { ProtectedRoute, PublicRoute } from './guards';
+
+// Layouts
+import MainLayout from '../layouts/MainLayout';
+import AuthLayout from '../layouts/AuthLayout';
+
+// Direct Imports for smaller bundles
+import LandingPage from '../pages/Landing/LandingPage';
+import LoginForm from '../pages/Auth/LoginForm';
+import RegisterForm from '../pages/Auth/RegisterForm';
+
+// Lazy loading for large feature pages
+const BrokerDashboard = lazy(() => import('../pages/Dashboard/BrokerDashboard'));
+const PropertiesView = lazy(() => import('../pages/Properties/PropertiesView'));
+const WhatsAppView = lazy(() => import('../pages/WhatsApp/WhatsAppView'));
+const ClientsView = lazy(() => import('../pages/Clients/ClientsView'));
+const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsView'));
+const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
+const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
+const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
+
+// Loading Fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
+
+// Mock dashboard stats for now
+const mockStats = {
+  totalProperties: 24,
+  totalClients: 156,
+  totalAppointments: 3,
+  whatsappMessagesCount: 1250,
+  remainingMessages: 750,
+  clientsByType: {
+    buyers: 45,
+    sellers: 32,
+    tenants: 58,
+    owners: 21
+  },
+  propertiesByStatus: {
+    available: 18,
+    sold: 3,
+    rented: 2,
+    under_negotiation: 1
+  }
+};
+
+export const AppRoutes: React.FC = () => {
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path={ROUTES.HOME} element={<PublicRoute><LandingPage /></PublicRoute>} />
+      
+      {/* Auth Routes */}
+      <Route element={<AuthLayout />}>
+        <Route path={ROUTES.LOGIN} element={<PublicRoute><LoginForm /></PublicRoute>} />
+        <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterForm /></PublicRoute>} />
+      </Route>
+
+      {/* Protected Routes */}
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route path={ROUTES.DASHBOARD} element={
+          <Suspense fallback={<PageLoader />}>
+            <BrokerDashboard stats={mockStats} />
+          </Suspense>
+        } />
+        <Route path={ROUTES.PROPERTIES} element={
+          <Suspense fallback={<PageLoader />}>
+            <PropertiesView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.WHATSAPP} element={
+          <Suspense fallback={<PageLoader />}>
+            <WhatsAppView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.CLIENTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ClientsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.APPOINTMENTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <AppointmentsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.NETWORK} element={
+          <Suspense fallback={<PageLoader />}>
+            <BrokerNetworkView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.BUSINESS_POSTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <BusinessPostsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.MARKETING} element={
+          <Suspense fallback={<PageLoader />}>
+            <MarketingView />
+          </Suspense>
+        } />
+        
+        {/* Catch-all redirect to Dashboard if logged in */}
+        <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+      </Route>
+    </Routes>
+  );
+};

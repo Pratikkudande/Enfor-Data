@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, User, Phone, MapPin, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
-import { Appointment as ApiAppointment } from '../../../services/api';
+import { Appointment as ApiAppointment } from '../../services/api';
 
 interface AppointmentCardProps {
   appointment: ApiAppointment;

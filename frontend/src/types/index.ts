@@ -2,11 +2,14 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  first_name?: string;
+  last_name?: string;
   phone: string;
   role: 'broker' | 'channel_partner' | 'admin';
   city: string;
   state: string;
   company_name?: string;
+  firm_name?: string;
   profile_image?: string;
   is_verified: boolean;
   created_at: string;
@@ -28,10 +31,12 @@ export interface Property {
   state: string;
   description: string;
   amenities: string[];
-  images: string[];
+  images?: string[];
   status: 'available' | 'sold' | 'rented' | 'under_negotiation';
-  owner_id: string;
+  owner_id?: string;
   broker_id: string;
+  broker_name?: string;
+  broker_city?: string;
   client_id?: string;
   client_name?: string;
   created_at: string;
@@ -40,16 +45,25 @@ export interface Property {
 
 export interface Client {
   id: string;
-  name: string;
+  name?: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string;
   type: 'buyer' | 'seller' | 'tenant' | 'owner';
+  status: 'active' | 'converted' | 'inactive';
   budget_min?: number;
   budget_max?: number;
   preferred_location: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
   requirements: string;
-  status: 'active' | 'converted' | 'inactive';
+  notes?: string;
   broker_id: string;
+  broker_name?: string;
+  broker_city?: string;
   created_at: string;
   updated_at: string;
 }
@@ -61,12 +75,25 @@ export interface Appointment {
   date: string;
   time: string;
   client_id: string;
+  client_name?: string;
+  client_phone?: string;
   property_id?: string;
+  property_title?: string;
+  property_address?: string;
   broker_id: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   type: 'site_visit' | 'meeting' | 'call';
   created_at: string;
   updated_at: string;
+}
+
+export interface AppointmentStats {
+  total: number;
+  scheduled: number;
+  completed: number;
+  cancelled: number;
+  today: number;
+  upcoming: number;
 }
 
 export interface WhatsAppMessage {
@@ -152,4 +179,142 @@ export interface DashboardStats {
     rented: number;
     under_negotiation: number;
   };
+}
+
+// --- API Request/Response Interfaces ---
+
+export interface ApiResponse<T = any> {
+  message: string;
+  data?: T;
+  error?: string;
+}
+
+export interface SignupRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  date_of_birth: string;
+  firm_name: string;
+  role: string;
+  whatsapp_number: string;
+  alternative_number?: string;
+  foreign_number?: string;
+  address: string;
+  location: string;
+  city: string;
+  state: string;
+  postal_code: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: string;
+    firm_name: string;
+    city: string;
+    state: string;
+    is_verified: boolean;
+    created_at: string;
+  };
+}
+
+export interface CreatePropertyRequest {
+  title: string;
+  type: 'apartment' | 'house' | 'commercial' | 'plot';
+  listing_type: 'sale' | 'rent';
+  price: number;
+  area: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  location: string;
+  address: string;
+  city: string;
+  state: string;
+  description: string;
+  amenities: string[];
+  client_id?: string;
+}
+
+export interface UpdatePropertyRequest {
+  title?: string;
+  type?: 'apartment' | 'house' | 'commercial' | 'plot';
+  listing_type?: 'sale' | 'rent';
+  price?: number;
+  area?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  description?: string;
+  amenities?: string[];
+  client_id?: string;
+  status?: 'available' | 'sold' | 'rented' | 'under_negotiation';
+}
+
+export interface CreateClientRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  type: 'buyer' | 'seller' | 'tenant' | 'owner';
+  preferred_location: string;
+  address: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  requirements: string;
+  budget_min?: number;
+  budget_max?: number;
+  notes?: string;
+}
+
+export interface UpdateClientRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  type?: 'buyer' | 'seller' | 'tenant' | 'owner';
+  status?: 'active' | 'converted' | 'inactive';
+  preferred_location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  requirements?: string;
+  budget_min?: number;
+  budget_max?: number;
+  notes?: string;
+}
+
+export interface CreateAppointmentRequest {
+  title: string;
+  description?: string;
+  date: string;
+  time: string;
+  type: 'site_visit' | 'meeting' | 'call';
+  client_id: string;
+  property_id?: string;
+}
+
+export interface UpdateAppointmentRequest {
+  title?: string;
+  description?: string;
+  date?: string;
+  time?: string;
+  status?: 'scheduled' | 'completed' | 'cancelled';
+  type?: 'site_visit' | 'meeting' | 'call';
+  client_id?: string;
+  property_id?: string;
 }

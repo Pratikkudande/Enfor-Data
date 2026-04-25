@@ -203,6 +203,8 @@ const PropertiesView: React.FC = () => {
       amenities: selectedAmenities,
     };
 
+    // Send empty string to clear the client link, or the selected client id
+    // Backend treats empty string as "remove client link"
     propertyData.client_id = formData.clientId || '';
 
     if (formData.bedrooms) {

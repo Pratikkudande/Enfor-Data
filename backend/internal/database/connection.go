@@ -37,6 +37,13 @@ func NewConnection(cfg *config.Config) (*DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
+	// Clear any stale prepared statements from the connection pooler
+	// This prevents "bind message has X result formats but query has Y columns" errors
+	// when the server restarts with a different query shape
+	if _, err := db.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("Warning: DEALLOCATE ALL failed (harmless): %v", err)
+	}
+
 	// Set connection pool settings
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
@@ -402,6 +409,20 @@ CREATE TRIGGER populate_client_broker_info_on_insert
 	_, err = db.Exec(clientsMigration)
 	if err != nil {
 		return fmt.Errorf("failed to run clients migration: %w", err)
+	}
+
+	// Migration: ensure clients table has all required columns (handles schema drift)
+	clientsAlterMigration := `
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS budget_min DECIMAL(15, 2);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS budget_max DECIMAL(15, 2);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS preferred_location VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) NOT NULL DEFAULT '';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS broker_name VARCHAR(200);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS broker_city VARCHAR(100);
+`
+	_, err = db.Exec(clientsAlterMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run clients alter migration: %w", err)
 	}
 
 	propertyClientMigration := `

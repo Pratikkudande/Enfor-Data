@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"enfor-data-backend/internal/dto"
 	"net/http"
 	"strings"
 
-	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +25,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 
 // Signup handles user registration
 func (h *AuthHandler) Signup(c *gin.Context) {
-	var req models.SignupRequest
+	var req dto.SignupRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -65,14 +65,14 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		Message: "User registered successfully",
 		Data: gin.H{
 			"token": response.Token,
-			"user":  response.User.ToPublicUser(),
+			"user":  response.User,
 		},
 	})
 }
 
 // Login handles user authentication
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req models.LoginRequest
+	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -105,7 +105,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Message: "Login successful",
 		Data: gin.H{
 			"token": response.Token,
-			"user":  response.User.ToPublicUser(),
+			"user":  response.User,
 		},
 	})
 }
@@ -133,7 +133,7 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "User profile retrieved successfully",
-		Data:    user.ToPublicUser(),
+		Data:    dto.ToPublicUser(user),
 	})
 }
 
@@ -146,35 +146,17 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // RefreshToken generates a new JWT token
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	// Get token from header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
+	// user_id is already set by RequireAuth middleware
+	userID, exists := c.Get("user_id")
+	if !exists {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Authorization header missing",
+			Error: "Unauthorized",
 		})
 		return
 	}
 
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenString == authHeader {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Invalid token format",
-		})
-		return
-	}
-
-	// Validate current token
-	claims, err := h.authService.ValidateToken(tokenString)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error:   "Invalid token",
-			Message: err.Error(),
-		})
-		return
-	}
-
-	// Get user to ensure they still exist
-	user, err := h.authService.GetUserByID(claims.UserID)
+	// Get user to ensure they still exist and get fresh data
+	user, err := h.authService.GetUserByID(userID.(string))
 	if err != nil {
 		c.JSON(http.StatusNotFound, ErrorResponse{
 			Error: "User not found",
@@ -182,14 +164,20 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Generate new token
-	jwtUtil := h.authService.ValidateToken // Note: This needs to be refactored to access JWTUtil directly
-	_ = jwtUtil                            // TODO: Fix this implementation
+	// Generate a new token
+	newToken, err := h.authService.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: "Failed to generate token",
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Token refreshed successfully",
 		Data: gin.H{
-			"user": user.ToPublicUser(),
+			"token": newToken,
+			"user":  dto.ToPublicUser(user),
 		},
 	})
 }

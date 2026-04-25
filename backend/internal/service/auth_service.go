@@ -1,6 +1,7 @@
 package service
 
 import (
+	"enfor-data-backend/internal/dto"
 	"fmt"
 	"time"
 
@@ -26,7 +27,7 @@ func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *Au
 }
 
 // Signup creates a new user account
-func (s *AuthService) Signup(req *models.SignupRequest) (*models.LoginResponse, error) {
+func (s *AuthService) Signup(req *dto.SignupRequest) (*dto.LoginResponse, error) {
 	// Check if email already exists
 	exists, err := s.userRepo.EmailExists(req.Email)
 	if err != nil {
@@ -84,14 +85,14 @@ func (s *AuthService) Signup(req *models.SignupRequest) (*models.LoginResponse, 
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	return &models.LoginResponse{
+	return &dto.LoginResponse{
 		Token: token,
-		User:  *user,
+		User:  dto.ToPublicUser(user),
 	}, nil
 }
 
 // Login authenticates a user and returns a JWT token
-func (s *AuthService) Login(req *models.LoginRequest) (*models.LoginResponse, error) {
+func (s *AuthService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 	// Get user by email
 	user, err := s.userRepo.GetUserByEmail(req.Email)
 	if err != nil {
@@ -109,9 +110,9 @@ func (s *AuthService) Login(req *models.LoginRequest) (*models.LoginResponse, er
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	return &models.LoginResponse{
+	return &dto.LoginResponse{
 		Token: token,
-		User:  *user,
+		User:  dto.ToPublicUser(user),
 	}, nil
 }
 
@@ -132,4 +133,9 @@ func (s *AuthService) ValidateToken(tokenString string) (*utils.Claims, error) {
 // UpdateProfileImage updates the user's profile image
 func (s *AuthService) UpdateProfileImage(userID, imagePath string) error {
 	return s.userRepo.UpdateUserProfileImage(userID, imagePath)
+}
+
+// GenerateToken generates a new JWT token for a user
+func (s *AuthService) GenerateToken(userID, email, role string) (string, error) {
+	return s.jwtUtil.GenerateToken(userID, email, role)
 }

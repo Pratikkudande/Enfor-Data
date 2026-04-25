@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User } from 'lucide-react';
 import { apiClient, Client as ApiClient, CreateClientRequest } from '../../services/api';
-import LoadingState from '../common/LoadingState';
-import ErrorState from '../common/ErrorState';
+import LoadingState from '../../components/common/LoadingState';
+import ErrorState from '../../components/common/ErrorState';
 import ClientCard from './ClientCard';
 import ClientForm from './ClientForm';
 
@@ -19,6 +19,13 @@ const ClientsView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    window.setTimeout(() => setSuccessMessage(null), 3000);
+  };
 
   const fetchClients = async () => {
     try {
@@ -76,8 +83,8 @@ const ClientsView: React.FC = () => {
     .map(client => ({ ...client, name: `${client.first_name} ${client.last_name}` }))
     .filter(client => {
       const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.preferred_location.toLowerCase().includes(searchTerm.toLowerCase());
+        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.preferred_location.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || client.type === filterType;
       return matchesSearch && matchesType;
     });
@@ -113,6 +120,7 @@ const ClientsView: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     try {
       setSubmitting(true);
       const clientData: CreateClientRequest = {
@@ -126,32 +134,35 @@ const ClientsView: React.FC = () => {
 
       if (formData.budgetMin.trim()) {
         const min = parseFloat(formData.budgetMin);
-        if (isNaN(min) || min <= 0) { alert('❌ Error: Min Budget must be valid > 0'); return; }
+        if (isNaN(min) || min <= 0) { setFormError('Min Budget must be a valid number greater than 0'); return; }
         clientData.budget_min = min;
       }
       if (formData.budgetMax.trim()) {
         const max = parseFloat(formData.budgetMax);
-        if (isNaN(max) || max <= 0) { alert('❌ Error: Max Budget must be valid > 0'); return; }
+        if (isNaN(max) || max <= 0) { setFormError('Max Budget must be a valid number greater than 0'); return; }
         clientData.budget_max = max;
       }
       if (clientData.budget_min && clientData.budget_max && clientData.budget_min > clientData.budget_max) {
-        alert('❌ Error: Min Budget cannot be greater than Max Budget'); return;
+        setFormError('Min Budget cannot be greater than Max Budget');
+        return;
       }
 
       const response = editingClientId
         ? await apiClient.updateClient(editingClientId, clientData)
         : await apiClient.createClient(clientData);
-      
+
       if (response.data) {
         if (editingClientId) {
           setRealClients(prev => prev.map(c => c.id === response.data!.id ? response.data! : c));
         } else {
           setRealClients(prev => [response.data!, ...prev]);
         }
-        alert(editingClientId ? '✅ Client updated successfully!' : '✅ Client added successfully!');
+        showSuccess(editingClientId ? 'Client updated successfully!' : 'Client added successfully!');
         closeModal();
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save client';
+      setFormError(msg);
       console.error('Error saving client:', err);
     } finally {
       setSubmitting(false);
@@ -165,8 +176,10 @@ const ClientsView: React.FC = () => {
       setDeletingClientId(client.id);
       const response = await apiClient.updateClient(client.id, { status: 'inactive' });
       setRealClients(prev => prev.map(item => item.id === client.id ? (response.data || { ...item, status: 'inactive' }) : item));
-      alert('✅ Client marked as inactive successfully!');
+      showSuccess('Client marked as inactive successfully!');
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update client';
+      setError(msg);
       console.error('Error marking client inactive:', err);
     } finally {
       setDeletingClientId(null);
@@ -212,7 +225,7 @@ const ClientsView: React.FC = () => {
       {!loading && !error && (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredClients.map((client) => (
-            <ClientCard 
+            <ClientCard
               key={client.id}
               client={client}
               getTypeColor={getTypeColor}
@@ -223,7 +236,7 @@ const ClientsView: React.FC = () => {
               isDeleting={deletingClientId === client.id}
             />
           ))}
-          
+
           {filteredClients.length === 0 && (
             <div className="col-span-full text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -243,11 +256,21 @@ const ClientsView: React.FC = () => {
           selectedClientType={selectedClientType}
           editingClientId={editingClientId}
           submitting={submitting}
+          formError={formError}
           onInputChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })}
           onTypeChange={setSelectedClientType}
           onSubmit={handleFormSubmit}
           onCancel={closeModal}
         />
+      )}
+
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50">
+          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {successMessage}
+        </div>
       )}
     </div>
   );

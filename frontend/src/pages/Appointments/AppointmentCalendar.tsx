@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Appointment as ApiAppointment } from '../../../services/api';
+import { Appointment as ApiAppointment } from '../../services/api';
 
 interface AppointmentCalendarProps {
   currentDate: Date;
