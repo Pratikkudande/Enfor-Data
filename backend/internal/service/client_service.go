@@ -45,6 +45,7 @@ func (s *ClientService) CreateClient(req *dto.CreateClientRequest, brokerID stri
 		Status:            "active", // Set default status to 'active'
 		BudgetMin:         req.BudgetMin,
 		BudgetMax:         req.BudgetMax,
+		ExpectedAmount:    req.ExpectedAmount,
 		PreferredLocation: req.PreferredLocation,
 		Address:           req.Address,
 		City:              req.City,
@@ -151,6 +152,9 @@ func (s *ClientService) UpdateClient(id string, req *dto.UpdateClientRequest, br
 	}
 	if req.Notes != nil {
 		client.Notes = req.Notes
+	}
+	if req.ExpectedAmount != nil {
+		client.ExpectedAmount = req.ExpectedAmount
 	}
 
 	// Call repository Update method

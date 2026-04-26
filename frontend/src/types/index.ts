@@ -54,10 +54,11 @@ export interface Client {
   last_name: string;
   email: string;
   phone: string;
-  type: 'buyer' | 'seller' | 'tenant' | 'owner';
+  type: 'buyer' | 'seller' | 'tenant' | 'owner' | 'list_property_for_rent';
   status: 'active' | 'converted' | 'inactive';
   budget_min?: number;
   budget_max?: number;
+  expected_amount?: number;
   preferred_location: string;
   address?: string;
   city?: string;
@@ -273,7 +274,7 @@ export interface CreateClientRequest {
   last_name: string;
   email: string;
   phone: string;
-  type: 'buyer' | 'seller' | 'tenant' | 'owner';
+  type: 'buyer' | 'seller' | 'tenant' | 'owner' | 'list_property_for_rent';
   preferred_location: string;
   address: string;
   city: string;
@@ -282,6 +283,7 @@ export interface CreateClientRequest {
   requirements: string;
   budget_min?: number;
   budget_max?: number;
+  expected_amount?: number;
   notes?: string;
 }
 
@@ -290,7 +292,7 @@ export interface UpdateClientRequest {
   last_name?: string;
   email?: string;
   phone?: string;
-  type?: 'buyer' | 'seller' | 'tenant' | 'owner';
+  type?: 'buyer' | 'seller' | 'tenant' | 'owner' | 'list_property_for_rent';
   status?: 'active' | 'converted' | 'inactive';
   preferred_location?: string;
   address?: string;
@@ -300,6 +302,7 @@ export interface UpdateClientRequest {
   requirements?: string;
   budget_min?: number;
   budget_max?: number;
+  expected_amount?: number;
   notes?: string;
 }
 

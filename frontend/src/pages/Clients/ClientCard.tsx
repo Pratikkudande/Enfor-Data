@@ -13,6 +13,7 @@ interface Client {
   created_at: string;
   budget_min?: number;
   budget_max?: number;
+  expected_amount?: number;
   first_name?: string;
   last_name?: string;
 }
@@ -22,6 +23,7 @@ interface ClientCardProps {
   getTypeColor: (type: string) => string;
   getStatusColor: (status: string) => string;
   formatBudget: (min?: number, max?: number) => string;
+  onView: (client: any) => void;
   onEdit: (client: any) => void;
   onDelete: (client: any) => void;
   isDeleting: boolean;
@@ -32,6 +34,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
   getTypeColor,
   getStatusColor,
   formatBudget,
+  onView,
   onEdit,
   onDelete,
   isDeleting
@@ -48,7 +51,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
             <p className="text-xs text-gray-500 font-mono mt-0.5">ID: {client.id}</p>
             <div className="flex items-center space-x-2 mt-1">
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(client.type)}`}>
-                {client.type.toUpperCase()}
+                {client.type.replace(/_/g, ' ').toUpperCase()}
               </span>
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(client.status)}`}>
                 {client.status.toUpperCase()}
@@ -73,10 +76,19 @@ const ClientCard: React.FC<ClientCardProps> = ({
         </div>
       </div>
 
-      {(client.budget_min || client.budget_max) && (
+      {(client.expected_amount || client.budget_min || client.budget_max) && (
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-900">Budget</p>
-          <p className="text-sm text-gray-600">{formatBudget(client.budget_min, client.budget_max)}</p>
+          {client.expected_amount ? (
+            <>
+              <p className="text-sm font-medium text-gray-900">Expected Amount</p>
+              <p className="text-sm text-gray-600">{formatBudget(client.expected_amount, client.expected_amount)}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-gray-900">Budget</p>
+              <p className="text-sm text-gray-600">{formatBudget(client.budget_min, client.budget_max)}</p>
+            </>
+          )}
         </div>
       )}
 
@@ -91,7 +103,10 @@ const ClientCard: React.FC<ClientCardProps> = ({
       </div>
 
       <div className="flex space-x-2">
-        <button className="flex-1 bg-blue-50 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center">
+        <button
+          onClick={() => onView(client)}
+          className="flex-1 bg-blue-50 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"
+        >
           <Eye className="h-4 w-4 mr-2" />
           View
         </button>

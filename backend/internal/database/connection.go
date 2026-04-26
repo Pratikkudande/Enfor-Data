@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS clients (
     phone VARCHAR(20) NOT NULL,
     
     -- Client Classification
-    type VARCHAR(50) NOT NULL CHECK (type IN ('buyer', 'seller', 'tenant', 'owner')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('buyer', 'seller', 'tenant', 'owner', 'list_property_for_rent')),
     status VARCHAR(50) NOT NULL DEFAULT 'active' 
         CHECK (status IN ('active', 'converted', 'inactive')),
     
@@ -415,6 +415,7 @@ CREATE TRIGGER populate_client_broker_info_on_insert
 	clientsAlterMigration := `
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS budget_min DECIMAL(15, 2);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS budget_max DECIMAL(15, 2);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS expected_amount DECIMAL(15, 2);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS preferred_location VARCHAR(255) NOT NULL DEFAULT '';
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) NOT NULL DEFAULT '';
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS broker_name VARCHAR(200);
@@ -423,6 +424,16 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS broker_city VARCHAR(100);
 	_, err = db.Exec(clientsAlterMigration)
 	if err != nil {
 		return fmt.Errorf("failed to run clients alter migration: %w", err)
+	}
+
+	clientsTypeConstraintMigration := `
+ALTER TABLE clients
+    DROP CONSTRAINT IF EXISTS clients_type_check,
+    ADD CONSTRAINT clients_type_check CHECK (type IN ('buyer', 'seller', 'tenant', 'owner', 'list_property_for_rent'));
+`
+	_, err = db.Exec(clientsTypeConstraintMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run clients type constraint migration: %w", err)
 	}
 
 	propertyClientMigration := `

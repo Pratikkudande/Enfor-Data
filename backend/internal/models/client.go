@@ -22,6 +22,9 @@ type Client struct {
 	BudgetMin *float64 `json:"budget_min,omitempty" db:"budget_min"`
 	BudgetMax *float64 `json:"budget_max,omitempty" db:"budget_max"`
 
+	// Expected Amount (for sellers and list_property_for_rent)
+	ExpectedAmount *float64 `json:"expected_amount,omitempty" db:"expected_amount"`
+
 	// Location & Requirements
 	PreferredLocation string `json:"preferred_location" db:"preferred_location"`
 	Address           string `json:"address" db:"address"`
