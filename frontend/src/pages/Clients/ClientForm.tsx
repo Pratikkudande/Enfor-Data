@@ -61,56 +61,68 @@ const ClientForm: React.FC<ClientFormProps> = ({
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3">Client Type</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <button
-                type="button"
-                onClick={() => !isViewOnly && onTypeChange('buyer')}
-                disabled={isViewOnly}
-                className={`p-4 border-2 rounded-lg text-center transition-all ${
-                  selectedClientType === 'buyer'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="font-semibold">Buy Property</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => !isViewOnly && onTypeChange('seller')}
-              disabled={isViewOnly}
-              className={`p-4 border-2 rounded-lg text-center transition-all ${
-                selectedClientType === 'seller'
-                  ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-semibold">Sell Property</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => !isViewOnly && onTypeChange('tenant')}
-              disabled={isViewOnly}
-              className={`p-4 border-2 rounded-lg text-center transition-all ${
-                selectedClientType === 'tenant'
-                  ? 'border-orange-500 bg-orange-50 text-orange-700'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-semibold">Rent Property</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => !isViewOnly && onTypeChange('list_property_for_rent')}
-              disabled={isViewOnly}
-              className={`p-4 border-2 rounded-lg text-center transition-all ${
-                selectedClientType === 'list_property_for_rent'
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-semibold">List Property for Rent</div>
-            </button>
-          </div>
+            {isViewOnly ? (
+              <div className="p-4 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-center font-semibold">
+                {selectedClientType === 'buyer'
+                  ? 'Buy Property'
+                  : selectedClientType === 'seller'
+                    ? 'Sell Property'
+                    : selectedClientType === 'tenant'
+                      ? 'Rent Property'
+                      : 'List Property for Rent'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => !isViewOnly && onTypeChange('buyer')}
+                  disabled={isViewOnly}
+                  className={`p-4 border-2 rounded-lg text-center transition-all ${
+                    selectedClientType === 'buyer'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">Buy Property</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !isViewOnly && onTypeChange('seller')}
+                  disabled={isViewOnly}
+                  className={`p-4 border-2 rounded-lg text-center transition-all ${
+                    selectedClientType === 'seller'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">Sell Property</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !isViewOnly && onTypeChange('tenant')}
+                  disabled={isViewOnly}
+                  className={`p-4 border-2 rounded-lg text-center transition-all ${
+                    selectedClientType === 'tenant'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">Rent Property</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !isViewOnly && onTypeChange('list_property_for_rent')}
+                  disabled={isViewOnly}
+                  className={`p-4 border-2 rounded-lg text-center transition-all ${
+                    selectedClientType === 'list_property_for_rent'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">List Property for Rent</div>
+                </button>
+              </div>
+            )}
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">

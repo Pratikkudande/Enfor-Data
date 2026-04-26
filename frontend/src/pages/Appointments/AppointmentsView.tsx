@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, Plus, Search, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import StatsCard from '../Dashboard/StatsCard';
-import { apiClient, Appointment as ApiAppointment, CreateAppointmentRequest, Client } from '../../services/api';
+import { apiClient, Appointment as ApiAppointment, AppointmentStats, CreateAppointmentRequest, Client } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import AppointmentCard from './AppointmentCard';
 import AppointmentForm from './AppointmentForm';
 import AppointmentCalendar from './AppointmentCalendar';
@@ -14,15 +15,27 @@ const AppointmentsView: React.FC = () => {
   const [filterDate, setFilterDate] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [selectedAppointment, setSelectedAppointment] = useState<ApiAppointment | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Real appointments state
-  const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { appointments: ctxAppointments, appointmentStats: ctxAppointmentStats } = useAuth();
+  const [appointments, setAppointments] = useState<ApiAppointment[]>(ctxAppointments ?? []);
+  const [appointmentStats, setAppointmentStats] = useState<AppointmentStats>(ctxAppointmentStats ?? {
+    total: 0,
+    scheduled: 0,
+    completed: 0,
+    cancelled: 0,
+    today: 0,
+    upcoming: 0,
+  });
+  const [loading, setLoading] = useState(!ctxAppointments);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -34,9 +47,17 @@ const AppointmentsView: React.FC = () => {
   const [loadingClients, setLoadingClients] = useState(false);
 
   useEffect(() => {
-    fetchAppointments();
+    if (!ctxAppointments) fetchAppointments();
     fetchClients();
+    if (!ctxAppointmentStats) fetchAppointmentStats();
   }, []);
+
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -54,6 +75,17 @@ const AppointmentsView: React.FC = () => {
     }
   };
 
+  const fetchAppointmentStats = async () => {
+    try {
+      const response = await apiClient.getAppointmentStats();
+      if (response.data) {
+        setAppointmentStats(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching appointment stats:', err);
+    }
+  };
+
   const fetchClients = async () => {
     try {
       setLoadingClients(true);
@@ -68,13 +100,7 @@ const AppointmentsView: React.FC = () => {
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
-  const appointmentStats = {
-    totalThisMonth: appointments.length,
-    todayAppointments: appointments.filter(apt => apt.date === today).length,
-    scheduledAppointments: appointments.filter(apt => apt.status === 'scheduled').length,
-    completedAppointments: appointments.filter(apt => apt.status === 'completed').length
-  };
+  const today = formatLocalDate(new Date());
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -103,36 +129,46 @@ const AppointmentsView: React.FC = () => {
     }
   };
 
-  const filterAppointments = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const filteredAppointments = useMemo(() => {
+    const localToday = formatLocalDate(new Date());
+    const yesterday = formatLocalDate(new Date(Date.now() - 86400000));
+    const tomorrow = formatLocalDate(new Date(Date.now() + 86400000));
 
-    return appointments.filter(appointment => {
+    return appointments.filter((appointment) => {
       const matchesSearch = appointment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (appointment.client_name && appointment.client_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
 
       let matchesDate = true;
-      if (filterDate === 'today') matchesDate = appointment.date === today;
+      if (filterDate === 'today') matchesDate = appointment.date === localToday;
       else if (filterDate === 'yesterday') matchesDate = appointment.date === yesterday;
       else if (filterDate === 'tomorrow') matchesDate = appointment.date === tomorrow;
 
       return matchesSearch && matchesStatus && matchesDate;
     });
-  };
+  }, [appointments, searchTerm, filterStatus, filterDate]);
 
   const handleFormSubmit = async (appointmentData: CreateAppointmentRequest) => {
     try {
       setSubmitting(true);
       setSubmitError(null);
-      const response = await apiClient.createAppointment(appointmentData);
+      const response = selectedAppointment && modalMode === 'edit'
+        ? await apiClient.updateAppointment(selectedAppointment.id, appointmentData)
+        : await apiClient.createAppointment(appointmentData);
 
       if (response.data) {
-        setAppointments(prev => [response.data!, ...prev]);
-        showSuccess('Appointment added successfully!');
+        setAppointments((prev) => {
+          if (selectedAppointment && modalMode === 'edit') {
+            return prev.map((item) => (item.id === response.data!.id ? response.data! : item));
+          }
+          return [response.data!, ...prev];
+        });
+        fetchAppointmentStats();
+        showSuccess(selectedAppointment && modalMode === 'edit' ? 'Appointment updated successfully!' : 'Appointment added successfully!');
         setShowAddModal(false);
+        setSelectedAppointment(null);
+        setModalMode('create');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create appointment';
@@ -143,19 +179,66 @@ const AppointmentsView: React.FC = () => {
     }
   };
 
+  const openCreateModal = () => {
+    setModalMode('create');
+    setSelectedAppointment(null);
+    setSubmitError(null);
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (appointment: ApiAppointment) => {
+    setModalMode('edit');
+    setSelectedAppointment(appointment);
+    setSubmitError(null);
+    setShowAddModal(true);
+  };
+
+  const openViewModal = (appointment: ApiAppointment) => {
+    setModalMode('view');
+    setSelectedAppointment(appointment);
+    setSubmitError(null);
+    setShowAddModal(true);
+  };
+
+  const handleDeleteAppointment = async (appointment: ApiAppointment) => {
+    const confirmed = window.confirm(`Delete appointment "${appointment.title}"?`);
+    if (!confirmed) return;
+    try {
+      setDeletingAppointmentId(appointment.id);
+      await apiClient.deleteAppointment(appointment.id);
+      setAppointments((prev) => prev.filter((item) => item.id !== appointment.id));
+      fetchAppointmentStats();
+      showSuccess('Appointment deleted successfully!');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete appointment';
+      setError(msg);
+      console.error('Error deleting appointment:', err);
+    } finally {
+      setDeletingAppointmentId(null);
+    }
+  };
+
+  const recentAppointments = useMemo(
+    () =>
+      [...appointments]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5),
+    [appointments]
+  );
+
   const renderDashboard = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard title="Total This Month" value={appointmentStats.totalThisMonth} icon={Calendar} color="blue" subtitle="All appointments" />
-        <StatsCard title="Today's Appointments" value={appointmentStats.todayAppointments} icon={Clock} color="orange" subtitle="Scheduled for today" />
-        <StatsCard title="Scheduled" value={appointmentStats.scheduledAppointments} icon={AlertCircle} color="purple" subtitle="Upcoming appointments" />
-        <StatsCard title="Completed" value={appointmentStats.completedAppointments} icon={CheckCircle} color="green" subtitle="This month" />
+        <StatsCard title="Total This Month" value={appointmentStats.total} icon={Calendar} color="blue" subtitle="All appointments" />
+        <StatsCard title="Today's Appointments" value={appointmentStats.today} icon={Clock} color="orange" subtitle="Scheduled for today" />
+        <StatsCard title="Scheduled" value={appointmentStats.scheduled} icon={AlertCircle} color="purple" subtitle="Upcoming appointments" />
+        <StatsCard title="Completed" value={appointmentStats.completed} icon={CheckCircle} color="green" subtitle="This month" />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Appointments</h3>
         <div className="space-y-4">
-          {appointments.slice(0, 5).map((appointment) => (
+          {recentAppointments.map((appointment) => (
             <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">{getStatusIcon(appointment.status)}</div>
@@ -216,24 +299,28 @@ const AppointmentsView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filterAppointments().map((appointment) => (
+        {filteredAppointments.map((appointment) => (
           <AppointmentCard
             key={appointment.id}
             appointment={appointment}
             getStatusColor={getStatusColor}
             getTypeColor={getTypeColor}
+            onView={openViewModal}
+            onEdit={openEditModal}
+            onDelete={handleDeleteAppointment}
+            isDeleting={deletingAppointmentId === appointment.id}
           />
         ))}
       </div>
 
-      {filterAppointments().length === 0 && !loading && (
+      {filteredAppointments.length === 0 && !loading && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
           <p className="text-gray-600 mb-4">Try adjusting your search or filters</p>
-          <button onClick={() => setShowAddModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">Add Appointment</button>
+          <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">Add Appointment</button>
         </div>
       )}
     </div>
@@ -253,7 +340,7 @@ const AppointmentsView: React.FC = () => {
           <p className="text-gray-600 mt-1">Manage your client appointments and schedule</p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={openCreateModal}
           className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
         >
           <Plus className="h-5 w-5 mr-2" />
@@ -301,8 +388,23 @@ const AppointmentsView: React.FC = () => {
           loadingClients={loadingClients}
           submitting={submitting}
           submitError={submitError}
+          mode={modalMode}
+          initialData={selectedAppointment ? {
+            title: selectedAppointment.title,
+            description: selectedAppointment.description || '',
+            date: selectedAppointment.date,
+            time: selectedAppointment.time,
+            client_id: selectedAppointment.client_id,
+            property_id: selectedAppointment.property_id,
+            type: selectedAppointment.type,
+          } : undefined}
           onSubmit={handleFormSubmit}
-          onCancel={() => { setShowAddModal(false); setSubmitError(null); }}
+          onCancel={() => {
+            setShowAddModal(false);
+            setSubmitError(null);
+            setSelectedAppointment(null);
+            setModalMode('create');
+          }}
         />
       )}
 

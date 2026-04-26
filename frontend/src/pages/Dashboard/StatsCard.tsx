@@ -1,10 +1,9 @@
 import React from 'react';
-import { Video as LucideIcon } from 'lucide-react';
 
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'teal';
   subtitle?: string;
   trend?: {

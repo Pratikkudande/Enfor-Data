@@ -3,24 +3,53 @@ import { CreateAppointmentRequest, Client } from '../../services/api';
 import { apiClient } from '../../services/api';
 import { Property } from '../../types';
 
+type AppointmentMode = 'create' | 'edit' | 'view';
+
 interface AppointmentFormProps {
   clients: Client[];
   loadingClients: boolean;
   submitting: boolean;
   submitError?: string | null;
+  mode?: AppointmentMode;
+  initialData?: {
+    title: string;
+    description?: string;
+    date: string;
+    time: string;
+    client_id: string;
+    property_id?: string;
+    type: 'site_visit' | 'meeting' | 'call';
+  };
   onSubmit: (data: CreateAppointmentRequest) => void;
   onCancel: () => void;
 }
 
-const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClients, submitting, submitError, onSubmit, onCancel }) => {
+const AppointmentForm: React.FC<AppointmentFormProps> = ({
+  clients,
+  loadingClients,
+  submitting,
+  submitError,
+  mode = 'create',
+  initialData,
+  onSubmit,
+  onCancel,
+}) => {
+  const isViewOnly = mode === 'view';
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    date: '',
-    time: '',
-    clientId: '',
-    propertyId: '',
-    type: 'site_visit' as 'site_visit' | 'meeting' | 'call'
+    title: initialData?.title || '',
+    description: initialData?.description || '',
+    date: initialData?.date || '',
+    time: initialData?.time || '',
+    clientId: initialData?.client_id || '',
+    propertyId: initialData?.property_id || '',
+    type: (initialData?.type || 'site_visit') as 'site_visit' | 'meeting' | 'call'
   });
 
   const [properties, setProperties] = useState<Property[]>([]);
@@ -43,6 +72,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    if (isViewOnly) return;
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     if (formError) setFormError(null);
@@ -66,6 +96,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
     }
     if (!formData.time) {
       setFormError('Please select a time');
+      return;
+    }
+
+    const selectedDateTime = new Date(`${formData.date}T${formData.time}`);
+    if (isNaN(selectedDateTime.getTime())) {
+      setFormError('Please provide a valid date and time');
+      return;
+    }
+    if (selectedDateTime < new Date()) {
+      setFormError('Appointment cannot be scheduled in the past');
       return;
     }
 
@@ -95,7 +135,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Add New Appointment</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {mode === 'view' ? 'View Appointment' : mode === 'edit' ? 'Edit Appointment' : 'Add New Appointment'}
+            </h2>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -109,26 +151,37 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Appointment Type <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: 'site_visit', label: 'Site Visit' },
-                  { value: 'meeting', label: 'Meeting' },
-                  { value: 'call', label: 'Call' }
-                ].map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: type.value as any, propertyId: '' })}
-                    className={`p-3 border-2 rounded-lg text-center transition-all ${
-                      formData.type === type.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
+              {isViewOnly ? (
+                <div className="p-3 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-center font-medium">
+                  {formData.type === 'site_visit'
+                    ? 'Site Visit'
+                    : formData.type === 'meeting'
+                      ? 'Meeting'
+                      : 'Call'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { value: 'site_visit', label: 'Site Visit' },
+                    { value: 'meeting', label: 'Meeting' },
+                    { value: 'call', label: 'Call' }
+                  ].map((type) => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => !isViewOnly && setFormData({ ...formData, type: type.value as any, propertyId: '' })}
+                      disabled={isViewOnly}
+                      className={`p-3 border-2 rounded-lg text-center transition-all ${
+                        formData.type === type.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Appointment Title */}
@@ -142,6 +195,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Property viewing for 3BHK apartment"
                 required
@@ -158,6 +212,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
+                disabled={isViewOnly}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Additional details about the appointment..."
@@ -176,6 +231,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                   name="date"
                   value={formData.date}
                   onChange={handleInputChange}
+                  min={formatLocalDate(new Date())}
+                  disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -190,6 +247,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                   name="time"
                   value={formData.time}
                   onChange={handleInputChange}
+                  disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -211,6 +269,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                   name="clientId"
                   value={formData.clientId}
                   onChange={handleInputChange}
+                  disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
@@ -244,6 +303,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                   name="propertyId"
                   value={formData.propertyId}
                   onChange={handleInputChange}
+                  disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">-- No property linked --</option>
@@ -272,22 +332,24 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ clients, loadingClien
                 disabled={submitting}
                 className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
+                {isViewOnly ? 'Close' : 'Cancel'}
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {submitting ? (
-                  <>
-                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Adding...
-                  </>
-                ) : (
-                  'Add Appointment'
-                )}
-              </button>
+              {!isViewOnly && (
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      {mode === 'edit' ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    mode === 'edit' ? 'Update Appointment' : 'Add Appointment'
+                  )}
+                </button>
+              )}
             </div>
           </form>
         </div>

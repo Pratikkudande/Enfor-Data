@@ -10,6 +10,13 @@ interface AppointmentCalendarProps {
 }
 
 const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ currentDate, setCurrentDate, appointments, getStatusColor }) => {
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
@@ -41,7 +48,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ currentDate, 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayAppointments = getAppointmentsForDate(dateString);
-    const isToday = dateString === new Date().toISOString().split('T')[0];
+    const isToday = dateString === formatLocalDate(new Date());
     
     days.push(
       <div key={day} className={`h-24 border border-gray-200 p-1 overflow-hidden ${isToday ? 'bg-blue-50' : 'bg-white'}`}>

@@ -29,26 +29,7 @@ const PageLoader = () => (
   </div>
 );
 
-// Mock dashboard stats for now
-const mockStats = {
-  totalProperties: 24,
-  totalClients: 156,
-  totalAppointments: 3,
-  whatsappMessagesCount: 1250,
-  remainingMessages: 750,
-  clientsByType: {
-    buyers: 45,
-    sellers: 32,
-    tenants: 58,
-    owners: 21
-  },
-  propertiesByStatus: {
-    available: 18,
-    sold: 3,
-    rented: 2,
-    under_negotiation: 1
-  }
-};
+
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -66,7 +47,7 @@ export const AppRoutes: React.FC = () => {
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path={ROUTES.DASHBOARD} element={
           <Suspense fallback={<PageLoader />}>
-            <BrokerDashboard stats={mockStats} />
+            <BrokerDashboard />
           </Suspense>
         } />
         <Route path={ROUTES.PROPERTIES} element={

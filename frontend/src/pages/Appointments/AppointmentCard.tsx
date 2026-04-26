@@ -6,9 +6,21 @@ interface AppointmentCardProps {
   appointment: ApiAppointment;
   getStatusColor: (status: string) => string;
   getTypeColor: (type: string) => string;
+  onView: (appointment: ApiAppointment) => void;
+  onEdit: (appointment: ApiAppointment) => void;
+  onDelete: (appointment: ApiAppointment) => void;
+  isDeleting: boolean;
 }
 
-const AppointmentCard: React.FC<AppointmentCardProps> = ({ appointment, getStatusColor, getTypeColor }) => {
+const AppointmentCard: React.FC<AppointmentCardProps> = ({
+  appointment,
+  getStatusColor,
+  getTypeColor,
+  onView,
+  onEdit,
+  onDelete,
+  isDeleting,
+}) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
@@ -49,15 +61,25 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({ appointment, getStatu
       </div>
       
       <div className="flex space-x-2">
-        <button className="flex-1 bg-blue-50 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center">
+        <button
+          onClick={() => onView(appointment)}
+          className="flex-1 bg-blue-50 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"
+        >
           <Eye className="h-4 w-4 mr-2" />
           View
         </button>
-        <button className="flex-1 bg-gray-50 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center">
+        <button
+          onClick={() => onEdit(appointment)}
+          className="flex-1 bg-gray-50 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
+        >
           <Edit className="h-4 w-4 mr-2" />
           Edit
         </button>
-        <button className="bg-red-50 text-red-700 py-2 px-4 rounded-lg hover:bg-red-100 transition-colors">
+        <button
+          onClick={() => onDelete(appointment)}
+          disabled={isDeleting}
+          className="bg-red-50 text-red-700 py-2 px-4 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>

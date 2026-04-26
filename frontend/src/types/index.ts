@@ -172,6 +172,12 @@ export interface DashboardStats {
   totalAppointments: number;
   whatsappMessagesCount: number;
   remainingMessages: number;
+  // Number of active properties across the system (not scoped to the user)
+  activeProperties?: number;
+  // Number of clients added by the current user/broker
+  userClientsCount?: number;
+  // Number of today's appointments for the current user/broker
+  todaysAppointments?: number;
   clientsByType: {
     buyers: number;
     sellers: number;

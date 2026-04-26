@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Building, 
   Users, 
@@ -7,16 +7,103 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import StatsCard from './StatsCard';
 import { DashboardStats } from '../../types';
+import { apiClient } from '../../services/apiClient';
+import { useAuth } from '../../context/AuthContext';
+import { ROUTES } from '../../routes/routePaths';
 
 interface BrokerDashboardProps {
-  stats: DashboardStats;
+  stats?: DashboardStats;
 }
 
-const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats }) => {
+const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }) => {
+  const navigate = useNavigate();
+  const { dashboardStats: ctxStats } = useAuth();
+  const [stats, setStats] = useState<DashboardStats | undefined>(initialStats);
+  const [loading, setLoading] = useState<boolean>(!initialStats && !ctxStats);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // If parent passed stats or AuthContext has prefetched stats, use them and skip loading
+    if (initialStats || ctxStats) {
+      if (ctxStats && !initialStats) setStats(ctxStats);
+      return;
+    }
+
+    let mounted = true;
+
+    const loadStats = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [propertiesRes, clientsRes, apptStatsRes] = await Promise.all([
+          // all properties (global) to compute active properties
+          // returns { data: Property[] }
+          apiClient.request('/properties/all'),
+          // clients for current user
+          apiClient.request('/clients'),
+          // appointment stats for current user
+          apiClient.request('/appointments/stats')
+        ]);
+
+        const propertiesData = propertiesRes?.data ?? propertiesRes;
+        const clientsData = clientsRes?.data ?? clientsRes;
+        const apptStatsData = apptStatsRes?.data ?? apptStatsRes;
+
+        if (!mounted) return;
+
+        const activeProperties = Array.isArray(propertiesData)
+          ? propertiesData.filter((p: any) => p.status === 'available').length
+          : 0;
+
+        const userClientsCount = Array.isArray(clientsData) ? clientsData.length : 0;
+
+        const todaysAppointments = apptStatsData?.today ?? apptStatsData?.data?.today ?? 0;
+
+        // Construct a DashboardStats-compatible object (fill required fields conservatively)
+        const derived: DashboardStats = {
+          totalProperties: Array.isArray(propertiesData) ? propertiesData.length : 0,
+          activeProperties,
+          totalClients: Array.isArray(clientsData) ? clientsData.length : 0,
+          userClientsCount,
+          totalAppointments: apptStatsData?.total ?? 0,
+          todaysAppointments,
+          whatsappMessagesCount: 0,
+          remainingMessages: 0,
+          clientsByType: {
+            buyers: 0,
+            sellers: 0,
+            tenants: 0,
+            owners: 0,
+          },
+          propertiesByStatus: {
+            available: activeProperties,
+            sold: 0,
+            rented: 0,
+            under_negotiation: 0,
+          },
+        };
+
+        setStats(derived);
+      } catch (err: any) {
+        setError(err?.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      mounted = false;
+    };
+  }, [initialStats]);
+
   const upcomingAppointments = [
     {
       id: '1',
@@ -105,38 +192,58 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats }) => {
     <div className="space-y-4 sm:space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg sm:rounded-xl text-white p-4 sm:p-6">
-        <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, Broker!</h1>
-        <p className="text-sm sm:text-base text-blue-100">Manage your properties, clients, and grow your real estate business</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, Broker!</h1>
+            <p className="text-sm sm:text-base text-blue-100">Manage your properties, clients, and grow your real estate business</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => navigate(`${ROUTES.CLIENTS}?openAdd=1`)}
+              className="inline-flex items-center px-4 py-2 rounded-lg bg-white text-blue-700 hover:bg-blue-50 transition-colors text-sm font-medium"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Client
+            </button>
+            <button
+              onClick={() => navigate(`${ROUTES.PROPERTIES}?openAdd=1`)}
+              className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-400 transition-colors text-sm font-medium border border-blue-300"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Property
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatsCard
-          title="Total Properties"
-          value={stats.totalProperties}
+          title="Active Properties"
+          value={stats?.activeProperties ?? stats?.totalProperties ?? 0}
           icon={Building}
           color="blue"
-          subtitle="Active listings"
+          subtitle="Active listings (all brokers)"
           trend={{ value: 12, isPositive: true }}
         />
         <StatsCard
-          title="Total Clients"
-          value={stats.totalClients}
+          title="Your Clients"
+          value={stats?.userClientsCount ?? stats?.totalClients ?? 0}
           icon={Users}
           color="green"
-          subtitle="All client types"
+          subtitle="Clients added by you"
           trend={{ value: 8, isPositive: true }}
         />
         <StatsCard
           title="Appointments Today"
-          value={stats.totalAppointments}
+          value={stats?.todaysAppointments ?? stats?.totalAppointments ?? 0}
           icon={Calendar}
           color="orange"
           subtitle="Scheduled meetings"
         />
         <StatsCard
           title="WhatsApp Messages"
-          value={`${stats.whatsappMessagesCount}/${stats.remainingMessages}`}
+          value={`${stats?.whatsappMessagesCount ?? 0}/${stats?.remainingMessages ?? 0}`}
           icon={MessageSquare}
           color="teal"
           subtitle="Sent/Remaining"
@@ -153,28 +260,28 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats }) => {
                 <div className="w-3 h-3 bg-blue-500 rounded-full mr-3 flex-shrink-0"></div>
                 <span className="text-sm sm:text-base text-gray-700">Buyers</span>
               </div>
-              <span className="text-sm sm:text-base font-semibold text-gray-900">{stats.clientsByType.buyers}</span>
+              <span className="text-sm sm:text-base font-semibold text-gray-900">{stats?.clientsByType?.buyers ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Sellers</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.clientsByType.sellers}</span>
+              <span className="font-semibold text-gray-900">{stats?.clientsByType?.sellers ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Tenants</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.clientsByType.tenants}</span>
+              <span className="font-semibold text-gray-900">{stats?.clientsByType?.tenants ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Owners</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.clientsByType.owners}</span>
+              <span className="font-semibold text-gray-900">{stats?.clientsByType?.owners ?? 0}</span>
             </div>
           </div>
         </div>
@@ -187,28 +294,28 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats }) => {
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Available</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.propertiesByStatus.available}</span>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.available ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Sold</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.propertiesByStatus.sold}</span>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.sold ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Rented</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.propertiesByStatus.rented}</span>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.rented ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Under Negotiation</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats.propertiesByStatus.under_negotiation}</span>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.under_negotiation ?? 0}</span>
             </div>
           </div>
         </div>
