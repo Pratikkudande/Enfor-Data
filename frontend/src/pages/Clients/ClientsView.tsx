@@ -10,7 +10,8 @@ const ClientsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedClientType, setSelectedClientType] = useState<'buyer' | 'seller' | 'tenant'>('buyer');
+  const [isViewMode, setIsViewMode] = useState(false);
+  const [selectedClientType, setSelectedClientType] = useState<'buyer' | 'seller' | 'tenant' | 'list_property_for_rent'>('buyer');
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editingClientType, setEditingClientType] = useState<ApiClient['type'] | null>(null);
 
@@ -21,6 +22,7 @@ const ClientsView: React.FC = () => {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const isExpectedAmountType = (type: string) => type !== 'buyer' && type !== 'tenant';
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -45,27 +47,35 @@ const ClientsView: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', location: '', contactNo: '', email: '',
     address: '', city: '', state: '', postalCode: '', enquiry: '',
-    budgetMin: '', budgetMax: ''
+    budgetMin: '', budgetMax: '', expectedAmount: ''
   });
 
   const resetFormState = () => {
     setFormData({
       firstName: '', lastName: '', location: '', contactNo: '', email: '',
       address: '', city: '', state: '', postalCode: '', enquiry: '',
-      budgetMin: '', budgetMax: ''
+      budgetMin: '', budgetMax: '', expectedAmount: ''
     });
     setSelectedClientType('buyer');
     setEditingClientId(null);
     setEditingClientType(null);
+    setIsViewMode(false);
   };
 
-  const openAddModal = () => { resetFormState(); setShowAddModal(true); };
+  const openAddModal = () => { resetFormState(); setIsViewMode(false); setShowAddModal(true); };
   const closeModal = () => { setShowAddModal(false); resetFormState(); };
 
   const openEditModal = (client: ApiClient) => {
+    setIsViewMode(false);
     setEditingClientId(client.id);
     setEditingClientType(client.type);
-    setSelectedClientType(client.type === 'seller' || client.type === 'tenant' ? client.type : 'buyer');
+    setSelectedClientType(
+      client.type === 'seller' || client.type === 'tenant' || client.type === 'list_property_for_rent'
+        ? client.type
+        : client.type === 'owner'
+          ? 'seller'
+        : 'buyer'
+    );
 
     setFormData({
       firstName: client.first_name, lastName: client.last_name,
@@ -75,8 +85,16 @@ const ClientsView: React.FC = () => {
       enquiry: client.requirements,
       budgetMin: client.budget_min ? client.budget_min.toString() : '',
       budgetMax: client.budget_max ? client.budget_max.toString() : '',
+      expectedAmount: client.expected_amount
+        ? client.expected_amount.toString()
+        : '',
     });
     setShowAddModal(true);
+  };
+
+  const openViewModal = (client: ApiClient) => {
+    openEditModal(client);
+    setIsViewMode(true);
   };
 
   const filteredClients = realClients
@@ -94,6 +112,7 @@ const ClientsView: React.FC = () => {
       case 'buyer': return 'bg-blue-100 text-blue-800';
       case 'seller': return 'bg-green-100 text-green-800';
       case 'tenant': return 'bg-orange-100 text-orange-800';
+      case 'list_property_for_rent': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -114,7 +133,10 @@ const ClientsView: React.FC = () => {
       if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
       return `₹${amount.toLocaleString()}`;
     };
-    if (min && max) return `${formatAmount(min)} - ${formatAmount(max)}`;
+    if (min && max) {
+      if (min === max) return formatAmount(min);
+      return `${formatAmount(min)} - ${formatAmount(max)}`;
+    }
     return min ? `From ${formatAmount(min)}` : `Up to ${formatAmount(max!)}`;
   };
 
@@ -132,19 +154,32 @@ const ClientsView: React.FC = () => {
         postal_code: formData.postalCode, requirements: formData.enquiry,
       };
 
-      if (formData.budgetMin.trim()) {
-        const min = parseFloat(formData.budgetMin);
-        if (isNaN(min) || min <= 0) { setFormError('Min Budget must be a valid number greater than 0'); return; }
-        clientData.budget_min = min;
-      }
-      if (formData.budgetMax.trim()) {
-        const max = parseFloat(formData.budgetMax);
-        if (isNaN(max) || max <= 0) { setFormError('Max Budget must be a valid number greater than 0'); return; }
-        clientData.budget_max = max;
-      }
-      if (clientData.budget_min && clientData.budget_max && clientData.budget_min > clientData.budget_max) {
-        setFormError('Min Budget cannot be greater than Max Budget');
-        return;
+      if (isExpectedAmountType(selectedClientType)) {
+        if (!formData.expectedAmount.trim()) {
+          setFormError('Expected Amount is required for this client type');
+          return;
+        }
+        const amount = parseFloat(formData.expectedAmount);
+        if (isNaN(amount) || amount <= 0) {
+          setFormError('Expected Amount must be a valid number greater than 0');
+          return;
+        }
+        clientData.expected_amount = amount;
+      } else {
+        if (formData.budgetMin.trim()) {
+          const min = parseFloat(formData.budgetMin);
+          if (isNaN(min) || min <= 0) { setFormError('Min Budget must be a valid number greater than 0'); return; }
+          clientData.budget_min = min;
+        }
+        if (formData.budgetMax.trim()) {
+          const max = parseFloat(formData.budgetMax);
+          if (isNaN(max) || max <= 0) { setFormError('Max Budget must be a valid number greater than 0'); return; }
+          clientData.budget_max = max;
+        }
+        if (clientData.budget_min && clientData.budget_max && clientData.budget_min > clientData.budget_max) {
+          setFormError('Min Budget cannot be greater than Max Budget');
+          return;
+        }
       }
 
       const response = editingClientId
@@ -211,9 +246,10 @@ const ClientsView: React.FC = () => {
           <div className="flex gap-4">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all">All Types</option>
-              <option value="buyer">Buy</option>
-              <option value="seller">Sale</option>
-              <option value="tenant">Rent</option>
+              <option value="buyer">Buy Property</option>
+              <option value="seller">Sell Property</option>
+              <option value="tenant">Rent Property</option>
+              <option value="list_property_for_rent">List Property for Rent</option>
             </select>
           </div>
         </div>
@@ -231,6 +267,7 @@ const ClientsView: React.FC = () => {
               getTypeColor={getTypeColor}
               getStatusColor={getStatusColor}
               formatBudget={formatBudget}
+              onView={openViewModal}
               onEdit={openEditModal}
               onDelete={handleDeleteClient}
               isDeleting={deletingClientId === client.id}
@@ -255,6 +292,7 @@ const ClientsView: React.FC = () => {
           formData={formData}
           selectedClientType={selectedClientType}
           editingClientId={editingClientId}
+          isViewOnly={isViewMode}
           submitting={submitting}
           formError={formError}
           onInputChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })}

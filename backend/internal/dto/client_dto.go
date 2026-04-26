@@ -9,7 +9,7 @@ type CreateClientRequest struct {
 	Phone     string `json:"phone" validate:"required,min=10,max=20"`
 
 	// Client Classification
-	Type string `json:"type" validate:"required,oneof=buyer seller tenant owner"`
+	Type string `json:"type" validate:"required,oneof=buyer seller tenant owner list_property_for_rent"`
 
 	// Location & Requirements
 	PreferredLocation string `json:"preferred_location" validate:"required,min=2,max=255"`
@@ -24,7 +24,11 @@ type CreateClientRequest struct {
 	// Optional Fields
 	BudgetMin *float64 `json:"budget_min,omitempty" validate:"omitempty,gt=0"`
 	BudgetMax *float64 `json:"budget_max,omitempty" validate:"omitempty,gt=0"`
-	Notes     *string  `json:"notes,omitempty"`
+
+	// Expected Amount (for sellers and list_property_for_rent)
+	ExpectedAmount *float64 `json:"expected_amount,omitempty" validate:"omitempty,gt=0"`
+
+	Notes *string  `json:"notes,omitempty"`
 }
 
 // UpdateClientRequest represents the data that can be updated
@@ -36,7 +40,7 @@ type UpdateClientRequest struct {
 	Phone     *string `json:"phone,omitempty" validate:"omitempty,min=10,max=20"`
 
 	// Client Classification
-	Type   *string `json:"type,omitempty" validate:"omitempty,oneof=buyer seller tenant owner"`
+	Type   *string `json:"type,omitempty" validate:"omitempty,oneof=buyer seller tenant owner list_property_for_rent"`
 	Status *string `json:"status,omitempty" validate:"omitempty,oneof=active converted inactive"`
 
 	// Location & Requirements
@@ -52,5 +56,9 @@ type UpdateClientRequest struct {
 	// Optional Fields
 	BudgetMin *float64 `json:"budget_min,omitempty" validate:"omitempty,gt=0"`
 	BudgetMax *float64 `json:"budget_max,omitempty" validate:"omitempty,gt=0"`
-	Notes     *string  `json:"notes,omitempty"`
+
+	// Expected Amount (for sellers and list_property_for_rent)
+	ExpectedAmount *float64 `json:"expected_amount,omitempty" validate:"omitempty,gt=0"`
+
+	Notes *string  `json:"notes,omitempty"`
 }

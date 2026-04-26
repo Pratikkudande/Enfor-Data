@@ -14,16 +14,18 @@ interface ClientFormData {
   enquiry: string;
   budgetMin: string;
   budgetMax: string;
+  expectedAmount: string;
 }
 
 interface ClientFormProps {
   formData: ClientFormData;
-  selectedClientType: 'buyer' | 'seller' | 'tenant';
+  selectedClientType: 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent';
   editingClientId: string | null;
+  isViewOnly?: boolean;
   submitting: boolean;
   formError?: string | null;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
-  onTypeChange: (type: 'buyer' | 'seller' | 'tenant') => void;
+  onTypeChange: (type: 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent') => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
@@ -32,6 +34,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
   formData,
   selectedClientType,
   editingClientId,
+  isViewOnly = false,
   submitting,
   formError,
   onInputChange,
@@ -39,12 +42,16 @@ const ClientForm: React.FC<ClientFormProps> = ({
   onSubmit,
   onCancel
 }) => {
+  const showsBudgetRange = selectedClientType === 'buyer' || selectedClientType === 'tenant';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">{editingClientId ? 'Edit Client' : 'Add New Client'}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {isViewOnly ? 'View Client' : editingClientId ? 'Edit Client' : 'Add New Client'}
+            </h2>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -54,39 +61,54 @@ const ClientForm: React.FC<ClientFormProps> = ({
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3">Client Type</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button
                 type="button"
-                onClick={() => onTypeChange('buyer')}
+                onClick={() => !isViewOnly && onTypeChange('buyer')}
+                disabled={isViewOnly}
                 className={`p-4 border-2 rounded-lg text-center transition-all ${
                   selectedClientType === 'buyer'
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="font-semibold">Buy</div>
+                <div className="font-semibold">Buy Property</div>
             </button>
             <button
               type="button"
-              onClick={() => onTypeChange('seller')}
+              onClick={() => !isViewOnly && onTypeChange('seller')}
+              disabled={isViewOnly}
               className={`p-4 border-2 rounded-lg text-center transition-all ${
                 selectedClientType === 'seller'
                   ? 'border-green-500 bg-green-50 text-green-700'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="font-semibold">Sale</div>
+              <div className="font-semibold">Sell Property</div>
             </button>
             <button
               type="button"
-              onClick={() => onTypeChange('tenant')}
+              onClick={() => !isViewOnly && onTypeChange('tenant')}
+              disabled={isViewOnly}
               className={`p-4 border-2 rounded-lg text-center transition-all ${
                 selectedClientType === 'tenant'
                   ? 'border-orange-500 bg-orange-50 text-orange-700'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="font-semibold">Rent</div>
+              <div className="font-semibold">Rent Property</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => !isViewOnly && onTypeChange('list_property_for_rent')}
+              disabled={isViewOnly}
+              className={`p-4 border-2 rounded-lg text-center transition-all ${
+                selectedClientType === 'list_property_for_rent'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="font-semibold">List Property for Rent</div>
             </button>
           </div>
         </div>
@@ -103,6 +125,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="firstName"
                 value={formData.firstName}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -117,6 +140,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="lastName"
                 value={formData.lastName}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -134,6 +158,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="contactNo"
                 value={formData.contactNo}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="+91 9876543210"
                 required
@@ -149,6 +174,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="email"
                 value={formData.email}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -157,14 +183,15 @@ const ClientForm: React.FC<ClientFormProps> = ({
 
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-              Address <span className="text-red-500">*</span>
+              Client Address <span className="text-red-500">*</span>
             </label>
             <textarea
               id="address"
               name="address"
               value={formData.address}
               onChange={onInputChange}
-              rows={3}
+              disabled={isViewOnly}
+              rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -173,7 +200,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                Location <span className="text-red-500">*</span>
+                {selectedClientType === 'buyer' ? 'Preferred Location' : 'Property Location'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -181,8 +208,9 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="location"
                 value={formData.location}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Area/Locality"
+                placeholder={selectedClientType === 'buyer' ? 'Area/Locality' : 'Property area/location'}
                 required
               />
             </div>
@@ -196,6 +224,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="city"
                 value={formData.city}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -212,6 +241,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="state"
                 value={formData.state}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
@@ -231,6 +261,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
                 name="postalCode"
                 value={formData.postalCode}
                 onChange={onInputChange}
+                disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="400001"
                 required
@@ -247,6 +278,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
               name="enquiry"
               value={formData.enquiry}
               onChange={onInputChange}
+              disabled={isViewOnly}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
@@ -257,35 +289,57 @@ const ClientForm: React.FC<ClientFormProps> = ({
             </select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="budgetMin" className="block text-sm font-medium text-gray-700 mb-1">Min Budget</label>
-              <input
-                type="number"
-                id="budgetMin"
-                name="budgetMin"
-                value={formData.budgetMin}
-                onChange={onInputChange}
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., 1500000"
-              />
-            </div>
-            <div>
-              <label htmlFor="budgetMax" className="block text-sm font-medium text-gray-700 mb-1">Max Budget</label>
-              <input
-                type="number"
-                id="budgetMax"
-                name="budgetMax"
-                value={formData.budgetMax}
-                onChange={onInputChange}
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., 3000000"
-              />
-            </div>
+          <div className={`grid grid-cols-1 ${showsBudgetRange ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-4`}>
+            {!showsBudgetRange ? (
+              <div>
+                <label htmlFor="expectedAmount" className="block text-sm font-medium text-gray-700 mb-1">Expected Amount</label>
+                <input
+                  type="number"
+                  id="expectedAmount"
+                  name="expectedAmount"
+                  value={formData.expectedAmount}
+                  onChange={onInputChange}
+                  disabled={isViewOnly}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 2500000"
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="budgetMin" className="block text-sm font-medium text-gray-700 mb-1">Min Budget</label>
+                  <input
+                    type="number"
+                    id="budgetMin"
+                    name="budgetMin"
+                    value={formData.budgetMin}
+                    onChange={onInputChange}
+                    disabled={isViewOnly}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., 1500000"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="budgetMax" className="block text-sm font-medium text-gray-700 mb-1">Max Budget</label>
+                  <input
+                    type="number"
+                    id="budgetMax"
+                    name="budgetMax"
+                    value={formData.budgetMax}
+                    onChange={onInputChange}
+                    disabled={isViewOnly}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., 3000000"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {formError && (
@@ -301,22 +355,24 @@ const ClientForm: React.FC<ClientFormProps> = ({
               disabled={submitting}
               className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {isViewOnly ? 'Close' : 'Cancel'}
             </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {submitting ? (
-                <>
-                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {editingClientId ? 'Updating...' : 'Adding...'}
-                </>
-              ) : (
-                editingClientId ? 'Update Client' : 'Add Client'
-              )}
-            </button>
+            {!isViewOnly && (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {submitting ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {editingClientId ? 'Updating...' : 'Adding...'}
+                  </>
+                ) : (
+                  editingClientId ? 'Update Client' : 'Add Client'
+                )}
+              </button>
+            )}
           </div>
         </form>
       </div>

@@ -9,6 +9,7 @@ export const indianStates = [
 
 export const enquiryOptions = [
   'Single Room',
+  'PG',
   '1 RK',
   '1 BHK',
   '1.5 BHK',

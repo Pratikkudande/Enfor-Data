@@ -23,10 +23,10 @@ func NewClientRepository(db *database.DB) *ClientRepository {
 func (r *ClientRepository) Create(client *models.Client) error {
 	query := `
 		INSERT INTO clients (
-			first_name, last_name, email, phone, type, status,
-			budget_min, budget_max, preferred_location, address, city, state, postal_code,
-			requirements, notes, broker_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+				first_name, last_name, email, phone, type, status,
+				budget_min, budget_max, expected_amount, preferred_location, address, city, state, postal_code,
+				requirements, notes, broker_id
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING id, broker_name, broker_city, created_at, updated_at
 	`
 
@@ -40,6 +40,7 @@ func (r *ClientRepository) Create(client *models.Client) error {
 		client.Status,
 		client.BudgetMin,
 		client.BudgetMax,
+		client.ExpectedAmount,
 		client.PreferredLocation,
 		client.Address,
 		client.City,
@@ -69,7 +70,7 @@ func (r *ClientRepository) GetByBrokerID(brokerID string) ([]models.Client, erro
 	query := `
 		SELECT 
 			id, first_name, last_name, email, phone, type, status,
-			budget_min, budget_max, preferred_location, address, city, state, postal_code,
+			budget_min, budget_max, expected_amount, preferred_location, address, city, state, postal_code,
 			requirements, notes, broker_id, broker_name, broker_city, created_at, updated_at
 		FROM clients
 		WHERE broker_id = $1
@@ -97,6 +98,7 @@ func (r *ClientRepository) GetByBrokerID(brokerID string) ([]models.Client, erro
 			&client.Status,
 			&client.BudgetMin,
 			&client.BudgetMax,
+			&client.ExpectedAmount,
 			&client.PreferredLocation,
 			&client.Address,
 			&client.City,
@@ -136,7 +138,7 @@ func (r *ClientRepository) GetByID(id string) (*models.Client, error) {
 	query := `
 		SELECT 
 			id, first_name, last_name, email, phone, type, status,
-			budget_min, budget_max, preferred_location, address, city, state, postal_code,
+			budget_min, budget_max, expected_amount, preferred_location, address, city, state, postal_code,
 			requirements, notes, broker_id, broker_name, broker_city, created_at, updated_at
 		FROM clients
 		WHERE id = $1
@@ -154,6 +156,7 @@ func (r *ClientRepository) GetByID(id string) (*models.Client, error) {
 		&client.Status,
 		&client.BudgetMin,
 		&client.BudgetMax,
+		&client.ExpectedAmount,
 		&client.PreferredLocation,
 		&client.Address,
 		&client.City,
@@ -184,9 +187,9 @@ func (r *ClientRepository) Update(client *models.Client) error {
 	query := `
 		UPDATE clients SET
 			first_name = $1, last_name = $2, email = $3, phone = $4, type = $5, status = $6,
-			budget_min = $7, budget_max = $8, preferred_location = $9, address = $10,
-			city = $11, state = $12, postal_code = $13, requirements = $14, notes = $15
-		WHERE id = $16
+			budget_min = $7, budget_max = $8, expected_amount = $9, preferred_location = $10, address = $11,
+			city = $12, state = $13, postal_code = $14, requirements = $15, notes = $16
+		WHERE id = $17
 		RETURNING broker_name, broker_city, created_at, updated_at
 	`
 
@@ -200,6 +203,7 @@ func (r *ClientRepository) Update(client *models.Client) error {
 		client.Status,
 		client.BudgetMin,
 		client.BudgetMax,
+		client.ExpectedAmount,
 		client.PreferredLocation,
 		client.Address,
 		client.City,

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS clients (
     phone VARCHAR(20) NOT NULL,
     
     -- Client Classification
-    type VARCHAR(50) NOT NULL CHECK (type IN ('buyer', 'seller', 'tenant', 'owner')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('buyer', 'seller', 'tenant', 'owner', 'list_property_for_rent')),
     status VARCHAR(50) NOT NULL DEFAULT 'active' 
         CHECK (status IN ('active', 'converted', 'inactive')),
     
