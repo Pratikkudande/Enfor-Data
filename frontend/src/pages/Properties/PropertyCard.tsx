@@ -1,7 +1,10 @@
-import React from 'react';
-import { Eye, CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building, MessageSquare, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Property } from '../../types';
 import { getStatusColor, formatPrice } from './utils';
+import { networkApi } from '../../services/networkApi';
+import { ROUTES } from '../../routes/routePaths';
 
 interface PropertyCardProps {
   property: Property;
@@ -14,6 +17,86 @@ interface PropertyCardProps {
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, isBusy, onView, onEdit, onDelete }) => {
   const isOwner = property.broker_id === currentUserId;
+  const navigate = useNavigate();
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | null>(null);
+  const [loadingConnection, setLoadingConnection] = useState(false);
+
+  // Check connection status with the property broker
+  useEffect(() => {
+    if (!isOwner && property.broker_id) {
+      checkConnectionStatus();
+    }
+  }, [property.broker_id, isOwner]);
+
+  const checkConnectionStatus = async () => {
+    try {
+      const response = await networkApi.getBrokers();
+      const broker = response.data?.find(b => b.id === property.broker_id);
+      setConnectionStatus(broker?.connection_status || 'none');
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
+    }
+  };
+
+  const handleConnect = async () => {
+    if (!property.broker_id) return;
+    setLoadingConnection(true);
+    try {
+      await networkApi.sendRequest(property.broker_id);
+      setConnectionStatus('pending');
+    } catch (error: any) {
+      alert(error.message || 'Failed to send connection request');
+    } finally {
+      setLoadingConnection(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!property.broker_id) return;
+    try {
+      // Get conversations to find the one with this broker
+      const convResponse = await networkApi.getConversations();
+      const conversation = convResponse.data?.find(
+        c => c.peer_id === property.broker_id
+      );
+      
+      if (conversation) {
+        // Navigate to network page with chat tab and property context
+        navigate(ROUTES.NETWORK, {
+          state: {
+            tab: 'chat',
+            conversationId: conversation.id,
+            propertyContext: {
+              id: property.id,
+              title: property.title,
+              location: `${property.location}, ${property.city}`,
+              address: property.address,
+              price: property.price,
+              listing_type: property.listing_type,
+              type: property.type,
+              area: property.area,
+              bedrooms: property.bedrooms,
+              bathrooms: property.bathrooms,
+              status: property.status,
+              images: property.images,
+              description: property.description,
+              amenities: property.amenities,
+              city: property.city,
+              state: property.state,
+              broker_id: property.broker_id,
+              broker_name: property.broker_name,
+              broker_city: property.broker_city,
+              broker_whatsapp: property.broker_whatsapp,
+              broker_email: property.broker_email
+            }
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to open chat:', error);
+      alert('Failed to open chat. Please try again.');
+    }
+  };
 
   return (
     <div className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${
@@ -99,7 +182,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
           )
         ) : (
           /* Other broker's property: show broker contact */
-          <div className="bg-amber-50 rounded-lg p-3 mb-3 space-y-1">
+          <div className="bg-amber-50 rounded-lg p-3 mb-3 space-y-2">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Listed By</p>
             <div className="flex items-center gap-2 text-sm text-amber-800">
               <User className="h-3.5 w-3.5 flex-shrink-0" />
@@ -132,7 +215,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
             {isBusy ? 'Opening...' : 'View'}
           </button>
 
-          {isOwner && (
+          {isOwner ? (
             <>
               <button
                 onClick={() => onEdit(property.id)}
@@ -149,6 +232,31 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
                 <Trash2 className="h-4 w-4" />
               </button>
             </>
+          ) : (
+            /* Connection/Message Button for other broker's property */
+            connectionStatus === 'connected' ? (
+              <button
+                onClick={handleMessage}
+                disabled={loadingConnection}
+                className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm disabled:opacity-60"
+              >
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                Message
+              </button>
+            ) : connectionStatus === 'pending' ? (
+              <div className="flex-1 bg-yellow-50 text-yellow-700 py-2 px-3 rounded-lg text-center text-xs font-medium border border-yellow-200">
+                Pending
+              </div>
+            ) : (
+              <button
+                onClick={handleConnect}
+                disabled={loadingConnection}
+                className="flex-1 bg-amber-600 text-white py-2 px-3 rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center text-sm disabled:opacity-60"
+              >
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                {loadingConnection ? 'Connecting...' : 'Connect'}
+              </button>
+            )
           )}
         </div>
       </div>

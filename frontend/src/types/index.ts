@@ -12,6 +12,9 @@ export interface User {
   firm_name?: string;
   profile_image?: string;
   is_verified: boolean;
+  years_experience?: number;
+  deals_completed?: number;
+  specializations?: string[];
   created_at: string;
   updated_at: string;
 }

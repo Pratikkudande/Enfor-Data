@@ -778,6 +778,23 @@ CREATE INDEX IF NOT EXISTS idx_messages_conv_unread  ON messages(conversation_id
 	if _, err := db.Exec(sql); err != nil {
 		return fmt.Errorf("failed to run network migrations: %w", err)
 	}
+	
+	// Add broker stats fields to users table
+	brokerStatsMigration := `
+-- Add experience and deals fields to users table for broker statistics
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS years_experience INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS deals_completed INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS specializations TEXT[] DEFAULT '{}';
+
+-- Add indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_users_years_experience ON users(years_experience);
+CREATE INDEX IF NOT EXISTS idx_users_deals_completed ON users(deals_completed);
+`
+	if _, err := db.Exec(brokerStatsMigration); err != nil {
+		return fmt.Errorf("failed to run broker stats migration: %w", err)
+	}
+	
 	log.Println("Network migrations completed successfully")
 	return nil
 }

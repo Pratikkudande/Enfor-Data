@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"enfor-data-backend/internal/database"
 	"enfor-data-backend/internal/models"
@@ -205,6 +206,10 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 	rows, err := r.db.Query(`
 		SELECT u.id, u.first_name||' '||u.last_name AS name, u.city, u.state,
 		       u.firm_name, u.profile_image,
+		       COALESCE(u.years_experience, 0) AS years_experience,
+		       COALESCE(u.deals_completed, 0) AS deals_completed,
+		       COALESCE(array_to_string(u.specializations, ','), '') AS specializations,
+		       COALESCE((SELECT COUNT(*) FROM properties WHERE broker_id=u.id AND status='available'), 0) AS properties_count,
 		       COALESCE(cr.status, 
 		           CASE WHEN conn.id IS NOT NULL THEN 'connected' ELSE 'none' END
 		       ) AS connection_status,
@@ -231,14 +236,35 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 		var (
 			id, name, city, state, firm string
 			image                       *string
+			yearsExp, dealsCompleted, propertiesCount int
+			specializationsStr          string
 			status, requestID, senderID *string
 		)
-		if err := rows.Scan(&id, &name, &city, &state, &firm, &image, &status, &requestID, &senderID); err != nil {
+		if err := rows.Scan(&id, &name, &city, &state, &firm, &image, 
+			&yearsExp, &dealsCompleted, &specializationsStr, &propertiesCount,
+			&status, &requestID, &senderID); err != nil {
 			return nil, err
 		}
+		
+		// Parse specializations from comma-separated string
+		var specializations []string
+		if specializationsStr != "" {
+			for _, s := range strings.Split(specializationsStr, ",") {
+				trimmed := strings.TrimSpace(s)
+				if trimmed != "" {
+					specializations = append(specializations, trimmed)
+				}
+			}
+		}
+		if specializations == nil {
+			specializations = []string{}
+		}
+		
 		m := map[string]interface{}{
 			"id": id, "name": name, "city": city, "state": state,
 			"firm_name": firm, "profile_image": image,
+			"years_experience": yearsExp, "deals_completed": dealsCompleted,
+			"specializations": specializations, "properties_count": propertiesCount,
 			"connection_status": status, "request_id": requestID, "sender_id": senderID,
 		}
 		list = append(list, m)

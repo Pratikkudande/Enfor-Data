@@ -8,6 +8,10 @@ export interface BrokerProfile {
   connection_status: 'none' | 'pending' | 'connected' | null;
   request_id?: string | null;
   sender_id?: string | null;
+  years_experience?: number;
+  deals_completed?: number;
+  specializations?: string[];
+  properties_count?: number;
 }
 
 export interface ConnectionRequest {

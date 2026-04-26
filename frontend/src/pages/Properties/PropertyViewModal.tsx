@@ -1,7 +1,10 @@
-import React from 'react';
-import { CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building, MessageSquare, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Property } from '../../types';
 import { getStatusColor, formatPrice } from './utils';
+import { networkApi } from '../../services/networkApi';
+import { ROUTES } from '../../routes/routePaths';
 
 interface PropertyViewModalProps {
   property: Property;
@@ -13,6 +16,87 @@ interface PropertyViewModalProps {
 
 const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, currentUserId, onClose, onEdit, onDelete }) => {
   const isOwner = property.broker_id === currentUserId;
+  const navigate = useNavigate();
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | null>(null);
+  const [loadingConnection, setLoadingConnection] = useState(false);
+
+  // Check connection status with the property broker
+  useEffect(() => {
+    if (!isOwner && property.broker_id) {
+      checkConnectionStatus();
+    }
+  }, [property.broker_id, isOwner]);
+
+  const checkConnectionStatus = async () => {
+    try {
+      const response = await networkApi.getBrokers();
+      const broker = response.data?.find(b => b.id === property.broker_id);
+      setConnectionStatus(broker?.connection_status || 'none');
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
+    }
+  };
+
+  const handleConnect = async () => {
+    if (!property.broker_id) return;
+    setLoadingConnection(true);
+    try {
+      await networkApi.sendRequest(property.broker_id);
+      setConnectionStatus('pending');
+    } catch (error: any) {
+      alert(error.message || 'Failed to send connection request');
+    } finally {
+      setLoadingConnection(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!property.broker_id) return;
+    try {
+      // Get conversations to find the one with this broker
+      const convResponse = await networkApi.getConversations();
+      const conversation = convResponse.data?.find(
+        c => c.peer_id === property.broker_id
+      );
+      
+      if (conversation) {
+        // Close modal and navigate to network page with chat tab and property context
+        onClose();
+        navigate(ROUTES.NETWORK, {
+          state: {
+            tab: 'chat',
+            conversationId: conversation.id,
+            propertyContext: {
+              id: property.id,
+              title: property.title,
+              location: `${property.location}, ${property.city}`,
+              address: property.address,
+              price: property.price,
+              listing_type: property.listing_type,
+              type: property.type,
+              area: property.area,
+              bedrooms: property.bedrooms,
+              bathrooms: property.bathrooms,
+              status: property.status,
+              images: property.images,
+              description: property.description,
+              amenities: property.amenities,
+              city: property.city,
+              state: property.state,
+              broker_id: property.broker_id,
+              broker_name: property.broker_name,
+              broker_city: property.broker_city,
+              broker_whatsapp: property.broker_whatsapp,
+              broker_email: property.broker_email
+            }
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to open chat:', error);
+      alert('Failed to open chat. Please try again.');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -140,7 +224,7 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, current
             /* Other broker's property: show broker contact */
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-3">Listed By</h3>
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-2">
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-2 text-amber-800">
                   <User className="h-4 w-4" />
                   <span className="font-semibold">{property.broker_name || 'Broker'}</span>
@@ -180,7 +264,7 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, current
             )}
           </div>
 
-          {/* Action buttons — only owner gets edit/delete */}
+          {/* Action buttons */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             {isOwner ? (
               <>
@@ -198,9 +282,38 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, current
                 </button>
               </>
             ) : (
-              <div className="flex-1 bg-gray-50 text-gray-500 py-3 px-4 rounded-lg text-center text-sm">
-                Read-only — contact the listing broker to enquire
-              </div>
+              /* Connection/Message Button for other broker's property */
+              <>
+                {connectionStatus === 'connected' ? (
+                  <button
+                    onClick={handleMessage}
+                    disabled={loadingConnection}
+                    className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Message Broker
+                  </button>
+                ) : connectionStatus === 'pending' ? (
+                  <div className="flex-1 bg-yellow-50 text-yellow-700 py-3 px-4 rounded-lg text-center text-sm font-medium border border-yellow-200">
+                    Connection Request Pending
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnect}
+                    disabled={loadingConnection}
+                    className="flex-1 bg-amber-600 text-white py-3 px-4 rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    {loadingConnection ? 'Connecting...' : 'Connect with Broker'}
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+              </>
             )}
           </div>
         </div>
