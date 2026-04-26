@@ -19,7 +19,7 @@ type AuthService struct {
 }
 
 func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *AuthService {
-	jwtUtil := utils.NewJWTUtil(cfg.JWT.Secret, cfg.JWT.ExpiresIn)
+	jwtUtil := utils.NewJWTUtil(cfg.JWT.Secret, cfg.JWT.ExpiresIn, cfg.JWT.RefreshExpiresIn)
 	return &AuthService{
 		userRepo: userRepo,
 		jwtUtil:  jwtUtil,
@@ -79,15 +79,21 @@ func (s *AuthService) Signup(req *dto.SignupRequest) (*dto.LoginResponse, error)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Generate JWT token
-	token, err := s.jwtUtil.GenerateToken(user.ID, user.Email, user.Role)
+	// Generate access and refresh tokens
+	accessToken, err := s.jwtUtil.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
+	refreshToken, err := s.jwtUtil.GenerateRefreshToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
 	return &dto.LoginResponse{
-		Token: token,
-		User:  dto.ToPublicUser(user),
+		Token:        accessToken,
+		RefreshToken: refreshToken,
+		User:         dto.ToPublicUser(user),
 	}, nil
 }
 
@@ -104,15 +110,21 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 		return nil, fmt.Errorf("invalid email or password")
 	}
 
-	// Generate JWT token
-	token, err := s.jwtUtil.GenerateToken(user.ID, user.Email, user.Role)
+	// Generate access and refresh tokens
+	accessToken, err := s.jwtUtil.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
+	refreshToken, err := s.jwtUtil.GenerateRefreshToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
 	return &dto.LoginResponse{
-		Token: token,
-		User:  dto.ToPublicUser(user),
+		Token:        accessToken,
+		RefreshToken: refreshToken,
+		User:         dto.ToPublicUser(user),
 	}, nil
 }
 
@@ -125,9 +137,38 @@ func (s *AuthService) GetUserByID(userID string) (*models.User, error) {
 	return user, nil
 }
 
-// ValidateToken validates a JWT token and returns user information
+// ValidateToken validates an access JWT token and returns user information
 func (s *AuthService) ValidateToken(tokenString string) (*utils.Claims, error) {
-	return s.jwtUtil.ValidateToken(tokenString)
+	return s.jwtUtil.ValidateAccessToken(tokenString)
+}
+
+// RefreshTokens validates the refresh token and returns a new access and refresh token pair
+func (s *AuthService) RefreshTokens(refreshToken string) (*dto.LoginResponse, error) {
+	claims, err := s.jwtUtil.ValidateRefreshToken(refreshToken)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	user, err := s.userRepo.GetUserByID(claims.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	accessToken, err := s.jwtUtil.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	newRefreshToken, err := s.jwtUtil.GenerateRefreshToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	return &dto.LoginResponse{
+		Token:        accessToken,
+		RefreshToken: newRefreshToken,
+		User:         dto.ToPublicUser(user),
+	}, nil
 }
 
 // UpdateProfileImage updates the user's profile image

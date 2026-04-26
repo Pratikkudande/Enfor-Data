@@ -39,8 +39,14 @@ type LoginRequest struct {
 
 // LoginResponse represents the response after successful login
 type LoginResponse struct {
-	Token string      `json:"token"`
-	User  PublicUser `json:"user"`
+	Token        string      `json:"token"`
+	RefreshToken string      `json:"refresh_token"`
+	User         PublicUser `json:"user"`
+}
+
+// RefreshRequest represents the data required to refresh an access token
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
 // PublicUser represents user data that can be safely returned to the client
