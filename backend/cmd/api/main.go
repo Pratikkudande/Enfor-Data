@@ -10,6 +10,7 @@ import (
 	"enfor-data-backend/internal/middleware"
 	"enfor-data-backend/internal/repository"
 	"enfor-data-backend/internal/service"
+	ws "enfor-data-backend/internal/websocket"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,18 +33,26 @@ func main() {
 	if err := db.RunMigrations(); err != nil {
 		log.Fatal("Failed to run migrations:", err)
 	}
+	if err := db.RunNetworkMigrations(); err != nil {
+		log.Fatal("Failed to run network migrations:", err)
+	}
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	propertyRepo := repository.NewPropertyRepository(db)
 	clientRepo := repository.NewClientRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
+	networkRepo := repository.NewNetworkRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg)
 	propertyService := service.NewPropertyService(propertyRepo, clientRepo, userRepo)
 	clientService := service.NewClientService(clientRepo, userRepo)
 	appointmentService := service.NewAppointmentService(appointmentRepo, clientRepo, propertyRepo)
+	networkService := service.NewNetworkService(networkRepo, userRepo)
+
+	// Initialize WebSocket hub
+	hub := ws.NewHub()
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -51,6 +60,7 @@ func main() {
 	propertyHandler := handler.NewPropertyHandler(propertyService)
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
+	networkHandler := handler.NewNetworkHandler(networkService, hub)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -115,6 +125,28 @@ func main() {
 			protected.GET("/appointments/:id", appointmentHandler.GetAppointment)
 			protected.PUT("/appointments/:id", appointmentHandler.UpdateAppointment)
 			protected.DELETE("/appointments/:id", appointmentHandler.DeleteAppointment)
+
+			// ── Broker Network ────────────────────────────────────────────────
+			network := protected.Group("/network")
+			{
+				// Discovery
+				network.GET("/brokers", networkHandler.GetAllBrokers)
+
+				// Connections
+				network.POST("/connect/send", networkHandler.SendRequest)
+				network.POST("/connect/respond", networkHandler.RespondRequest)
+				network.GET("/connections", networkHandler.GetConnections)
+				network.GET("/requests", networkHandler.GetPendingRequests)
+				network.GET("/requests/sent", networkHandler.GetSentRequests)
+
+				// Messaging (REST fallback)
+				network.GET("/conversations", networkHandler.GetConversations)
+				network.GET("/conversations/:id/messages", networkHandler.GetMessages)
+				network.POST("/conversations/:id/messages", networkHandler.SendMessage)
+
+				// WebSocket
+				network.GET("/ws", networkHandler.WebSocketHandler)
+			}
 
 			// Role-specific routes
 			broker := protected.Group("/broker")
