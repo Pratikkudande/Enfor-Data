@@ -218,6 +218,7 @@ export interface LoginRequest {
 
 export interface AuthResponse {
   token: string;
+  refresh_token: string;
   user: {
     id: string;
     first_name: string;

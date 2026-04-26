@@ -34,6 +34,15 @@ class ApiService {
     });
   }
 
+  async refresh(): Promise<ApiResponse<AuthResponse>> {
+    const refreshToken = localStorage.getItem('enfor_refresh_token');
+    return apiClient.request<ApiResponse<AuthResponse>>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      skipAuth: true,
+    });
+  }
+
   async getMe(): Promise<ApiResponse<AuthResponse['user']>> {
     return apiClient.request<ApiResponse<AuthResponse['user']>>('/auth/me');
   }

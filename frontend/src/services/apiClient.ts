@@ -3,6 +3,11 @@ import { API_CONFIG } from '../config/api';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
+type RequestOptions = RequestInit & {
+  skipAuth?: boolean;
+  _retry?: boolean;
+};
+
 export class ApiClient {
   private baseURL: string;
 
@@ -10,9 +15,36 @@ export class ApiClient {
     this.baseURL = baseURL;
   }
 
+  private async refreshAccessToken(): Promise<void> {
+    const refreshToken = localStorage.getItem('enfor_refresh_token');
+    if (!refreshToken) {
+      throw new Error('Session expired. Please login again.');
+    }
+
+    const response = await fetch(`${this.baseURL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) {
+      throw new Error('Session refresh failed');
+    }
+
+    if (data.data?.token) {
+      localStorage.setItem('enfor_token', data.data.token);
+    }
+    if (data.data?.refresh_token) {
+      localStorage.setItem('enfor_refresh_token', data.data.refresh_token);
+    }
+  }
+
   public async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestOptions = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
@@ -24,21 +56,37 @@ export class ApiClient {
       ...options,
     };
 
-    const token = localStorage.getItem('enfor_token');
-    if (token) {
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${token}`,
-      };
+    if (!options.skipAuth) {
+      const token = localStorage.getItem('enfor_token');
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${token}`,
+        };
+      }
     }
 
     try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+      let response = await fetch(url, config);
+      let data: any;
+
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
 
       if (!response.ok) {
-        let errorMessage = data.error || 'Request failed';
-        if (data.message) {
+        if (response.status === 401 && !options._retry) {
+          await this.refreshAccessToken();
+          return this.request<T>(endpoint, {
+            ...options,
+            _retry: true,
+          });
+        }
+
+        let errorMessage = data?.error || 'Request failed';
+        if (data?.message) {
           errorMessage = `${errorMessage}: ${data.message}`;
         }
         throw new Error(errorMessage);
@@ -55,7 +103,7 @@ export class ApiClient {
   }
 
   // File upload requires special handling for FormData (no Content-Type header)
-  public async upload(endpoint: string, file: File, fieldName: string): Promise<any> {
+  public async upload(endpoint: string, file: File, fieldName: string, retry = false): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
     const formData = new FormData();
     formData.append(fieldName, file);
@@ -63,7 +111,7 @@ export class ApiClient {
     const config: RequestInit = {
       method: 'POST',
       body: formData,
-      headers: {}, 
+      headers: {},
     };
 
     const token = localStorage.getItem('enfor_token');
@@ -77,7 +125,13 @@ export class ApiClient {
     try {
       const response = await fetch(url, config);
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Upload failed');
+      if (!response.ok) {
+        if (response.status === 401 && !retry) {
+          await this.refreshAccessToken();
+          return this.upload(endpoint, file, fieldName, true);
+        }
+        throw new Error(data.error || 'Upload failed');
+      }
       return data;
     } catch (error) {
       console.error('Upload failed:', error);

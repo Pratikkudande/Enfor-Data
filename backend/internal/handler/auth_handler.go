@@ -64,8 +64,9 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 	c.JSON(http.StatusCreated, SuccessResponse{
 		Message: "User registered successfully",
 		Data: gin.H{
-			"token": response.Token,
-			"user":  response.User,
+			"token":         response.Token,
+			"refresh_token": response.RefreshToken,
+			"user":          response.User,
 		},
 	})
 }
@@ -104,8 +105,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Login successful",
 		Data: gin.H{
-			"token": response.Token,
-			"user":  response.User,
+			"token":         response.Token,
+			"refresh_token": response.RefreshToken,
+			"user":          response.User,
 		},
 	})
 }
@@ -144,31 +146,30 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	})
 }
 
-// RefreshToken generates a new JWT token
+// RefreshToken exchanges a valid refresh token for a new access token and refresh token
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	// user_id is already set by RequireAuth middleware
-	userID, exists := c.Get("user_id")
-	if !exists {
+	var req dto.RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Validation failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	response, err := h.authService.RefreshTokens(req.RefreshToken)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
-		})
-		return
-	}
-
-	// Get user to ensure they still exist and get fresh data
-	user, err := h.authService.GetUserByID(userID.(string))
-	if err != nil {
-		c.JSON(http.StatusNotFound, ErrorResponse{
-			Error: "User not found",
-		})
-		return
-	}
-
-	// Generate a new token
-	newToken, err := h.authService.GenerateToken(user.ID, user.Email, user.Role)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to generate token",
+			Error:   "Refresh token invalid",
+			Message: err.Error(),
 		})
 		return
 	}
@@ -176,8 +177,9 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Token refreshed successfully",
 		Data: gin.H{
-			"token": newToken,
-			"user":  dto.ToPublicUser(user),
+			"token":         response.Token,
+			"refresh_token": response.RefreshToken,
+			"user":          response.User,
 		},
 	})
 }

@@ -38,20 +38,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: response.data.id,
               email: response.data.email,
               name: `${response.data.first_name} ${response.data.last_name}`,
-              phone: '', // Will be populated from backend
+              phone: '',
               role: response.data.role as 'broker' | 'channel_partner' | 'admin',
               city: response.data.city,
               state: response.data.state,
               company_name: response.data.firm_name,
               is_verified: response.data.is_verified,
               created_at: response.data.created_at,
-              updated_at: response.data.created_at
+              updated_at: response.data.created_at,
             };
             setUser(userData);
+            localStorage.setItem('enfor_user', JSON.stringify(userData));
+            setLoading(false);
+            return;
           }
         } catch (error) {
-          // Token is invalid, clear it
+          try {
+            const refreshResponse = await apiClient.refresh();
+            if (refreshResponse.data) {
+              localStorage.setItem('enfor_token', refreshResponse.data.token);
+              localStorage.setItem('enfor_refresh_token', refreshResponse.data.refresh_token);
+
+              const meResponse = await apiClient.getMe();
+              if (meResponse.data) {
+                const userData: User = {
+                  id: meResponse.data.id,
+                  email: meResponse.data.email,
+                  name: `${meResponse.data.first_name} ${meResponse.data.last_name}`,
+                  phone: '',
+                  role: meResponse.data.role as 'broker' | 'channel_partner' | 'admin',
+                  city: meResponse.data.city,
+                  state: meResponse.data.state,
+                  company_name: meResponse.data.firm_name,
+                  is_verified: meResponse.data.is_verified,
+                  created_at: meResponse.data.created_at,
+                  updated_at: meResponse.data.created_at,
+                };
+                setUser(userData);
+                localStorage.setItem('enfor_user', JSON.stringify(userData));
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (refreshError) {
+            console.warn('Session refresh failed:', refreshError);
+          }
           localStorage.removeItem('enfor_token');
+          localStorage.removeItem('enfor_refresh_token');
           localStorage.removeItem('enfor_user');
         }
       }
@@ -66,15 +99,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiClient.login({ email, password });
       
       if (response.data) {
-        // Store token
+        // Store tokens
         localStorage.setItem('enfor_token', response.data.token);
+        localStorage.setItem('enfor_refresh_token', response.data.refresh_token);
         
         // Create user object
         const userData: User = {
           id: response.data.user.id,
           email: response.data.user.email,
           name: `${response.data.user.first_name} ${response.data.user.last_name}`,
-          phone: '', // Will be populated from backend
+          phone: '',
           role: response.data.user.role as 'broker' | 'channel_partner' | 'admin',
           city: response.data.user.city,
           state: response.data.user.state,
@@ -100,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       localStorage.removeItem('enfor_token');
+      localStorage.removeItem('enfor_refresh_token');
       localStorage.removeItem('enfor_user');
     }
   };
@@ -109,15 +144,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiClient.signup(userData);
       
       if (response.data) {
-        // Store token
+        // Store tokens
         localStorage.setItem('enfor_token', response.data.token);
+        localStorage.setItem('enfor_refresh_token', response.data.refresh_token);
         
         // Create user object
         const newUser: User = {
           id: response.data.user.id,
           email: response.data.user.email,
           name: `${response.data.user.first_name} ${response.data.user.last_name}`,
-          phone: '', // Will be populated from backend
+          phone: '',
           role: response.data.user.role as 'broker' | 'channel_partner' | 'admin',
           city: response.data.user.city,
           state: response.data.user.state,

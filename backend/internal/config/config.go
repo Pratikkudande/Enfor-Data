@@ -27,8 +27,9 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	Secret    string
-	ExpiresIn time.Duration
+	Secret           string
+	ExpiresIn       time.Duration
+	RefreshExpiresIn time.Duration
 }
 
 type ServerConfig struct {
@@ -55,6 +56,14 @@ func Load() *Config {
 		jwtExpires = 24 * time.Hour
 	}
 
+	// Parse refresh token expiry duration
+	refreshExpiresStr := getEnv("JWT_REFRESH_EXPIRES_IN", "168h") // 7 days default
+	refreshExpires, err := time.ParseDuration(refreshExpiresStr)
+	if err != nil {
+		log.Printf("Invalid JWT_REFRESH_EXPIRES_IN format, using default 7 days: %v", err)
+		refreshExpires = 168 * time.Hour
+	}
+
 	// Parse max file size
 	maxFileSizeStr := getEnv("MAX_FILE_SIZE", "5242880") // 5MB default
 	maxFileSize, err := strconv.ParseInt(maxFileSizeStr, 10, 64)
@@ -74,8 +83,9 @@ func Load() *Config {
 			SSLMode:  getEnv("DB_SSL_MODE", "disable"),
 		},
 		JWT: JWTConfig{
-			Secret:    getEnv("JWT_SECRET", "your-super-secret-jwt-key"),
-			ExpiresIn: jwtExpires,
+			Secret:           getEnv("JWT_SECRET", "your-super-secret-jwt-key"),
+			ExpiresIn:        jwtExpires,
+			RefreshExpiresIn: refreshExpires,
 		},
 		Server: ServerConfig{
 			Port:    getEnv("PORT", "8080"),
