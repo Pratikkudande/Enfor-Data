@@ -108,7 +108,7 @@ psql -U backend -d enfor_data -h localhost < migrations/004_create_appointments_
 ```bash
 # Terminal 1 - Backend
 cd backend
-go run cmd/server/main.go
+go run cmd/api/main.go
 
 # Terminal 2 - Frontend
 npm run dev

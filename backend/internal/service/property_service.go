@@ -81,6 +81,20 @@ func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerI
 	return property, nil
 }
 
+// GetAllProperties returns all properties from all brokers (read-only network view)
+func (s *PropertyService) GetAllProperties() ([]models.Property, error) {
+	properties, err := s.propertyRepo.GetAllProperties()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all properties: %w", err)
+	}
+	return properties, nil
+}
+
+// GetPropertyByIDPublic retrieves any property by ID without ownership check (read-only)
+func (s *PropertyService) GetPropertyByIDPublic(id string) (*models.Property, error) {
+	return s.propertyRepo.GetByIDPublic(id)
+}
+
 // GetBrokerProperties retrieves all properties for a specific broker
 func (s *PropertyService) GetBrokerProperties(brokerID string) ([]models.Property, error) {
 	properties, err := s.propertyRepo.GetByBrokerID(brokerID)

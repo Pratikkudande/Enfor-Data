@@ -25,6 +25,36 @@ func NewPropertyHandler(propertyService *service.PropertyService) *PropertyHandl
 	}
 }
 
+// GetAllProperties handles GET /api/properties/all - returns all brokers' properties (read-only)
+func (h *PropertyHandler) GetAllProperties(c *gin.Context) {
+	properties, err := h.propertyService.GetAllProperties()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Internal server error",
+			Message: "Failed to retrieve properties",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Properties retrieved successfully",
+		Data:    properties,
+	})
+}
+
+// GetAnyProperty handles GET /api/properties/view/:id - any broker can view any property (read-only)
+func (h *PropertyHandler) GetAnyProperty(c *gin.Context) {
+	property, err := h.propertyService.GetPropertyByIDPublic(c.Param("id"))
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, ErrorResponse{Error: "Not found", Message: "Property not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal server error", Message: "Failed to retrieve property"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "Property retrieved successfully", Data: property})
+}
+
 // GetProperties handles GET /api/properties - retrieves all properties for authenticated broker
 func (h *PropertyHandler) GetProperties(c *gin.Context) {
 	// Extract broker_id from context (set by auth middleware)

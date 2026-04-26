@@ -96,6 +96,8 @@ func main() {
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
 
 			// Property routes (accessible to all authenticated users)
+			protected.GET("/properties/all", propertyHandler.GetAllProperties)
+			protected.GET("/properties/view/:id", propertyHandler.GetAnyProperty)
 			protected.GET("/properties", propertyHandler.GetProperties)
 			protected.POST("/properties", propertyHandler.CreateProperty)
 			protected.GET("/properties/:id", propertyHandler.GetProperty)

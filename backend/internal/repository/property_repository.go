@@ -231,6 +231,96 @@ func (r *PropertyRepository) Update(property *models.Property) error {
 	return nil
 }
 
+// GetAllProperties retrieves all properties from all brokers (read access for network view)
+// Joins users table for broker contact and clients table for client contact
+func (r *PropertyRepository) GetAllProperties() ([]models.Property, error) {
+	query := `
+		SELECT 
+			p.id, p.title, p.type, p.listing_type, p.price, p.area,
+			p.bedrooms, p.bathrooms, p.location, p.address, p.city, p.state,
+			p.description, p.amenities, p.status, p.broker_id, p.client_id,
+			p.broker_name, p.broker_city, p.client_name,
+			u.whatsapp_number  AS broker_whatsapp,
+			u.email            AS broker_email,
+			c.phone            AS client_phone,
+			c.email            AS client_email,
+			p.created_at, p.updated_at
+		FROM properties p
+		JOIN users u ON u.id = p.broker_id
+		LEFT JOIN clients c ON c.id = p.client_id
+		WHERE p.deleted_at IS NULL
+		ORDER BY p.created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all properties: %w", err)
+	}
+	defer rows.Close()
+
+	var properties []models.Property
+	for rows.Next() {
+		var p models.Property
+		err := rows.Scan(
+			&p.ID, &p.Title, &p.Type, &p.ListingType, &p.Price, &p.Area,
+			&p.Bedrooms, &p.Bathrooms, &p.Location, &p.Address, &p.City, &p.State,
+			&p.Description, pq.Array(&p.Amenities), &p.Status, &p.BrokerID, &p.ClientID,
+			&p.BrokerName, &p.BrokerCity, &p.ClientName,
+			&p.BrokerWhatsapp, &p.BrokerEmail,
+			&p.ClientPhone, &p.ClientEmail,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan property row: %w", err)
+		}
+		properties = append(properties, p)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating property rows: %w", err)
+	}
+	if properties == nil {
+		properties = []models.Property{}
+	}
+	return properties, nil
+}
+
+// GetByIDPublic retrieves a single property by ID without ownership check (read-only access)
+func (r *PropertyRepository) GetByIDPublic(id string) (*models.Property, error) {
+	query := `
+		SELECT 
+			p.id, p.title, p.type, p.listing_type, p.price, p.area,
+			p.bedrooms, p.bathrooms, p.location, p.address, p.city, p.state,
+			p.description, p.amenities, p.status, p.broker_id, p.client_id,
+			p.broker_name, p.broker_city, p.client_name,
+			u.whatsapp_number  AS broker_whatsapp,
+			u.email            AS broker_email,
+			c.phone            AS client_phone,
+			c.email            AS client_email,
+			p.created_at, p.updated_at
+		FROM properties p
+		JOIN users u ON u.id = p.broker_id
+		LEFT JOIN clients c ON c.id = p.client_id
+		WHERE p.id = $1 AND p.deleted_at IS NULL
+	`
+	var p models.Property
+	err := r.db.QueryRow(query, id).Scan(
+		&p.ID, &p.Title, &p.Type, &p.ListingType, &p.Price, &p.Area,
+		&p.Bedrooms, &p.Bathrooms, &p.Location, &p.Address, &p.City, &p.State,
+		&p.Description, pq.Array(&p.Amenities), &p.Status, &p.BrokerID, &p.ClientID,
+		&p.BrokerName, &p.BrokerCity, &p.ClientName,
+		&p.BrokerWhatsapp, &p.BrokerEmail,
+		&p.ClientPhone, &p.ClientEmail,
+		&p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("property not found")
+		}
+		return nil, fmt.Errorf("failed to get property by ID: %w", err)
+	}
+	return &p, nil
+}
+
 // SoftDelete marks a property as deleted without removing it from the database.
 func (r *PropertyRepository) SoftDelete(id string) error {
 	query := `

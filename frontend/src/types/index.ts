@@ -37,8 +37,12 @@ export interface Property {
   broker_id: string;
   broker_name?: string;
   broker_city?: string;
+  broker_whatsapp?: string;
+  broker_email?: string;
   client_id?: string;
   client_name?: string;
+  client_phone?: string;
+  client_email?: string;
   created_at: string;
   updated_at: string;
 }

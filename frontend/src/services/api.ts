@@ -50,6 +50,10 @@ class ApiService {
   }
 
   // Property endpoints
+  async getAllProperties(): Promise<ApiResponse<Property[]>> {
+    return apiClient.request<ApiResponse<Property[]>>('/properties/all');
+  }
+
   async getProperties(): Promise<ApiResponse<Property[]>> {
     return apiClient.request<ApiResponse<Property[]>>('/properties');
   }
@@ -62,7 +66,7 @@ class ApiService {
   }
 
   async getProperty(id: string): Promise<ApiResponse<Property>> {
-    return apiClient.request<ApiResponse<Property>>(`/properties/${id}`);
+    return apiClient.request<ApiResponse<Property>>(`/properties/view/${id}`);
   }
 
   async updateProperty(id: string, propertyData: UpdatePropertyRequest): Promise<ApiResponse<Property>> {

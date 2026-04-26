@@ -9,11 +9,16 @@ import PropertyCard from './PropertyCard';
 import PropertyFormModal from './PropertyFormModal';
 import PropertyViewModal from './PropertyViewModal';
 import PropertyDeleteModal from './PropertyDeleteModal';
+import { useAuth } from '../../context/AuthContext';
 
 const PropertiesView: React.FC = () => {
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? '';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterOwner, setFilterOwner] = useState('all');
   const [properties, setProperties] = useState<Property[]>([]);
   const [clients, setClients] = useState<ApiClientClient[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,14 +59,11 @@ const PropertiesView: React.FC = () => {
   const fetchProperties = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await apiClient.getProperties();
+      const response = await apiClient.getAllProperties();
       setProperties((response.data || []).map(transformProperty));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch properties';
-      setError(errorMessage);
-      console.error('Error fetching properties:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch properties');
     } finally {
       setLoading(false);
     }
@@ -78,142 +80,61 @@ const PropertiesView: React.FC = () => {
 
   const fetchPropertyById = async (propertyId: string) => {
     const response = await apiClient.getProperty(propertyId);
-    if (!response.data) {
-      throw new Error('Property details not found');
-    }
-
+    if (!response.data) throw new Error('Property details not found');
     return transformProperty(response.data);
   };
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-
-    if (!formData.title.trim()) {
-      errors.title = 'Title is required';
-    } else if (formData.title.trim().length < 5) {
-      errors.title = 'Title must be at least 5 characters';
-    } else if (formData.title.trim().length > 255) {
-      errors.title = 'Title must not exceed 255 characters';
-    }
-
-    if (!formData.price) {
-      errors.price = 'Price is required';
-    } else if (parseFloat(formData.price) <= 0) {
-      errors.price = 'Price must be greater than 0';
-    }
-
-    if (!formData.area) {
-      errors.area = 'Area is required';
-    } else if (parseFloat(formData.area) <= 0) {
-      errors.area = 'Area must be greater than 0';
-    }
-
+    if (!formData.title.trim()) errors.title = 'Title is required';
+    else if (formData.title.trim().length < 5) errors.title = 'Title must be at least 5 characters';
+    else if (formData.title.trim().length > 255) errors.title = 'Title must not exceed 255 characters';
+    if (!formData.price) errors.price = 'Price is required';
+    else if (parseFloat(formData.price) <= 0) errors.price = 'Price must be greater than 0';
+    if (!formData.area) errors.area = 'Area is required';
+    else if (parseFloat(formData.area) <= 0) errors.area = 'Area must be greater than 0';
     if (formData.type === 'apartment' || formData.type === 'house') {
-      if (!formData.bedrooms) {
-        errors.bedrooms = 'Bedrooms are required for apartments and houses';
-      } else if (parseInt(formData.bedrooms, 10) < 0) {
-        errors.bedrooms = 'Bedrooms must be a positive number';
-      }
-
-      if (!formData.bathrooms) {
-        errors.bathrooms = 'Bathrooms are required for apartments and houses';
-      } else if (parseInt(formData.bathrooms, 10) < 0) {
-        errors.bathrooms = 'Bathrooms must be a positive number';
-      }
+      if (!formData.bedrooms) errors.bedrooms = 'Bedrooms are required for apartments and houses';
+      else if (parseInt(formData.bedrooms, 10) < 0) errors.bedrooms = 'Bedrooms must be a positive number';
+      if (!formData.bathrooms) errors.bathrooms = 'Bathrooms are required for apartments and houses';
+      else if (parseInt(formData.bathrooms, 10) < 0) errors.bathrooms = 'Bathrooms must be a positive number';
     }
-
-    if (!formData.location.trim()) {
-      errors.location = 'Location is required';
-    } else if (formData.location.trim().length < 2) {
-      errors.location = 'Location must be at least 2 characters';
-    } else if (formData.location.trim().length > 255) {
-      errors.location = 'Location must not exceed 255 characters';
-    }
-
-    if (!formData.address.trim()) {
-      errors.address = 'Address is required';
-    } else if (formData.address.trim().length < 10) {
-      errors.address = 'Address must be at least 10 characters';
-    }
-
-    if (!formData.city.trim()) {
-      errors.city = 'City is required';
-    } else if (formData.city.trim().length < 2) {
-      errors.city = 'City must be at least 2 characters';
-    } else if (formData.city.trim().length > 100) {
-      errors.city = 'City must not exceed 100 characters';
-    }
-
-    if (!formData.state) {
-      errors.state = 'State is required';
-    }
-
-    if (!formData.description.trim()) {
-      errors.description = 'Description is required';
-    } else if (formData.description.trim().length < 20) {
-      errors.description = 'Description must be at least 20 characters';
-    }
-
+    if (!formData.location.trim()) errors.location = 'Location is required';
+    if (!formData.address.trim()) errors.address = 'Address is required';
+    else if (formData.address.trim().length < 10) errors.address = 'Address must be at least 10 characters';
+    if (!formData.city.trim()) errors.city = 'City is required';
+    if (!formData.state) errors.state = 'State is required';
+    if (!formData.description.trim()) errors.description = 'Description is required';
+    else if (formData.description.trim().length < 20) errors.description = 'Description must be at least 20 characters';
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const buildCreatePayload = (): CreatePropertyRequest => {
     const propertyData: CreatePropertyRequest = {
-      title: formData.title.trim(),
-      type: formData.type,
-      listing_type: formData.listingType,
-      price: parseFloat(formData.price),
-      area: parseFloat(formData.area),
-      location: formData.location.trim(),
-      address: formData.address.trim(),
-      city: formData.city.trim(),
-      state: formData.state,
-      description: formData.description.trim(),
-      amenities: selectedAmenities,
+      title: formData.title.trim(), type: formData.type, listing_type: formData.listingType,
+      price: parseFloat(formData.price), area: parseFloat(formData.area),
+      location: formData.location.trim(), address: formData.address.trim(),
+      city: formData.city.trim(), state: formData.state,
+      description: formData.description.trim(), amenities: selectedAmenities,
     };
-
-    if (formData.clientId) {
-      propertyData.client_id = formData.clientId;
-    }
-
-    if (formData.bedrooms) {
-      propertyData.bedrooms = parseInt(formData.bedrooms, 10);
-    }
-    if (formData.bathrooms) {
-      propertyData.bathrooms = parseInt(formData.bathrooms, 10);
-    }
-
+    if (formData.clientId) propertyData.client_id = formData.clientId;
+    if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
+    if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
     return propertyData;
   };
 
   const buildUpdatePayload = (): UpdatePropertyRequest => {
     const propertyData: UpdatePropertyRequest = {
-      title: formData.title.trim(),
-      type: formData.type,
-      listing_type: formData.listingType,
-      status: formData.status,
-      price: parseFloat(formData.price),
-      area: parseFloat(formData.area),
-      location: formData.location.trim(),
-      address: formData.address.trim(),
-      city: formData.city.trim(),
-      state: formData.state,
-      description: formData.description.trim(),
-      amenities: selectedAmenities,
+      title: formData.title.trim(), type: formData.type, listing_type: formData.listingType,
+      status: formData.status, price: parseFloat(formData.price), area: parseFloat(formData.area),
+      location: formData.location.trim(), address: formData.address.trim(),
+      city: formData.city.trim(), state: formData.state,
+      description: formData.description.trim(), amenities: selectedAmenities,
     };
-
-    // Send empty string to clear the client link, or the selected client id
-    // Backend treats empty string as "remove client link"
     propertyData.client_id = formData.clientId || '';
-
-    if (formData.bedrooms) {
-      propertyData.bedrooms = parseInt(formData.bedrooms, 10);
-    }
-    if (formData.bathrooms) {
-      propertyData.bathrooms = parseInt(formData.bathrooms, 10);
-    }
-
+    if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
+    if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
     return propertyData;
   };
 
@@ -221,50 +142,26 @@ const PropertiesView: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     setValidationErrors({});
-
-    if (!validateForm()) {
-      setFormError('Please fix the validation errors before submitting');
-      return;
-    }
-
+    if (!validateForm()) { setFormError('Please fix the validation errors before submitting'); return; }
     setSubmitting(true);
-
     try {
       if (formMode === 'create') {
         const response = await apiClient.createProperty(buildCreatePayload());
-        if (response.data) {
-          setProperties((prev) => [transformProperty(response.data), ...prev]);
-        }
+        if (response.data) setProperties((prev) => [transformProperty(response.data), ...prev]);
         showTimedSuccessMessage('Property added successfully!');
       } else if (selectedProperty) {
         const response = await apiClient.updateProperty(selectedProperty.id, buildUpdatePayload());
         if (response.data) {
-          const updatedProperty = transformProperty(response.data);
-          setProperties((prev) => prev.map((property) => (
-            property.id === updatedProperty.id ? updatedProperty : property
-          )));
-          setSelectedProperty(updatedProperty);
+          const updated = transformProperty(response.data);
+          setProperties((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+          setSelectedProperty(updated);
         }
         showTimedSuccessMessage('Property updated successfully!');
       }
-
       setShowFormModal(false);
       resetFormState();
     } catch (err) {
-      let errorMessage = formMode === 'create' ? 'Failed to create property' : 'Failed to update property';
-
-      if (err instanceof Error) {
-        if (err.message.toLowerCase().includes('network') || err.message.toLowerCase().includes('fetch')) {
-          errorMessage = 'Network error. Please check if the backend is running and try again.';
-        } else if (err.message.toLowerCase().includes('unauthorized') || err.message.toLowerCase().includes('401')) {
-          errorMessage = 'Your session has expired. Please log in again.';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-
-      setFormError(errorMessage);
-      console.error('Error saving property:', err);
+      setFormError(err instanceof Error ? err.message : 'Failed to save property');
     } finally {
       setSubmitting(false);
     }
@@ -272,63 +169,37 @@ const PropertiesView: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (validationErrors[name]) setValidationErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleAmenityToggle = (amenity: string) => {
-    setSelectedAmenities((prev) => (
-      prev.includes(amenity)
-        ? prev.filter((item) => item !== amenity)
-        : [...prev, amenity]
-    ));
+    setSelectedAmenities((prev) => prev.includes(amenity) ? prev.filter((i) => i !== amenity) : [...prev, amenity]);
   };
 
   const handleTypeChange = (type: PropertyFormData['type']) => {
     setFormData((prev) => ({
-      ...prev,
-      type,
+      ...prev, type,
       bedrooms: type === 'commercial' || type === 'plot' ? '' : prev.bedrooms,
       bathrooms: type === 'commercial' || type === 'plot' ? '' : prev.bathrooms,
     }));
-
-    if (validationErrors.bedrooms || validationErrors.bathrooms) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        bedrooms: '',
-        bathrooms: '',
-      }));
-    }
+    if (validationErrors.bedrooms || validationErrors.bathrooms)
+      setValidationErrors((prev) => ({ ...prev, bedrooms: '', bathrooms: '' }));
   };
 
   const handleOpenCreateModal = () => {
-    fetchClients();
-    resetFormState();
-    setFormMode('create');
-    setShowFormModal(true);
+    fetchClients(); resetFormState(); setFormMode('create'); setShowFormModal(true);
   };
 
   const handleViewProperty = async (propertyId: string) => {
     setActionLoadingId(propertyId);
     setError(null);
-
     try {
       const property = await fetchPropertyById(propertyId);
       setSelectedProperty(property);
       setShowViewModal(true);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load property details';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to load property details');
     } finally {
       setActionLoadingId(null);
     }
@@ -338,7 +209,6 @@ const PropertiesView: React.FC = () => {
     setActionLoadingId(propertyId);
     setFormError(null);
     fetchClients();
-
     try {
       const property = await fetchPropertyById(propertyId);
       setSelectedProperty(property);
@@ -348,56 +218,62 @@ const PropertiesView: React.FC = () => {
       setFormMode('edit');
       setShowFormModal(true);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load property for editing';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to load property for editing');
     } finally {
       setActionLoadingId(null);
     }
   };
 
   const handleDeleteClick = (property: Property) => {
-    setSelectedProperty(property);
-    setShowDeleteModal(true);
+    setSelectedProperty(property); setShowDeleteModal(true);
   };
 
   const handleDeleteProperty = async () => {
-    if (!selectedProperty) {
-      return;
-    }
-
+    if (!selectedProperty) return;
     setDeleting(true);
-
     try {
       await apiClient.deleteProperty(selectedProperty.id);
-      setProperties((prev) => prev.filter((property) => property.id !== selectedProperty.id));
+      setProperties((prev) => prev.filter((p) => p.id !== selectedProperty.id));
       setShowDeleteModal(false);
       setShowViewModal(false);
       showTimedSuccessMessage('Property deleted successfully!');
       setSelectedProperty(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete property';
-      setFormError(errorMessage);
+      setFormError(err instanceof Error ? err.message : 'Failed to delete property');
     } finally {
       setDeleting(false);
     }
   };
 
   const filteredProperties = properties.filter((property) => {
-    const matchesSearch = property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (property.broker_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (property.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || property.status === filterStatus;
     const matchesType = filterType === 'all' || property.type === filterType;
-
-    return matchesSearch && matchesStatus && matchesType;
+    const matchesOwner =
+      filterOwner === 'all' ||
+      (filterOwner === 'mine' && property.broker_id === currentUserId) ||
+      (filterOwner === 'others' && property.broker_id !== currentUserId);
+    return matchesSearch && matchesStatus && matchesType && matchesOwner;
   });
+
+  const myCount = properties.filter((p) => p.broker_id === currentUserId).length;
+  const othersCount = properties.filter((p) => p.broker_id !== currentUserId).length;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
-          <p className="text-gray-600 mt-1">Manage your property listings</p>
+          <p className="text-gray-600 mt-1">
+            <span className="text-blue-600 font-medium">{myCount} yours</span>
+            {' · '}
+            <span className="text-gray-500">{othersCount} from other brokers</span>
+          </p>
         </div>
         <button
           onClick={handleOpenCreateModal}
@@ -408,23 +284,41 @@ const PropertiesView: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex flex-col lg:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              placeholder="Search properties..."
+              placeholder="Search by title, location, broker or client..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+              {[
+                { value: 'all', label: 'All' },
+                { value: 'mine', label: 'Mine' },
+                { value: 'others', label: "Others'" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFilterOwner(opt.value)}
+                  className={`px-3 py-2 transition-colors ${
+                    filterOwner === opt.value ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
               <option value="all">All Status</option>
               <option value="available">Available</option>
@@ -435,7 +329,7 @@ const PropertiesView: React.FC = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
               <option value="all">All Types</option>
               <option value="apartment">Apartment</option>
@@ -448,33 +342,20 @@ const PropertiesView: React.FC = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error loading properties</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-              <button
-                onClick={fetchProperties}
-                className="mt-2 text-sm font-medium text-red-800 hover:text-red-900 underline"
-              >
-                Try again
-              </button>
-            </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+          <svg className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-red-800">{error}</p>
+            <button onClick={fetchProperties} className="mt-1 text-sm text-red-700 underline">Try again</button>
           </div>
         </div>
       )}
 
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Loading properties...</p>
-          </div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       )}
 
@@ -484,6 +365,7 @@ const PropertiesView: React.FC = () => {
             <PropertyCard
               key={property.id}
               property={property}
+              currentUserId={currentUserId}
               isBusy={actionLoadingId === property.id}
               onView={handleViewProperty}
               onEdit={handleEditProperty}
@@ -500,44 +382,31 @@ const PropertiesView: React.FC = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No properties found</h3>
           <p className="text-gray-500 mb-6">
-            {searchTerm || filterStatus !== 'all' || filterType !== 'all'
-              ? 'Try adjusting your filters to find what you are looking for.'
+            {searchTerm || filterStatus !== 'all' || filterType !== 'all' || filterOwner !== 'all'
+              ? 'Try adjusting your filters.'
               : 'Get started by adding your first property.'}
           </p>
-          <button
-            onClick={handleOpenCreateModal}
-            className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Property
+          <button onClick={handleOpenCreateModal} className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+            <Plus className="h-5 w-5 mr-2" />Add Property
           </button>
         </div>
       )}
 
       {showFormModal && (
         <PropertyFormModal
-          formMode={formMode}
-          formData={formData}
-          validationErrors={validationErrors}
-          formError={formError}
-          submitting={submitting}
-          clients={clients}
-          selectedAmenities={selectedAmenities}
-          handleInputChange={handleInputChange}
-          handleTypeChange={handleTypeChange}
-          setFormData={setFormData}
-          handleAmenityToggle={handleAmenityToggle}
-          handleFormSubmit={handleFormSubmit}
-          onClose={() => {
-            setShowFormModal(false);
-            resetFormState();
-          }}
+          formMode={formMode} formData={formData} validationErrors={validationErrors}
+          formError={formError} submitting={submitting} clients={clients}
+          selectedAmenities={selectedAmenities} handleInputChange={handleInputChange}
+          handleTypeChange={handleTypeChange} setFormData={setFormData}
+          handleAmenityToggle={handleAmenityToggle} handleFormSubmit={handleFormSubmit}
+          onClose={() => { setShowFormModal(false); resetFormState(); }}
         />
       )}
 
       {showViewModal && selectedProperty && (
         <PropertyViewModal
           property={selectedProperty}
+          currentUserId={currentUserId}
           onClose={() => setShowViewModal(false)}
           onEdit={handleEditProperty}
           onDelete={handleDeleteClick}
@@ -546,13 +415,8 @@ const PropertiesView: React.FC = () => {
 
       {showDeleteModal && selectedProperty && (
         <PropertyDeleteModal
-          property={selectedProperty}
-          deleting={deleting}
-          formError={formError}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setFormError(null);
-          }}
+          property={selectedProperty} deleting={deleting} formError={formError}
+          onClose={() => { setShowDeleteModal(false); setFormError(null); }}
           onConfirm={handleDeleteProperty}
         />
       )}

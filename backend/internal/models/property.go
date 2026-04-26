@@ -37,9 +37,13 @@ type Property struct {
 	ClientID *string `json:"client_id,omitempty" db:"client_id"`
 
 	// Denormalized broker and client info for admin queries
-	BrokerName *string `json:"broker_name,omitempty" db:"broker_name"`
-	BrokerCity *string `json:"broker_city,omitempty" db:"broker_city"`
-	ClientName *string `json:"client_name,omitempty" db:"client_name"`
+	BrokerName      *string `json:"broker_name,omitempty" db:"broker_name"`
+	BrokerCity      *string `json:"broker_city,omitempty" db:"broker_city"`
+	BrokerWhatsapp  *string `json:"broker_whatsapp,omitempty" db:"broker_whatsapp"`
+	BrokerEmail     *string `json:"broker_email,omitempty" db:"broker_email"`
+	ClientName      *string `json:"client_name,omitempty" db:"client_name"`
+	ClientPhone     *string `json:"client_phone,omitempty" db:"client_phone"`
+	ClientEmail     *string `json:"client_email,omitempty" db:"client_email"`
 
 	// Timestamps
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
