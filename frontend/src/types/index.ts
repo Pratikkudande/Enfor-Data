@@ -106,6 +106,8 @@ export interface Agreement {
   property_id: string;
   property_title?: string;
   property_address?: string;
+  client_id?: string;
+  client_name?: string;
   broker_id: string;
   start_date: string;
   end_date: string;
@@ -116,6 +118,7 @@ export interface Agreement {
 
 export interface CreateAgreementRequest {
   property_id: string;
+  client_id?: string;
   start_date: string;
   end_date: string;
 }

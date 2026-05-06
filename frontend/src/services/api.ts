@@ -152,6 +152,35 @@ class ApiService {
   async getAppointmentStats(): Promise<ApiResponse<AppointmentStats>> {
     return apiClient.request<ApiResponse<AppointmentStats>>('/appointments/stats');
   }
+
+  // Agreement endpoints
+  async getAgreements(): Promise<ApiResponse<Agreement[]>> {
+    return apiClient.request<ApiResponse<Agreement[]>>('/agreements');
+  }
+
+  async createAgreement(data: CreateAgreementRequest): Promise<ApiResponse<Agreement>> {
+    return apiClient.request<ApiResponse<Agreement>>('/agreements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAgreement(id: string): Promise<ApiResponse<Agreement>> {
+    return apiClient.request<ApiResponse<Agreement>>(`/agreements/${id}`);
+  }
+
+  async updateAgreement(id: string, status: string): Promise<ApiResponse<Agreement>> {
+    return apiClient.request<ApiResponse<Agreement>>(`/agreements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async deleteAgreement(id: string): Promise<ApiResponse> {
+    return apiClient.request<ApiResponse>(`/agreements/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Export a singleton instance that matches the original exported name

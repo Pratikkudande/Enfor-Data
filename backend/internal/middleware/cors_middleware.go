@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -38,6 +39,15 @@ func CORSMiddleware() gin.HandlerFunc {
 			"Content-Type",
 		},
 		AllowCredentials: true,
+		// AllowOriginFunc permits origins not explicitly listed above —
+		// this enables local-network dev hosts like http://172.18.48.1:3000
+		// while keeping stricter rules for production.
+		AllowOriginFunc: func(origin string) bool {
+			if strings.HasPrefix(origin, "http://172.") || strings.HasPrefix(origin, "https://172.") {
+				return true
+			}
+			return false
+		},
 		MaxAge:           12 * time.Hour,
 	})
 }
