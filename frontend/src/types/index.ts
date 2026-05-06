@@ -101,6 +101,25 @@ export interface AppointmentStats {
   upcoming: number;
 }
 
+export interface Agreement {
+  id: string;
+  property_id: string;
+  property_title?: string;
+  property_address?: string;
+  broker_id: string;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'expired' | 'terminated';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAgreementRequest {
+  property_id: string;
+  start_date: string;
+  end_date: string;
+}
+
 export interface WhatsAppMessage {
   id: string;
   recipient_type: 'individual' | 'bulk';

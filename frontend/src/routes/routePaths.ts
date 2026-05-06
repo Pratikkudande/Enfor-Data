@@ -10,4 +10,5 @@ export const ROUTES = {
   NETWORK: '/network',
   BUSINESS_POSTS: '/business-posts',
   MARKETING: '/marketing',
+  AGREEMENTS: '/agreements',
 } as const;
