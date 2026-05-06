@@ -12,7 +12,9 @@ import {
   BarChart3,
   Settings,
   UserCheck,
-  Briefcase
+  Briefcase,
+  CreditCard,
+  Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,12 +33,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'clients', label: 'Clients', icon: Users },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageSquare },
+    { id: 'sms-marketing', label: 'SMS Marketing', icon: MessageSquare },
     { id: 'network', label: 'Broker Network', icon: Network },
     { id: 'projects', label: 'New Projects', icon: Briefcase },
     { id: 'agreements', label: 'Agreements', icon: FileText },
     { id: 'business-posts', label: 'Business Posts', icon: PlusCircle },
     { id: 'marketing', label: 'Marketing', icon: Megaphone },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 }
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'pricing', label: 'Pricing Plans', icon: Crown },
+    { id: 'subscription', label: 'My Subscription', icon: CreditCard }
   ];
 
   const channelPartnerMenuItems = [
@@ -46,7 +51,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'leads', label: 'Leads Management', icon: Users },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'marketing', label: 'Marketing', icon: Megaphone }
+    { id: 'marketing', label: 'Marketing', icon: Megaphone },
+    { id: 'pricing', label: 'Pricing Plans', icon: Crown },
+    { id: 'subscription', label: 'My Subscription', icon: CreditCard }
   ];
 
   const adminMenuItems = [

@@ -151,3 +151,64 @@ func (r *UserRepository) UpdateUser(user *models.User) error {
 
 	return nil
 }
+
+// GetUserByMobile retrieves a user by mobile number (whatsapp_number)
+func (r *UserRepository) GetUserByMobile(mobileNumber string) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT 
+			id, first_name, last_name, email, password_hash, date_of_birth,
+			firm_name, role, whatsapp_number, alternative_number, foreign_number,
+			address, location, city, state, postal_code, profile_image,
+			is_verified, is_active, created_at, updated_at
+		FROM users 
+		WHERE whatsapp_number = $1 AND is_active = true
+	`
+
+	err := r.db.QueryRow(query, mobileNumber).Scan(
+		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PasswordHash, &user.DateOfBirth,
+		&user.FirmName, &user.Role, &user.WhatsappNumber, &user.AlternativeNumber, &user.ForeignNumber,
+		&user.Address, &user.Location, &user.City, &user.State, &user.PostalCode, &user.ProfileImage,
+		&user.IsVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to get user by mobile: %w", err)
+	}
+
+	return user, nil
+}
+
+// UpdateMobileVerification updates the mobile verification status
+func (r *UserRepository) UpdateMobileVerification(userID string, verified bool) error {
+	query := `
+		UPDATE users 
+		SET mobile_verified = $1,
+			mobile_verified_at = CASE WHEN $1 = true THEN NOW() ELSE NULL END,
+			updated_at = NOW()
+		WHERE id = $2
+	`
+
+	_, err := r.db.Exec(query, verified, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update mobile verification: %w", err)
+	}
+
+	return nil
+}
+
+// MobileExists checks if a mobile number already exists in the database
+func (r *UserRepository) MobileExists(mobileNumber string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE whatsapp_number = $1)`
+
+	err := r.db.QueryRow(query, mobileNumber).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check mobile existence: %w", err)
+	}
+
+	return exists, nil
+}

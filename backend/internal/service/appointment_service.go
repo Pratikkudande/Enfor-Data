@@ -14,6 +14,8 @@ type AppointmentService struct {
 	appointmentRepo *repository.AppointmentRepository
 	clientRepo      *repository.ClientRepository
 	propertyRepo    *repository.PropertyRepository
+	userRepo        *repository.UserRepository
+	smsService      *SMSService
 }
 
 // NewAppointmentService creates a new AppointmentService instance
@@ -21,11 +23,15 @@ func NewAppointmentService(
 	appointmentRepo *repository.AppointmentRepository,
 	clientRepo *repository.ClientRepository,
 	propertyRepo *repository.PropertyRepository,
+	userRepo *repository.UserRepository,
+	smsService *SMSService,
 ) *AppointmentService {
 	return &AppointmentService{
 		appointmentRepo: appointmentRepo,
 		clientRepo:      clientRepo,
 		propertyRepo:    propertyRepo,
+		userRepo:        userRepo,
+		smsService:      smsService,
 	}
 }
 
@@ -84,6 +90,9 @@ func (s *AppointmentService) CreateAppointment(req *dto.CreateAppointmentRequest
 	if err != nil {
 		return nil, fmt.Errorf("failed to create appointment: %w", err)
 	}
+
+	// Send SMS confirmation to client
+	go s.sendAppointmentConfirmationSMS(appointment, client, brokerID)
 
 	return appointment, nil
 }
@@ -183,13 +192,30 @@ func (s *AppointmentService) UpdateAppointment(id string, req *dto.UpdateAppoint
 	}
 
 	if req.Status != nil {
+		oldStatus := appointment.Status
 		appointment.Status = *req.Status
+		
+		// Send SMS if status changed to cancelled
+		if oldStatus != "cancelled" && *req.Status == "cancelled" {
+			client, _ := s.clientRepo.GetByID(appointment.ClientID)
+			if client != nil {
+				go s.sendAppointmentCancellationSMS(appointment, client)
+			}
+		}
 	}
 
 	// Update appointment in database
 	err = s.appointmentRepo.Update(appointment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update appointment: %w", err)
+	}
+
+	// Send SMS if date or time was updated
+	if req.Date != nil || req.Time != nil {
+		client, _ := s.clientRepo.GetByID(appointment.ClientID)
+		if client != nil {
+			go s.sendAppointmentUpdateSMS(appointment, client)
+		}
 	}
 
 	return appointment, nil
@@ -220,4 +246,70 @@ func (s *AppointmentService) GetAppointmentStats(brokerID string) (*dto.Appointm
 	}
 
 	return stats, nil
+}
+
+
+// sendAppointmentConfirmationSMS sends SMS confirmation when appointment is created
+func (s *AppointmentService) sendAppointmentConfirmationSMS(appointment *models.Appointment, client *models.Client, brokerID string) {
+	// Get broker details
+	broker, err := s.userRepo.GetUserByID(brokerID)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to get broker details for SMS: %v\n", err)
+		return
+	}
+
+	brokerName := fmt.Sprintf("%s %s", broker.FirstName, broker.LastName)
+	clientName := fmt.Sprintf("%s %s", client.FirstName, client.LastName)
+	
+	// Format date and time
+	appointmentDate := appointment.Date.Format("Monday, January 2, 2006")
+	appointmentTime := appointment.TimeVal.Format("3:04 PM")
+
+	// Send SMS
+	err = s.smsService.SendAppointmentConfirmation(
+		client.Phone,
+		clientName,
+		appointment.Title,
+		appointmentDate,
+		appointmentTime,
+		brokerName,
+	)
+
+	if err != nil {
+		fmt.Printf("⚠️  Failed to send appointment confirmation SMS: %v\n", err)
+	}
+}
+
+// sendAppointmentUpdateSMS sends SMS when appointment is updated
+func (s *AppointmentService) sendAppointmentUpdateSMS(appointment *models.Appointment, client *models.Client) {
+	clientName := fmt.Sprintf("%s %s", client.FirstName, client.LastName)
+	appointmentDate := appointment.Date.Format("Monday, January 2, 2006")
+	appointmentTime := appointment.TimeVal.Format("3:04 PM")
+
+	err := s.smsService.SendAppointmentUpdate(
+		client.Phone,
+		clientName,
+		appointment.Title,
+		appointmentDate,
+		appointmentTime,
+	)
+
+	if err != nil {
+		fmt.Printf("⚠️  Failed to send appointment update SMS: %v\n", err)
+	}
+}
+
+// sendAppointmentCancellationSMS sends SMS when appointment is cancelled
+func (s *AppointmentService) sendAppointmentCancellationSMS(appointment *models.Appointment, client *models.Client) {
+	clientName := fmt.Sprintf("%s %s", client.FirstName, client.LastName)
+
+	err := s.smsService.SendAppointmentCancellation(
+		client.Phone,
+		clientName,
+		appointment.Title,
+	)
+
+	if err != nil {
+		fmt.Printf("⚠️  Failed to send appointment cancellation SMS: %v\n", err)
+	}
 }

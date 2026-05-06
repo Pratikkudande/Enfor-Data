@@ -5,6 +5,7 @@ export interface User {
   first_name?: string;
   last_name?: string;
   phone: string;
+  whatsapp_number?: string;
   role: 'broker' | 'channel_partner' | 'admin';
   city: string;
   state: string;

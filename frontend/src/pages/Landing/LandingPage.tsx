@@ -118,12 +118,20 @@ const LandingPage: React.FC = () => {
                 <p className="text-sm text-gray-600">Real Estate Business Platform</p>
               </div>
             </div>
-            <button
-              onClick={handleGetStarted}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Get Started
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate(ROUTES.PRICING)}
+                className="text-gray-700 hover:text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Pricing
+              </button>
+              <button
+                onClick={handleGetStarted}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Get Started
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -438,6 +446,128 @@ const LandingPage: React.FC = () => {
                   <div>Sunday: Closed</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Choose the perfect plan for your business. Start with our free trial and upgrade as you grow.
+            </p>
+          </div>
+          
+          <div className="flex justify-center mb-12">
+            <button
+              onClick={() => navigate(ROUTES.PRICING)}
+              className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-colors text-lg font-semibold inline-flex items-center"
+            >
+              View All Plans & Pricing
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Quick Pricing Preview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="bg-gray-50 p-8 rounded-xl border border-gray-200 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Free Trial</h3>
+              <div className="text-4xl font-bold text-blue-600 mb-4">₹0</div>
+              <p className="text-gray-600 mb-6">15 days free trial</p>
+              <ul className="text-left space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  5 Properties
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  10 Clients
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  50 SMS/WhatsApp
+                </li>
+              </ul>
+              <button
+                onClick={handleGetStarted}
+                className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Start Free Trial
+              </button>
+            </div>
+
+            <div className="bg-blue-50 p-8 rounded-xl border-2 border-blue-200 text-center relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  Most Popular
+                </span>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter Plan</h3>
+              <div className="text-4xl font-bold text-blue-600 mb-4">₹999</div>
+              <p className="text-gray-600 mb-6">per month</p>
+              <ul className="text-left space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  50 Properties
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  100 Clients
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  500 SMS/WhatsApp
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Analytics Dashboard
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate(ROUTES.PRICING)}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Choose Plan
+              </button>
+            </div>
+
+            <div className="bg-gray-50 p-8 rounded-xl border border-gray-200 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
+              <div className="text-4xl font-bold text-blue-600 mb-4">₹2,499</div>
+              <p className="text-gray-600 mb-6">per month</p>
+              <ul className="text-left space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Unlimited Properties
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Unlimited Clients
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  2000 SMS/WhatsApp
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Advanced Analytics
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Priority Support
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate(ROUTES.PRICING)}
+                className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Choose Plan
+              </button>
             </div>
           </div>
         </div>

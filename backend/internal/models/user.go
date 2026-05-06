@@ -39,8 +39,10 @@ type User struct {
 	Specializations *[]string `json:"specializations" db:"specializations"`
 
 	// Status and Verification
-	IsVerified bool `json:"is_verified" db:"is_verified"`
-	IsActive   bool `json:"is_active" db:"is_active"`
+	IsVerified       bool       `json:"is_verified" db:"is_verified"`
+	IsActive         bool       `json:"is_active" db:"is_active"`
+	MobileVerified   bool       `json:"mobile_verified" db:"mobile_verified"`
+	MobileVerifiedAt *time.Time `json:"mobile_verified_at" db:"mobile_verified_at"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at" db:"created_at"`

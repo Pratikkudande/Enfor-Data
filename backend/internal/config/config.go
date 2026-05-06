@@ -14,6 +14,8 @@ type Config struct {
 	JWT      JWTConfig
 	Server   ServerConfig
 	Upload   UploadConfig
+	Twilio   TwilioConfig
+	Razorpay RazorpayConfig
 }
 
 type DatabaseConfig struct {
@@ -40,6 +42,20 @@ type ServerConfig struct {
 type UploadConfig struct {
 	Path        string
 	MaxFileSize int64
+}
+
+type TwilioConfig struct {
+	AccountSID string
+	AuthToken  string
+	FromNumber string
+	Enabled    bool
+}
+
+type RazorpayConfig struct {
+	KeyID         string
+	KeySecret     string
+	WebhookSecret string
+	Enabled       bool
 }
 
 func Load() *Config {
@@ -94,6 +110,18 @@ func Load() *Config {
 		Upload: UploadConfig{
 			Path:        getEnv("UPLOAD_PATH", "./uploads"),
 			MaxFileSize: maxFileSize,
+		},
+		Twilio: TwilioConfig{
+			AccountSID: getEnv("TWILIO_ACCOUNT_SID", ""),
+			AuthToken:  getEnv("TWILIO_AUTH_TOKEN", ""),
+			FromNumber: getEnv("TWILIO_FROM_NUMBER", ""),
+			Enabled:    getEnv("TWILIO_ENABLED", "false") == "true",
+		},
+		Razorpay: RazorpayConfig{
+			KeyID:         getEnv("RAZORPAY_KEY_ID", ""),
+			KeySecret:     getEnv("RAZORPAY_KEY_SECRET", ""),
+			WebhookSecret: getEnv("RAZORPAY_WEBHOOK_SECRET", ""),
+			Enabled:       getEnv("RAZORPAY_ENABLED", "false") == "true",
 		},
 	}
 }

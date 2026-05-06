@@ -798,3 +798,666 @@ CREATE INDEX IF NOT EXISTS idx_users_deals_completed ON users(deals_completed);
 	log.Println("Network migrations completed successfully")
 	return nil
 }
+
+// RunWhatsAppMigrations creates the WhatsApp marketing module tables.
+func (db *DB) RunWhatsAppMigrations() error {
+	sql := `
+-- ============================================================
+-- WHATSAPP MARKETING MODULE
+-- ============================================================
+
+-- 1. WhatsApp Accounts (Connection Status)
+CREATE TABLE IF NOT EXISTS whatsapp_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Meta Business Account Details
+    business_account_id VARCHAR(255),
+    phone_number_id VARCHAR(255),
+    phone_number VARCHAR(20) NOT NULL,
+    display_name VARCHAR(255),
+    
+    -- Security
+    access_token_encrypted TEXT,
+    webhook_verify_token VARCHAR(255),
+    
+    -- Status
+    status VARCHAR(50) NOT NULL DEFAULT 'not_connected' 
+        CHECK (status IN ('not_connected', 'pending_verification', 'connected', 'failed', 'reconnect_required')),
+    connection_error TEXT,
+    
+    -- Limits
+    message_limit INTEGER DEFAULT 1000,
+    messages_sent_today INTEGER DEFAULT 0,
+    last_reset_date DATE DEFAULT CURRENT_DATE,
+    
+    -- Timestamps
+    connected_at TIMESTAMP WITH TIME ZONE,
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT uq_user_whatsapp UNIQUE(user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_user ON whatsapp_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_status ON whatsapp_accounts(status);
+
+-- 2. Message Templates
+CREATE TABLE IF NOT EXISTS message_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(50) NOT NULL CHECK (category IN ('marketing', 'appointment', 'acknowledgment', 'general')),
+    template_text TEXT NOT NULL,
+    variables TEXT[] DEFAULT '{}',
+    
+    -- Usage stats
+    usage_count INTEGER DEFAULT 0,
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_templates_user ON message_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_templates_category ON message_templates(category);
+
+-- 3. Campaigns
+CREATE TABLE IF NOT EXISTS campaigns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    whatsapp_account_id UUID REFERENCES whatsapp_accounts(id) ON DELETE SET NULL,
+    
+    name VARCHAR(255) NOT NULL,
+    message_text TEXT NOT NULL,
+    
+    -- Recipients
+    total_recipients INTEGER NOT NULL DEFAULT 0,
+    successful_sends INTEGER DEFAULT 0,
+    failed_sends INTEGER DEFAULT 0,
+    pending_sends INTEGER DEFAULT 0,
+    
+    -- Status
+    status VARCHAR(50) NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('draft', 'queued', 'sending', 'completed', 'failed', 'cancelled')),
+    
+    -- Scheduling
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Metadata
+    error_message TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaigns_user ON campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_campaigns_created ON campaigns(created_at DESC);
+
+-- 4. Campaign Recipients (Message Tracking)
+CREATE TABLE IF NOT EXISTS campaign_recipients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    
+    -- Recipient details (denormalized for history)
+    recipient_name VARCHAR(255),
+    recipient_phone VARCHAR(20) NOT NULL,
+    
+    -- Sending status
+    send_status VARCHAR(50) NOT NULL DEFAULT 'pending'
+        CHECK (send_status IN ('pending', 'queued', 'sent', 'delivered', 'read', 'failed')),
+    
+    -- Provider details
+    provider_message_id VARCHAR(255),
+    error_message TEXT,
+    
+    -- Timestamps
+    queued_at TIMESTAMP WITH TIME ZONE,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    read_at TIMESTAMP WITH TIME ZONE,
+    failed_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_recipients_campaign ON campaign_recipients(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_recipients_client ON campaign_recipients(client_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_recipients_status ON campaign_recipients(send_status);
+
+-- 5. Message Logs (Audit Trail)
+CREATE TABLE IF NOT EXISTS message_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,
+    client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+    
+    message_type VARCHAR(50) NOT NULL CHECK (message_type IN ('individual', 'bulk', 'campaign')),
+    message_text TEXT NOT NULL,
+    recipient_phone VARCHAR(20) NOT NULL,
+    
+    status VARCHAR(50) NOT NULL,
+    provider_message_id VARCHAR(255),
+    error_message TEXT,
+    
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_logs_user ON message_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_message_logs_campaign ON message_logs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_message_logs_sent ON message_logs(sent_at DESC);
+
+-- Triggers for updated_at
+DROP TRIGGER IF EXISTS update_whatsapp_accounts_updated_at ON whatsapp_accounts;
+CREATE TRIGGER update_whatsapp_accounts_updated_at
+    BEFORE UPDATE ON whatsapp_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_message_templates_updated_at ON message_templates;
+CREATE TRIGGER update_message_templates_updated_at
+    BEFORE UPDATE ON message_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_campaigns_updated_at ON campaigns;
+CREATE TRIGGER update_campaigns_updated_at
+    BEFORE UPDATE ON campaigns
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_campaign_recipients_updated_at ON campaign_recipients;
+CREATE TRIGGER update_campaign_recipients_updated_at
+    BEFORE UPDATE ON campaign_recipients
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+`
+	if _, err := db.Exec(sql); err != nil {
+		return fmt.Errorf("failed to run WhatsApp migrations: %w", err)
+	}
+	
+	log.Println("WhatsApp migrations completed successfully")
+	return nil
+}
+
+// RunSMSMarketingMigrations creates the SMS marketing module tables.
+func (db *DB) RunSMSMarketingMigrations() error {
+	sql := `
+-- ============================================================
+-- SMS MARKETING MODULE
+-- ============================================================
+
+-- SMS Accounts Table (stores Twilio credentials per user)
+CREATE TABLE IF NOT EXISTS sms_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Twilio Configuration
+    twilio_account_sid VARCHAR(255),
+    twilio_auth_token_encrypted TEXT, -- Encrypted
+    twilio_phone_number VARCHAR(20) NOT NULL,
+    
+    -- Account Status
+    status VARCHAR(50) DEFAULT 'not_connected' CHECK (status IN ('connected', 'not_connected', 'suspended')),
+    connection_error TEXT,
+    
+    -- Usage Limits
+    message_limit INTEGER DEFAULT 1000,
+    messages_sent_today INTEGER DEFAULT 0,
+    last_reset_date DATE DEFAULT CURRENT_DATE,
+    
+    -- Timestamps
+    connected_at TIMESTAMP WITH TIME ZONE,
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id)
+);
+
+-- SMS Campaigns Table
+CREATE TABLE IF NOT EXISTS sms_campaigns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sms_account_id UUID REFERENCES sms_accounts(id) ON DELETE SET NULL,
+    
+    name VARCHAR(255) NOT NULL,
+    message_text TEXT NOT NULL,
+    
+    -- Campaign Stats
+    total_recipients INTEGER DEFAULT 0,
+    successful_sends INTEGER DEFAULT 0,
+    failed_sends INTEGER DEFAULT 0,
+    pending_sends INTEGER DEFAULT 0,
+    
+    -- Campaign Status
+    status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'completed', 'failed', 'cancelled')),
+    
+    -- Scheduling
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    
+    error_message TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- SMS Campaign Recipients Table
+CREATE TABLE IF NOT EXISTS sms_campaign_recipients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES sms_campaigns(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    
+    recipient_name VARCHAR(255),
+    recipient_phone VARCHAR(20) NOT NULL,
+    
+    -- Send Status
+    send_status VARCHAR(50) DEFAULT 'pending' CHECK (send_status IN ('pending', 'sent', 'delivered', 'failed')),
+    provider_message_id VARCHAR(255), -- Twilio Message SID
+    error_message TEXT,
+    
+    -- Timestamps
+    queued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    sent_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    failed_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- SMS Message Templates Table
+CREATE TABLE IF NOT EXISTS sms_message_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    template_text TEXT NOT NULL,
+    variables TEXT[], -- Array of variable names like {name}, {property}
+    
+    usage_count INTEGER DEFAULT 0,
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- SMS Message Logs Table (audit trail)
+CREATE TABLE IF NOT EXISTS sms_message_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES sms_campaigns(id) ON DELETE SET NULL,
+    client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+    
+    message_type VARCHAR(50) NOT NULL CHECK (message_type IN ('individual', 'campaign', 'appointment')),
+    message_text TEXT NOT NULL,
+    recipient_phone VARCHAR(20) NOT NULL,
+    
+    status VARCHAR(50) NOT NULL CHECK (status IN ('sent', 'delivered', 'failed')),
+    provider_message_id VARCHAR(255), -- Twilio Message SID
+    error_message TEXT,
+    
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_user_id ON sms_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_status ON sms_accounts(status);
+
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_user_id ON sms_campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_status ON sms_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_created_at ON sms_campaigns(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_sms_campaign_recipients_campaign_id ON sms_campaign_recipients(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sms_campaign_recipients_status ON sms_campaign_recipients(send_status);
+
+CREATE INDEX IF NOT EXISTS idx_sms_templates_user_id ON sms_message_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_category ON sms_message_templates(category);
+
+CREATE INDEX IF NOT EXISTS idx_sms_logs_user_id ON sms_message_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_sent_at ON sms_message_logs(sent_at DESC);
+
+-- Trigger to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_sms_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_sms_accounts_updated_at ON sms_accounts;
+CREATE TRIGGER update_sms_accounts_updated_at 
+    BEFORE UPDATE ON sms_accounts 
+    FOR EACH ROW EXECUTE FUNCTION update_sms_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_sms_campaigns_updated_at ON sms_campaigns;
+CREATE TRIGGER update_sms_campaigns_updated_at 
+    BEFORE UPDATE ON sms_campaigns 
+    FOR EACH ROW EXECUTE FUNCTION update_sms_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_sms_campaign_recipients_updated_at ON sms_campaign_recipients;
+CREATE TRIGGER update_sms_campaign_recipients_updated_at 
+    BEFORE UPDATE ON sms_campaign_recipients 
+    FOR EACH ROW EXECUTE FUNCTION update_sms_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_sms_templates_updated_at ON sms_message_templates;
+CREATE TRIGGER update_sms_templates_updated_at 
+    BEFORE UPDATE ON sms_message_templates 
+    FOR EACH ROW EXECUTE FUNCTION update_sms_updated_at_column();
+`
+	if _, err := db.Exec(sql); err != nil {
+		return fmt.Errorf("failed to run SMS marketing migrations: %w", err)
+	}
+	
+	log.Println("SMS Marketing migrations completed successfully")
+	return nil
+}
+
+// RunSubscriptionMigrations creates the subscription management tables.
+func (db *DB) RunSubscriptionMigrations() error {
+	sql := `
+-- ============================================================
+-- SUBSCRIPTION MANAGEMENT SYSTEM
+-- ============================================================
+
+-- 1. Subscription Plans Table
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Plan Identification
+    name VARCHAR(50) NOT NULL UNIQUE,
+    display_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    
+    -- Pricing
+    monthly_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    annual_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    currency VARCHAR(3) DEFAULT 'INR',
+    
+    -- Feature Limits
+    max_properties INTEGER,
+    max_clients INTEGER,
+    max_appointments_per_month INTEGER,
+    max_whatsapp_messages_per_month INTEGER,
+    max_sms_messages_per_month INTEGER,
+    max_broker_connections INTEGER,
+    max_business_posts_per_month INTEGER,
+    max_team_members INTEGER DEFAULT 1,
+    
+    -- Feature Flags
+    has_analytics BOOLEAN DEFAULT true,
+    has_advanced_analytics BOOLEAN DEFAULT false,
+    has_api_access BOOLEAN DEFAULT false,
+    has_custom_templates BOOLEAN DEFAULT false,
+    has_priority_support BOOLEAN DEFAULT false,
+    
+    -- Display Settings
+    is_active BOOLEAN DEFAULT true,
+    is_visible BOOLEAN DEFAULT true,
+    is_popular BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. User Subscriptions Table
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id UUID NOT NULL REFERENCES subscription_plans(id),
+    
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+    billing_cycle VARCHAR(20) NOT NULL,
+    
+    is_trial BOOLEAN DEFAULT false,
+    trial_starts_at TIMESTAMP WITH TIME ZONE,
+    trial_ends_at TIMESTAMP WITH TIME ZONE,
+    
+    current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    current_period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    cancel_at_period_end BOOLEAN DEFAULT false,
+    cancelled_at TIMESTAMP WITH TIME ZONE,
+    cancellation_reason TEXT,
+    
+    razorpay_subscription_id VARCHAR(255) UNIQUE,
+    razorpay_plan_id VARCHAR(255),
+    razorpay_customer_id VARCHAR(255),
+    
+    current_properties_count INTEGER DEFAULT 0,
+    current_clients_count INTEGER DEFAULT 0,
+    current_appointments_count INTEGER DEFAULT 0,
+    current_whatsapp_messages_count INTEGER DEFAULT 0,
+    current_sms_messages_count INTEGER DEFAULT 0,
+    current_business_posts_count INTEGER DEFAULT 0,
+    usage_reset_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    metadata JSONB,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_active_subscription 
+    ON user_subscriptions(user_id) 
+    WHERE status IN ('trial', 'active');
+
+-- 3. Payments Table
+CREATE TABLE IF NOT EXISTS payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subscription_id UUID REFERENCES user_subscriptions(id) ON DELETE SET NULL,
+    
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'INR',
+    status VARCHAR(50) NOT NULL,
+    payment_method VARCHAR(50),
+    
+    razorpay_payment_id VARCHAR(255) UNIQUE,
+    razorpay_order_id VARCHAR(255),
+    razorpay_signature VARCHAR(500),
+    
+    description TEXT,
+    invoice_number VARCHAR(100) UNIQUE,
+    receipt_url TEXT,
+    
+    failure_reason TEXT,
+    failure_code VARCHAR(100),
+    
+    paid_at TIMESTAMP WITH TIME ZONE,
+    failed_at TIMESTAMP WITH TIME ZONE,
+    refunded_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. OTP Verifications Table
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    mobile_number VARCHAR(20) NOT NULL,
+    
+    otp_code VARCHAR(6) NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    
+    is_verified BOOLEAN DEFAULT false,
+    attempts_count INTEGER DEFAULT 0,
+    max_attempts INTEGER DEFAULT 5,
+    
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. Subscription Events Table
+CREATE TABLE IF NOT EXISTS subscription_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subscription_id UUID REFERENCES user_subscriptions(id) ON DELETE SET NULL,
+    
+    event_type VARCHAR(100) NOT NULL,
+    event_data JSONB,
+    
+    notification_sent BOOLEAN DEFAULT false,
+    notification_sent_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 6. Feature Usage Logs Table
+CREATE TABLE IF NOT EXISTS feature_usage_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subscription_id UUID REFERENCES user_subscriptions(id) ON DELETE SET NULL,
+    
+    feature_name VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    resource_id UUID,
+    
+    metadata JSONB,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_name ON subscription_plans(name);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user ON user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_otp_mobile_purpose ON otp_verifications(mobile_number, purpose, is_verified);
+CREATE INDEX IF NOT EXISTS idx_subscription_events_user ON subscription_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feature_usage_user_feature ON feature_usage_logs(user_id, feature_name, created_at DESC);
+
+-- Triggers
+DROP TRIGGER IF EXISTS update_subscription_plans_updated_at ON subscription_plans;
+CREATE TRIGGER update_subscription_plans_updated_at
+    BEFORE UPDATE ON subscription_plans
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_subscriptions_updated_at ON user_subscriptions;
+CREATE TRIGGER update_user_subscriptions_updated_at
+    BEFORE UPDATE ON user_subscriptions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+CREATE TRIGGER update_payments_updated_at
+    BEFORE UPDATE ON payments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_otp_verifications_updated_at ON otp_verifications;
+CREATE TRIGGER update_otp_verifications_updated_at
+    BEFORE UPDATE ON otp_verifications
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Seed Data - Default Subscription Plans
+INSERT INTO subscription_plans (
+    name, display_name, description,
+    monthly_price, annual_price,
+    max_properties, max_clients, max_appointments_per_month,
+    max_whatsapp_messages_per_month, max_sms_messages_per_month,
+    max_broker_connections, max_business_posts_per_month, max_team_members,
+    has_analytics, has_advanced_analytics, has_api_access, has_custom_templates, has_priority_support,
+    is_active, is_visible, is_popular, sort_order
+) VALUES
+('free_trial', 'Free Trial', '15-day free trial with limited features',
+    0.00, 0.00, 5, 10, 5, 50, 50, 0, 0, 1,
+    true, false, false, false, false, true, false, false, 0),
+('starter', 'Starter Plan', 'Perfect for individual brokers getting started',
+    999.00, 9999.00, 50, 100, NULL, 500, 500, 20, 5, 1,
+    true, false, false, false, false, true, true, false, 1),
+('professional', 'Professional Plan', 'For growing teams and serious brokers',
+    2499.00, 24999.00, NULL, NULL, NULL, 2000, 2000, NULL, NULL, 3,
+    true, true, true, true, true, true, true, true, 2),
+('enterprise', 'Enterprise Plan', 'Custom solution for large organizations',
+    0.00, 0.00, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    true, true, true, true, true, true, true, false, 3)
+ON CONFLICT (name) DO NOTHING;
+
+-- Modify Users Table
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS mobile_verified BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS mobile_verified_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS last_otp_sent_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS otp_attempts_count INTEGER DEFAULT 0;
+
+-- Add unique constraint only if it doesn't exist and there are no duplicates
+DO $$
+BEGIN
+    -- Check if constraint already exists
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'unique_whatsapp_number'
+    ) THEN
+        -- Check for duplicates
+        IF NOT EXISTS (
+            SELECT whatsapp_number 
+            FROM users 
+            WHERE whatsapp_number IS NOT NULL
+            GROUP BY whatsapp_number 
+            HAVING COUNT(*) > 1
+        ) THEN
+            ALTER TABLE users ADD CONSTRAINT unique_whatsapp_number UNIQUE(whatsapp_number);
+        ELSE
+            -- Log warning but don't fail
+            RAISE NOTICE 'Duplicate whatsapp_number values found. Skipping unique constraint.';
+        END IF;
+    END IF;
+END $$;
+`
+	if _, err := db.Exec(sql); err != nil {
+		return fmt.Errorf("failed to run subscription migrations: %w", err)
+	}
+
+	// Fix payments table - add missing columns
+	fixSQL := `
+-- Fix payments table to add missing columns
+ALTER TABLE payments 
+ADD COLUMN IF NOT EXISTS plan_id UUID REFERENCES subscription_plans(id),
+ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(20);
+
+-- Update existing payments to have a default billing cycle if any exist
+UPDATE payments 
+SET billing_cycle = 'monthly' 
+WHERE billing_cycle IS NULL;
+
+-- Make billing_cycle NOT NULL after setting defaults (only if column exists and has no nulls)
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'billing_cycle') THEN
+        -- Only set NOT NULL if there are no NULL values
+        IF NOT EXISTS (SELECT 1 FROM payments WHERE billing_cycle IS NULL) THEN
+            ALTER TABLE payments ALTER COLUMN billing_cycle SET NOT NULL;
+        END IF;
+    END IF;
+END $$;
+
+-- Add indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_payments_plan ON payments(plan_id);
+CREATE INDEX IF NOT EXISTS idx_payments_billing_cycle ON payments(billing_cycle);
+`
+	if _, err := db.Exec(fixSQL); err != nil {
+		log.Printf("Warning: Failed to fix payments table (may already be fixed): %v", err)
+		// Don't return error here as this is a fix, not a critical migration
+	}
+	
+	log.Println("Subscription migrations completed successfully")
+	return nil
+}

@@ -141,3 +141,32 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
+
+// Convenience methods
+export const api = {
+  get: <T>(endpoint: string, options?: RequestOptions) => 
+    apiClient.request<T>(endpoint, { ...options, method: 'GET' }),
+  
+  post: <T>(endpoint: string, data?: any, options?: RequestOptions) => 
+    apiClient.request<T>(endpoint, { 
+      ...options, 
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined 
+    }),
+  
+  put: <T>(endpoint: string, data?: any, options?: RequestOptions) => 
+    apiClient.request<T>(endpoint, { 
+      ...options, 
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined 
+    }),
+  
+  delete: <T>(endpoint: string, options?: RequestOptions) => 
+    apiClient.request<T>(endpoint, { ...options, method: 'DELETE' }),
+  
+  upload: (endpoint: string, file: File, fieldName: string = 'file') =>
+    apiClient.upload(endpoint, file, fieldName),
+};
+
+// Default export for convenience
+export default api;

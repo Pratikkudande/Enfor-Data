@@ -16,11 +16,19 @@ import RegisterForm from '../pages/Auth/RegisterForm';
 const BrokerDashboard = lazy(() => import('../pages/Dashboard/BrokerDashboard'));
 const PropertiesView = lazy(() => import('../pages/Properties/PropertiesView'));
 const WhatsAppView = lazy(() => import('../pages/WhatsApp/WhatsAppView'));
+const SMSMarketingView = lazy(() => import('../pages/SMSMarketing/SMSMarketingView'));
 const ClientsView = lazy(() => import('../pages/Clients/ClientsView'));
 const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsView'));
 const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
 const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
 const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
+
+// Subscription Pages
+const PricingPage = lazy(() => import('../pages/Subscription/PricingPage'));
+const ActivateTrialPage = lazy(() => import('../pages/Subscription/ActivateTrialPage'));
+const SubscriptionDashboard = lazy(() => import('../pages/Subscription/SubscriptionDashboard'));
+const CheckoutPage = lazy(() => import('../pages/Subscription/CheckoutPage'));
+const SuccessPage = lazy(() => import('../pages/Subscription/SuccessPage'));
 
 // Loading Fallback
 const PageLoader = () => (
@@ -56,6 +64,13 @@ export const AppRoutes: React.FC = () => {
       {/* Public Routes */}
       <Route path={ROUTES.HOME} element={<PublicRoute><LandingPage /></PublicRoute>} />
       
+      {/* Public Pricing Page */}
+      <Route path={ROUTES.PRICING} element={
+        <Suspense fallback={<PageLoader />}>
+          <PricingPage />
+        </Suspense>
+      } />
+      
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path={ROUTES.LOGIN} element={<PublicRoute><LoginForm /></PublicRoute>} />
@@ -77,6 +92,11 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.WHATSAPP} element={
           <Suspense fallback={<PageLoader />}>
             <WhatsAppView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.SMS_MARKETING} element={
+          <Suspense fallback={<PageLoader />}>
+            <SMSMarketingView />
           </Suspense>
         } />
         <Route path={ROUTES.CLIENTS} element={
@@ -102,6 +122,28 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.MARKETING} element={
           <Suspense fallback={<PageLoader />}>
             <MarketingView />
+          </Suspense>
+        } />
+        
+        {/* Subscription Routes - Protected */}
+        <Route path={ROUTES.SUBSCRIPTION} element={
+          <Suspense fallback={<PageLoader />}>
+            <SubscriptionDashboard />
+          </Suspense>
+        } />
+        <Route path={ROUTES.SUBSCRIPTION_ACTIVATE_TRIAL} element={
+          <Suspense fallback={<PageLoader />}>
+            <ActivateTrialPage />
+          </Suspense>
+        } />
+        <Route path={ROUTES.SUBSCRIPTION_CHECKOUT} element={
+          <Suspense fallback={<PageLoader />}>
+            <CheckoutPage />
+          </Suspense>
+        } />
+        <Route path={ROUTES.SUBSCRIPTION_SUCCESS} element={
+          <Suspense fallback={<PageLoader />}>
+            <SuccessPage />
           </Suspense>
         } />
         

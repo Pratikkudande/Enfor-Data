@@ -36,6 +36,15 @@ func main() {
 	if err := db.RunNetworkMigrations(); err != nil {
 		log.Fatal("Failed to run network migrations:", err)
 	}
+	if err := db.RunWhatsAppMigrations(); err != nil {
+		log.Fatal("Failed to run WhatsApp migrations:", err)
+	}
+	if err := db.RunSMSMarketingMigrations(); err != nil {
+		log.Fatal("Failed to run SMS Marketing migrations:", err)
+	}
+	if err := db.RunSubscriptionMigrations(); err != nil {
+		log.Fatal("Failed to run Subscription migrations:", err)
+	}
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
@@ -43,13 +52,29 @@ func main() {
 	clientRepo := repository.NewClientRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
 	networkRepo := repository.NewNetworkRepository(db)
+	whatsappRepo := repository.NewWhatsAppRepository(db)
+	smsMarketingRepo := repository.NewSMSMarketingRepository(db)
+	otpRepo := repository.NewOTPRepository(db)
+	subscriptionRepo := repository.NewSubscriptionRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
 
 	// Initialize services
+	smsService := service.NewSMSService(cfg)
 	authService := service.NewAuthService(userRepo, cfg)
 	propertyService := service.NewPropertyService(propertyRepo, clientRepo, userRepo)
 	clientService := service.NewClientService(clientRepo, userRepo)
-	appointmentService := service.NewAppointmentService(appointmentRepo, clientRepo, propertyRepo)
+	appointmentService := service.NewAppointmentService(appointmentRepo, clientRepo, propertyRepo, userRepo, smsService)
 	networkService := service.NewNetworkService(networkRepo, userRepo)
+	whatsappService := service.NewWhatsAppService(whatsappRepo, clientRepo)
+	whatsappSetupService := service.NewMetaWhatsAppSetupService(whatsappRepo)
+	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, smsService)
+	otpService := service.NewOTPService(otpRepo, userRepo, smsService)
+	subscriptionService := service.NewSubscriptionService(subscriptionRepo, userRepo)
+	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
+	
+	// Initialize appointment reminder service
+	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
+	reminderService.Start() // Start the background reminder scheduler
 
 	// Initialize WebSocket hub
 	hub := ws.NewHub()
@@ -61,9 +86,15 @@ func main() {
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
 	networkHandler := handler.NewNetworkHandler(networkService, hub)
+	whatsappHandler := handler.NewWhatsAppHandler(whatsappService, whatsappSetupService)
+	smsMarketingHandler := handler.NewSMSMarketingHandler(smsMarketingService)
+	otpHandler := handler.NewOTPHandler(otpService)
+	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
+	paymentHandler := handler.NewPaymentHandler(paymentService, subscriptionService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
+	// subscriptionMiddleware := middleware.NewSubscriptionMiddleware(subscriptionService) // For future feature gating
 
 	// Initialize Gin router
 	router := gin.New()
@@ -91,6 +122,10 @@ func main() {
 			auth.POST("/signup", authHandler.Signup)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/logout", authHandler.Logout)
+			// OTP routes (public)
+			auth.POST("/send-otp", otpHandler.SendOTP)
+			auth.POST("/verify-otp", otpHandler.VerifyOTP)
+			auth.POST("/resend-otp", otpHandler.ResendOTP)
 			// Protected auth routes
 			auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
 			auth.POST("/refresh", authHandler.RefreshToken)
@@ -148,6 +183,91 @@ func main() {
 				network.GET("/ws", networkHandler.WebSocketHandler)
 			}
 
+			// ── WhatsApp Marketing ────────────────────────────────────────────
+			whatsapp := protected.Group("/whatsapp")
+			{
+				// Setup & Onboarding
+				whatsapp.POST("/setup/business", whatsappHandler.InitializeBusinessSetup)
+				whatsapp.POST("/setup/request-verification", whatsappHandler.RequestVerificationCode)
+				whatsapp.POST("/setup/verify-phone", whatsappHandler.VerifyPhoneNumber)
+				whatsapp.POST("/setup/connect-meta-api", whatsappHandler.ConnectMetaAPI)
+				whatsapp.GET("/setup/status", whatsappHandler.GetSetupStatus)
+				whatsapp.POST("/setup/resend-code", whatsappHandler.ResendVerificationCode)
+
+				// Account Management
+				whatsapp.GET("/account", whatsappHandler.GetAccount)
+				whatsapp.POST("/connect", whatsappHandler.ConnectAccount)
+				whatsapp.POST("/disconnect", whatsappHandler.DisconnectAccount)
+
+				// Message Sending
+				whatsapp.POST("/send", whatsappHandler.SendMessage)
+
+				// Campaign Management
+				whatsapp.POST("/campaigns", whatsappHandler.CreateCampaign)
+				whatsapp.GET("/campaigns", whatsappHandler.GetCampaigns)
+				whatsapp.GET("/campaigns/:id", whatsappHandler.GetCampaignDetails)
+				whatsapp.POST("/campaigns/:id/send", whatsappHandler.SendCampaign)
+
+				// Templates
+				whatsapp.GET("/templates", whatsappHandler.GetTemplates)
+				whatsapp.POST("/templates", whatsappHandler.CreateTemplate)
+				whatsapp.DELETE("/templates/:id", whatsappHandler.DeleteTemplate)
+
+				// Analytics
+				whatsapp.GET("/logs", whatsappHandler.GetMessageLogs)
+			}
+
+			// ── SMS Marketing ────────────────────────────────────────────
+			smsMarketing := protected.Group("/sms-marketing")
+			{
+				// Account Management
+				smsMarketing.GET("/account", smsMarketingHandler.GetAccount)
+				smsMarketing.POST("/connect", smsMarketingHandler.ConnectAccount)
+				smsMarketing.POST("/disconnect", smsMarketingHandler.DisconnectAccount)
+
+				// Message Sending
+				smsMarketing.POST("/send", smsMarketingHandler.SendMessage)
+				smsMarketing.POST("/send-bulk", smsMarketingHandler.SendBulkMessage)
+
+				// Campaign Management
+				smsMarketing.POST("/campaigns", smsMarketingHandler.CreateCampaign)
+				smsMarketing.GET("/campaigns", smsMarketingHandler.GetCampaigns)
+				smsMarketing.GET("/campaigns/:id", smsMarketingHandler.GetCampaignDetails)
+				smsMarketing.POST("/campaigns/:id/send", smsMarketingHandler.SendCampaign)
+
+				// Templates
+				smsMarketing.GET("/templates", smsMarketingHandler.GetTemplates)
+				smsMarketing.POST("/templates", smsMarketingHandler.CreateTemplate)
+				smsMarketing.DELETE("/templates/:id", smsMarketingHandler.DeleteTemplate)
+
+				// Analytics
+				smsMarketing.GET("/logs", smsMarketingHandler.GetMessageLogs)
+				smsMarketing.GET("/stats", smsMarketingHandler.GetStats)
+			}
+
+			// ── Subscriptions ────────────────────────────────────────────
+			subscriptions := protected.Group("/subscriptions")
+			{
+				// User Subscription (protected)
+				subscriptions.GET("/current", subscriptionHandler.GetCurrentSubscription)
+				subscriptions.GET("/status", subscriptionHandler.GetSubscriptionStatus)
+				subscriptions.POST("/activate-trial", subscriptionHandler.ActivateTrial)
+				subscriptions.POST("/cancel", subscriptionHandler.CancelSubscription)
+
+				// Feature Access (protected)
+				subscriptions.GET("/features/:feature/access", subscriptionHandler.CheckFeatureAccess)
+				subscriptions.GET("/features/:feature/limit", subscriptionHandler.CheckFeatureLimit)
+				subscriptions.GET("/usage", subscriptionHandler.GetFeatureUsage)
+			}
+
+			// ── Payments ────────────────────────────────────────────
+			payments := protected.Group("/payments")
+			{
+				payments.POST("/create-order", paymentHandler.CreateSubscriptionOrder)
+				payments.POST("/verify", paymentHandler.VerifyPayment)
+				payments.GET("/history", paymentHandler.GetPaymentHistory)
+			}
+
 			// Role-specific routes
 			broker := protected.Group("/broker")
 			broker.Use(authMiddleware.RequireRole("broker"))
@@ -185,6 +305,20 @@ func main() {
 
 		// File serving routes (public for uploaded files)
 		api.GET("/uploads/:filename", uploadHandler.ServeUploadedFile)
+
+		// Razorpay webhook (public)
+		api.POST("/payments/webhook", paymentHandler.RazorpayWebhook)
+
+		// ── Public Subscription Plans ────────────────────────────────────────────
+		// These endpoints are public so users can view pricing without authentication
+		publicSubscriptions := api.Group("/subscriptions")
+		{
+			// Plans (public access)
+			publicSubscriptions.GET("/plans", subscriptionHandler.GetAllPlans)
+			publicSubscriptions.GET("/plans/compare", subscriptionHandler.ComparePlans)
+			publicSubscriptions.GET("/plans/:id", subscriptionHandler.GetPlanByID)
+			publicSubscriptions.GET("/plans/slug/:slug", subscriptionHandler.GetPlanBySlug)
+		}
 	}
 
 	// Start server
