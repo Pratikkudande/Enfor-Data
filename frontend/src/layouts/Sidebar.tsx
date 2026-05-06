@@ -14,7 +14,8 @@ import {
   UserCheck,
   Briefcase,
   CreditCard,
-  Crown
+  Crown,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'properties', label: 'Properties', icon: Building },
     { id: 'clients', label: 'Clients', icon: Users },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageSquare },
     { id: 'sms-marketing', label: 'SMS Marketing', icon: MessageSquare },
     { id: 'network', label: 'Broker Network', icon: Network },
@@ -40,8 +42,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'business-posts', label: 'Business Posts', icon: PlusCircle },
     { id: 'marketing', label: 'Marketing', icon: Megaphone },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'pricing', label: 'Pricing Plans', icon: Crown },
-    { id: 'subscription', label: 'My Subscription', icon: CreditCard }
+    { id: 'subscription', label: 'My Subscription', icon: CreditCard },
+    { id: 'profile', label: 'Profile', icon: UserCheck },
+    { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
   const channelPartnerMenuItems = [
@@ -49,11 +52,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'projects', label: 'My Projects', icon: Briefcase },
     { id: 'brokers', label: 'Broker Network', icon: Network },
     { id: 'leads', label: 'Leads Management', icon: Users },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'marketing', label: 'Marketing', icon: Megaphone },
     { id: 'pricing', label: 'Pricing Plans', icon: Crown },
-    { id: 'subscription', label: 'My Subscription', icon: CreditCard }
+    { id: 'subscription', label: 'My Subscription', icon: CreditCard },
+    { id: 'profile', label: 'Profile', icon: UserCheck },
+    { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
   const adminMenuItems = [
@@ -61,8 +67,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'users', label: 'User Management', icon: UserCheck },
     { id: 'properties', label: 'All Properties', icon: Building },
     { id: 'projects', label: 'All Projects', icon: Briefcase },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'whatsapp-control', label: 'WhatsApp Control', icon: MessageSquare },
     { id: 'analytics', label: 'Platform Analytics', icon: BarChart3 },
+    { id: 'profile', label: 'Profile', icon: UserCheck },
     { id: 'settings', label: 'System Settings', icon: Settings }
   ];
 

@@ -30,17 +30,23 @@ See `WINDOWS_QUICK_START.txt` for more details.
 
 - **Property Management** - Manage listings with images, pricing, and status tracking
 - **Client Management** - Track buyers, sellers, tenants, and owners
-- **Appointment Scheduling** - Schedule property viewings and meetings
-- **WhatsApp Integration** - Direct client communication and marketing
-- **Broker Network** - Connect with brokers across India
-- **Business Posts** - Share and discover property listings
+- **Appointment Scheduling** - Schedule property viewings and meetings with SMS reminders
+- **Subscription Management** - SaaS subscription system with multiple plans and Razorpay integration
+- **Payment Processing** - Secure payment handling with Razorpay for subscription plans
+- **WhatsApp Integration** - Direct client communication and marketing campaigns
+- **SMS Marketing** - Bulk SMS campaigns and automated messaging
+- **Broker Network** - Connect and collaborate with brokers across India
+- **Business Posts** - Share and discover property listings in the network
 - **Marketing Tools** - Automated campaigns and client outreach
 - **Dashboard & Analytics** - Real-time statistics and insights
+- **OTP Authentication** - Secure mobile number verification
+- **Feature Gating** - Subscription-based access control for premium features
 
 ## Tech Stack
 
-**Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Supabase  
-**Backend:** Go 1.21, Gin, PostgreSQL, JWT Authentication  
+**Frontend:** React 18, TypeScript, Vite, Tailwind CSS, React Router, Lucide React  
+**Backend:** Go 1.21, Gin, PostgreSQL, JWT Authentication, Razorpay Integration  
+**Services:** Twilio SMS, Meta WhatsApp API, OTP Verification  
 
 ## Project Structure
 
@@ -49,12 +55,24 @@ See `WINDOWS_QUICK_START.txt` for more details.
 ├── backend/              # Go backend server
 │   ├── cmd/             # Application entry points
 │   ├── internal/        # Internal packages
+│   │   ├── handler/     # HTTP handlers
+│   │   ├── service/     # Business logic
+│   │   ├── repository/  # Data access layer
+│   │   ├── models/      # Data models
+│   │   ├── middleware/  # HTTP middleware
+│   │   └── utils/       # Utility functions
 │   ├── migrations/      # Database migrations
 │   └── uploads/         # File uploads
-├── src/                 # React frontend
-│   ├── components/      # React components
-│   ├── context/         # Context providers
-│   └── services/        # API services
+├── frontend/            # React frontend
+│   ├── src/
+│   │   ├── components/  # Reusable UI components
+│   │   ├── pages/       # Page components
+│   │   ├── services/    # API services
+│   │   ├── context/     # React contexts
+│   │   ├── layouts/     # Layout components
+│   │   ├── routes/      # Routing configuration
+│   │   └── types/       # TypeScript types
+│   └── dist/            # Production build
 ├── scripts/             # Build and startup scripts
 ├── start.bat            # Windows one-click startup
 └── stop.bat             # Windows one-click shutdown
@@ -78,18 +96,49 @@ CREATE USER backend WITH PASSWORD 'enfor_data';
 GRANT ALL PRIVILEGES ON DATABASE enfor_data TO backend;
 ```
 
-### 3. Configure Backend
+### 3. Configure Environment
 
-Copy `backend/config.env.example` to `backend/config.env` and update if needed.
+**Backend Configuration:**
+Copy `backend/config.env.example` to `backend/config.env` and update:
+
+```env
+# Database
+DATABASE_URL=postgres://backend:enfor_data@localhost/enfor_data?sslmode=disable
+
+# Server
+PORT=8080
+GIN_MODE=debug
+
+# JWT
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=24h
+
+# Razorpay (for payments)
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
+# Twilio (for SMS)
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_FROM_NUMBER=+1234567890
+```
+
+**Frontend Configuration:**
+Create `frontend/.env` file:
+
+```env
+VITE_API_URL=http://localhost:8080/api
+```
 
 ### 4. Install Dependencies
 
 ```bash
 # Frontend
+cd frontend
 npm install
 
 # Backend
-cd backend
+cd ../backend
 go mod download
 ```
 
@@ -111,13 +160,15 @@ cd backend
 go run cmd/api/main.go
 
 # Terminal 2 - Frontend
+cd frontend
 npm run dev
 ```
 
 ## Access the Application
 
-- **Frontend:** http://localhost:5173
+- **Frontend:** http://localhost:3000 (or http://localhost:5173)
 - **Backend API:** http://localhost:8080
+- **API Documentation:** http://localhost:8080/health (health check)
 
 ## Demo Credentials
 
@@ -128,8 +179,27 @@ npm run dev
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register new user
+- `POST /api/auth/signup` - Register new user
 - `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `POST /api/auth/refresh` - Refresh access token
+- `GET /api/auth/me` - Get current user info
+
+### OTP Verification
+- `POST /api/auth/send-otp` - Send OTP to mobile number
+- `POST /api/auth/verify-otp` - Verify OTP code
+- `POST /api/auth/resend-otp` - Resend OTP
+
+### Subscriptions
+- `GET /api/subscriptions/plans` - Get all subscription plans
+- `GET /api/subscriptions/current` - Get user's current subscription
+- `POST /api/subscriptions/activate-trial` - Activate free trial
+- `POST /api/subscriptions/cancel` - Cancel subscription
+
+### Payments
+- `POST /api/payments/create-order` - Create Razorpay payment order
+- `POST /api/payments/verify` - Verify payment and activate subscription
+- `GET /api/payments/history` - Get payment history
 
 ### Properties
 - `GET /api/properties` - List all properties
@@ -152,19 +222,30 @@ npm run dev
 - `PUT /api/appointments/:id` - Update appointment
 - `DELETE /api/appointments/:id` - Delete appointment
 
+### WhatsApp
+- `POST /api/whatsapp/setup/business` - Initialize WhatsApp business setup
+- `POST /api/whatsapp/send` - Send WhatsApp message
+- `GET /api/whatsapp/campaigns` - Get WhatsApp campaigns
+
+### SMS Marketing
+- `POST /api/sms-marketing/send` - Send SMS message
+- `POST /api/sms-marketing/campaigns` - Create SMS campaign
+- `GET /api/sms-marketing/stats` - Get SMS statistics
+
 ## Development
 
 ### Frontend Scripts
-- `npm run dev` - Start development server
+- `npm run dev` - Start development server (Vite)
 - `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run typecheck` - TypeScript type checking
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint for code quality
+- `npm run typecheck` - Run TypeScript type checking
 
 ### Backend Commands
-- `go run cmd/server/main.go` - Start development server
-- `go build -o enfor-backend cmd/server/main.go` - Build binary
+- `go run cmd/api/main.go` - Start development server
+- `go build -o enfor-backend cmd/api/main.go` - Build binary
 - `go test ./...` - Run tests
+- `go mod tidy` - Clean up dependencies
 
 ## Stopping the Application
 

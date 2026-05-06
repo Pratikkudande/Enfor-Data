@@ -12,6 +12,11 @@ export const ROUTES = {
   BUSINESS_POSTS: '/business-posts',
   MARKETING: '/marketing',
   
+  // Profile & Settings Routes
+  PROFILE: '/profile',
+  SETTINGS: '/settings',
+  NOTIFICATIONS: '/notifications',
+  
   // Subscription Routes
   PRICING: '/pricing',
   SUBSCRIPTION: '/subscription',

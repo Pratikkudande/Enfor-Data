@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Bell, LogOut, Menu, User, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../routes/routePaths';
+import NotificationDropdown from '../components/notifications/NotificationDropdown';
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -9,11 +13,39 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
+  const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [notifications] = useState(3); // Mock notification count
+  const [showNotifications, setShowNotifications] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
+    setShowProfileMenu(false);
+  };
+
+  const handleProfileClick = () => {
+    navigate(ROUTES.PROFILE);
+    setShowProfileMenu(false);
+  };
+
+  const handleSettingsClick = () => {
+    navigate(ROUTES.SETTINGS);
     setShowProfileMenu(false);
   };
 
@@ -48,17 +80,29 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
 
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Notifications */}
-          <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <Bell className="h-5 w-5 text-gray-600" />
-            {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {notifications}
-              </span>
-            )}
-          </button>
+          <div className="relative" ref={notificationRef}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Bell className="h-5 w-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            <NotificationDropdown
+              isOpen={showNotifications}
+              onClose={() => setShowNotifications(false)}
+              notificationCount={unreadCount}
+              onNotificationCountChange={() => {}} // This is now handled by the context
+            />
+          </div>
 
           {/* Profile Menu */}
-          <div className="relative">
+          <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -83,7 +127,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
                 </div>
 
                 <button
-                  onClick={() => setShowProfileMenu(false)}
+                  onClick={handleProfileClick}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
                 >
                   <User className="h-4 w-4 mr-3" />
@@ -91,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
                 </button>
 
                 <button
-                  onClick={() => setShowProfileMenu(false)}
+                  onClick={handleSettingsClick}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
                 >
                   <Settings className="h-4 w-4 mr-3" />

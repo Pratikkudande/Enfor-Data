@@ -23,6 +23,11 @@ const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'
 const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
 const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
 
+// Profile & Settings Pages
+const ProfileView = lazy(() => import('../pages/Profile/ProfileView'));
+const SettingsView = lazy(() => import('../pages/Settings/SettingsView'));
+const NotificationsView = lazy(() => import('../pages/Notifications/NotificationsView'));
+
 // Subscription Pages
 const PricingPage = lazy(() => import('../pages/Subscription/PricingPage'));
 const ActivateTrialPage = lazy(() => import('../pages/Subscription/ActivateTrialPage'));
@@ -122,6 +127,23 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.MARKETING} element={
           <Suspense fallback={<PageLoader />}>
             <MarketingView />
+          </Suspense>
+        } />
+        
+        {/* Profile & Settings Routes */}
+        <Route path={ROUTES.PROFILE} element={
+          <Suspense fallback={<PageLoader />}>
+            <ProfileView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.SETTINGS} element={
+          <Suspense fallback={<PageLoader />}>
+            <SettingsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.NOTIFICATIONS} element={
+          <Suspense fallback={<PageLoader />}>
+            <NotificationsView />
           </Suspense>
         } />
         

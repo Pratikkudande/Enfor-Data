@@ -10,6 +10,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import StatsCard from './StatsCard';
+import NotificationDemo from '../../components/demo/NotificationDemo';
 import { DashboardStats } from '../../types';
 
 interface BrokerDashboardProps {
@@ -260,6 +261,9 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats }) => {
           </div>
         </div>
       </div>
+
+      {/* Notification Demo Section */}
+      <NotificationDemo />
     </div>
   );
 };
