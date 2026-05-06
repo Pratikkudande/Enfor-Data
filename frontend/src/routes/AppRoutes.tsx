@@ -22,6 +22,7 @@ const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsVi
 const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
 const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
 const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
+const AgreementsView = lazy(() => import('../pages/Agreements/AgreementsView'));
 
 // Profile & Settings Pages
 const ProfileView = lazy(() => import('../pages/Profile/ProfileView'));
@@ -42,26 +43,7 @@ const PageLoader = () => (
   </div>
 );
 
-// Mock dashboard stats for now
-const mockStats = {
-  totalProperties: 24,
-  totalClients: 156,
-  totalAppointments: 3,
-  whatsappMessagesCount: 1250,
-  remainingMessages: 750,
-  clientsByType: {
-    buyers: 45,
-    sellers: 32,
-    tenants: 58,
-    owners: 21
-  },
-  propertiesByStatus: {
-    available: 18,
-    sold: 3,
-    rented: 2,
-    under_negotiation: 1
-  }
-};
+
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -86,7 +68,7 @@ export const AppRoutes: React.FC = () => {
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path={ROUTES.DASHBOARD} element={
           <Suspense fallback={<PageLoader />}>
-            <BrokerDashboard stats={mockStats} />
+            <BrokerDashboard />
           </Suspense>
         } />
         <Route path={ROUTES.PROPERTIES} element={
@@ -127,6 +109,11 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.MARKETING} element={
           <Suspense fallback={<PageLoader />}>
             <MarketingView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.AGREEMENTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <AgreementsView />
           </Suspense>
         } />
         

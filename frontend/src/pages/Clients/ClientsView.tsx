@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User } from 'lucide-react';
 import { apiClient, Client as ApiClient, CreateClientRequest } from '../../services/api';
+import { useSearchParams } from 'react-router-dom';
 import LoadingState from '../../components/common/LoadingState';
 import ErrorState from '../../components/common/ErrorState';
 import ClientCard from './ClientCard';
 import ClientForm from './ClientForm';
 
 const ClientsView: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -43,6 +45,14 @@ const ClientsView: React.FC = () => {
   };
 
   useEffect(() => { fetchClients(); }, []);
+  useEffect(() => {
+    if (searchParams.get('openAdd') === '1') {
+      openAddModal();
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('openAdd');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', location: '', contactNo: '', email: '',

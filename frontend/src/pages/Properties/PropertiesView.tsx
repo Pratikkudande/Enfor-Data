@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Building } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Property } from '../../types';
 import { apiClient, Client as ApiClientClient, CreatePropertyRequest, UpdatePropertyRequest } from '../../services/api';
 import { PropertyFormData } from './types';
@@ -12,6 +13,7 @@ import PropertyDeleteModal from './PropertyDeleteModal';
 import { useAuth } from '../../context/AuthContext';
 
 const PropertiesView: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const currentUserId = user?.id ?? '';
 
@@ -42,6 +44,14 @@ const PropertiesView: React.FC = () => {
     fetchProperties();
     fetchClients();
   }, []);
+  useEffect(() => {
+    if (searchParams.get('openAdd') === '1') {
+      handleOpenCreateModal();
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('openAdd');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams]);
 
   const showTimedSuccessMessage = (message: string) => {
     setSuccessMessage(message);

@@ -11,6 +11,7 @@ export const ROUTES = {
   NETWORK: '/network',
   BUSINESS_POSTS: '/business-posts',
   MARKETING: '/marketing',
+  AGREEMENTS: '/agreements',
   
   // Profile & Settings Routes
   PROFILE: '/profile',

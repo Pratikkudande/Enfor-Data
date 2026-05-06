@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, DashboardStats, Appointment } from '../types';
 import { apiClient } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  dashboardStats?: DashboardStats | null;
+  appointments?: Appointment[] | null;
+  appointmentStats?: any;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any) => Promise<void>;
@@ -25,6 +28,9 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[] | null>(null);
+  const [appointmentStats, setAppointmentStats] = useState<any | null>(null);
 
   useEffect(() => {
     // Check for existing session and validate token
@@ -50,6 +56,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             setUser(userData);
             localStorage.setItem('enfor_user', JSON.stringify(userData));
+            // Prefetch dashboard stats for immediate availability in UI
+            try {
+              const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
+                  apiClient.getAllProperties(),
+                  apiClient.getClients(),
+                  apiClient.getAppointmentStats(),
+                  apiClient.getAppointments(),
+                ]);
+
+              const properties = propsRes?.data ?? [];
+              const clients = clientsRes?.data ?? [];
+              const apptStats = apptRes?.data ?? apptRes ?? {};
+              const appts = apptsRes?.data ?? apptsRes ?? [];
+
+              const derived: DashboardStats = {
+                totalProperties: Array.isArray(properties) ? properties.length : 0,
+                activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+                totalClients: Array.isArray(clients) ? clients.length : 0,
+                userClientsCount: Array.isArray(clients) ? clients.length : 0,
+                totalAppointments: apptStats?.total ?? 0,
+                todaysAppointments: apptStats?.today ?? 0,
+                whatsappMessagesCount: 0,
+                remainingMessages: 0,
+                clientsByType: {
+                  buyers: 0,
+                  sellers: 0,
+                  tenants: 0,
+                  owners: 0,
+                },
+                propertiesByStatus: {
+                  available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+                  sold: 0,
+                  rented: 0,
+                  under_negotiation: 0,
+                },
+              };
+
+              setDashboardStats(derived);
+              setAppointments(Array.isArray(appts) ? appts : []);
+              setAppointmentStats(apptStats);
+            } catch (e) {
+              // ignore prefetch errors — dashboard will fetch on demand
+            }
             setLoading(false);
             return;
           }
@@ -123,6 +172,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(userData);
         localStorage.setItem('enfor_user', JSON.stringify(userData));
+        // Prefetch dashboard stats immediately after login
+        try {
+          const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
+            apiClient.getAllProperties(),
+            apiClient.getClients(),
+            apiClient.getAppointmentStats(),
+            apiClient.getAppointments(),
+          ]);
+
+          const properties = propsRes?.data ?? [];
+          const clients = clientsRes?.data ?? [];
+          const apptStats = apptRes?.data ?? apptRes ?? {};
+          const appts = apptsRes?.data ?? apptsRes ?? [];
+
+          const derived: DashboardStats = {
+            totalProperties: Array.isArray(properties) ? properties.length : 0,
+            activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+            totalClients: Array.isArray(clients) ? clients.length : 0,
+            userClientsCount: Array.isArray(clients) ? clients.length : 0,
+            totalAppointments: apptStats?.total ?? 0,
+            todaysAppointments: apptStats?.today ?? 0,
+            whatsappMessagesCount: 0,
+            remainingMessages: 0,
+            clientsByType: {
+              buyers: 0,
+              sellers: 0,
+              tenants: 0,
+              owners: 0,
+            },
+            propertiesByStatus: {
+              available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+              sold: 0,
+              rented: 0,
+              under_negotiation: 0,
+            },
+          };
+
+          setDashboardStats(derived);
+          setAppointments(Array.isArray(appts) ? appts : []);
+          setAppointmentStats(apptStats);
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (error: any) {
       throw new Error(error.message || 'Login failed');
@@ -169,6 +261,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(newUser);
         localStorage.setItem('enfor_user', JSON.stringify(newUser));
+        // Prefetch dashboard stats after registration
+        try {
+          const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
+            apiClient.getAllProperties(),
+            apiClient.getClients(),
+            apiClient.getAppointmentStats(),
+            apiClient.getAppointments(),
+          ]);
+
+          const properties = propsRes?.data ?? [];
+          const clients = clientsRes?.data ?? [];
+          const apptStats = apptRes?.data ?? apptRes ?? {};
+          const appts = apptsRes?.data ?? apptsRes ?? [];
+
+          const derived: DashboardStats = {
+            totalProperties: Array.isArray(properties) ? properties.length : 0,
+            activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+            totalClients: Array.isArray(clients) ? clients.length : 0,
+            userClientsCount: Array.isArray(clients) ? clients.length : 0,
+            totalAppointments: apptStats?.total ?? 0,
+            todaysAppointments: apptStats?.today ?? 0,
+            whatsappMessagesCount: 0,
+            remainingMessages: 0,
+            clientsByType: {
+              buyers: 0,
+              sellers: 0,
+              tenants: 0,
+              owners: 0,
+            },
+            propertiesByStatus: {
+              available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+              sold: 0,
+              rented: 0,
+              under_negotiation: 0,
+            },
+          };
+
+          setDashboardStats(derived);
+          setAppointments(Array.isArray(appts) ? appts : []);
+          setAppointmentStats(apptStats);
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (error: any) {
       throw new Error(error.message || 'Registration failed');
@@ -178,6 +313,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     isAuthenticated: !!user,
+    dashboardStats,
+    appointments,
+    appointmentStats,
     login,
     logout,
     register,
