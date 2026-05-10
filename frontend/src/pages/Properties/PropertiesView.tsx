@@ -3,6 +3,7 @@ import { Plus, Search, Building } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Property } from '../../types';
 import { apiClient, Client as ApiClientClient, CreatePropertyRequest, UpdatePropertyRequest } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import { PropertyFormData } from './types';
 import { initialFormData } from './constants';
 import { transformProperty, propertyToFormData } from './utils';
@@ -285,13 +286,36 @@ const PropertiesView: React.FC = () => {
             <span className="text-gray-500">{othersCount} from other brokers</span>
           </p>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add Property
-        </button>
+        <div className="mt-4 sm:mt-0 flex items-center gap-3">
+          <button
+            onClick={handleOpenCreateModal}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add Property
+          </button>
+          <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/properties-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+            Download Sample Excel
+          </button>
+          <input type="file" accept=".xlsx,.xls,.csv" id="propertiesExcelInput" className="hidden" onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              setSubmitting(true);
+              await apiClient.uploadPropertiesExcel(file);
+              showTimedSuccessMessage('Properties uploaded successfully');
+              fetchProperties();
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Upload failed');
+            } finally {
+              setSubmitting(false);
+              (e.target as HTMLInputElement).value = '';
+            }
+          }} />
+          <button onClick={() => document.getElementById('propertiesExcelInput')?.click()} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+            Upload Excel
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

@@ -49,7 +49,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
-	uploadHandler := handler.NewUploadHandler(authService, cfg)
+	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService)
 	propertyHandler := handler.NewPropertyHandler(propertyService)
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
@@ -94,6 +94,8 @@ func main() {
 		{
 			// File upload routes
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
+			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
+			protected.POST("/upload/properties-excel", uploadHandler.UploadPropertiesExcel)
 
 			// Property routes (accessible to all authenticated users)
 			protected.GET("/properties/all", propertyHandler.GetAllProperties)
@@ -163,6 +165,9 @@ func main() {
 
 		// File serving routes (public for uploaded files)
 		api.GET("/uploads/:filename", uploadHandler.ServeUploadedFile)
+		// Sample download templates
+		api.GET("/download/clients-sample", uploadHandler.DownloadClientsSample)
+		api.GET("/download/properties-sample", uploadHandler.DownloadPropertiesSample)
 	}
 
 	// Start server

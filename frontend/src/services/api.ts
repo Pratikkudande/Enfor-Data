@@ -58,6 +58,15 @@ class ApiService {
     return apiClient.upload('/upload/profile-photo', file, 'profile_photo');
   }
 
+  // Bulk Excel uploads
+  async uploadClientsExcel(file: File): Promise<ApiResponse> {
+    return apiClient.upload('/upload/clients-excel', file, 'file');
+  }
+
+  async uploadPropertiesExcel(file: File): Promise<ApiResponse> {
+    return apiClient.upload('/upload/properties-excel', file, 'file');
+  }
+
   // Property endpoints
   async getAllProperties(): Promise<ApiResponse<Property[]>> {
     return apiClient.request<ApiResponse<Property[]>>('/properties/all');

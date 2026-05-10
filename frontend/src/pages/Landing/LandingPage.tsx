@@ -1,4 +1,5 @@
 import React from 'react';
+import logo from '../../assets/enfordata-logo.svg';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/routePaths';
 import { 
@@ -112,11 +113,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <Building2 className="h-8 w-8 text-blue-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-blue-600">ENFOR DATA</h1>
-                <p className="text-sm text-gray-600">Real Estate Business Platform</p>
-              </div>
+              <img src={logo} alt="Enfor Data" className="h-10 mr-3" />
             </div>
             <button
               onClick={handleGetStarted}
