@@ -22,6 +22,7 @@ const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'
 const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
 const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
 const AgreementsView = lazy(() => import('../pages/Agreements/AgreementsView'));
+const ProjectsView = lazy(() => import('../pages/Projects/ProjectsView'));
 
 // Loading Fallback
 const PageLoader = () => (
@@ -89,6 +90,11 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.AGREEMENTS} element={
           <Suspense fallback={<PageLoader />}>
             <AgreementsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.PROJECTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ProjectsView />
           </Suspense>
         } />
         

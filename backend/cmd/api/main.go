@@ -39,6 +39,7 @@ func main() {
 	clientRepo := repository.NewClientRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
 	agreementRepo := repository.NewAgreementRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg)
@@ -46,6 +47,7 @@ func main() {
 	clientService := service.NewClientService(clientRepo, userRepo)
 	appointmentService := service.NewAppointmentService(appointmentRepo, clientRepo, propertyRepo)
 	agreementService := service.NewAgreementService(agreementRepo, propertyRepo, clientRepo)
+	projectService := service.NewProjectService(projectRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -54,6 +56,7 @@ func main() {
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
 	agreementHandler := handler.NewAgreementHandler(agreementService)
+	projectHandler := handler.NewProjectHandler(projectService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -127,6 +130,14 @@ func main() {
 			protected.GET("/agreements/:id", agreementHandler.GetAgreement)
 			protected.PUT("/agreements/:id", agreementHandler.UpdateAgreement)
 			protected.DELETE("/agreements/:id", agreementHandler.DeleteAgreement)
+
+			// Project routes
+			protected.GET("/projects/all", projectHandler.GetAllProjects)
+			protected.GET("/projects", projectHandler.GetMyProjects)
+			protected.POST("/projects", projectHandler.CreateProject)
+			protected.GET("/projects/:id", projectHandler.GetProject)
+			protected.PUT("/projects/:id", projectHandler.UpdateProject)
+			protected.DELETE("/projects/:id", projectHandler.DeleteProject)
 
 			// Role-specific routes
 			broker := protected.Group("/broker")

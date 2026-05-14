@@ -11,4 +11,5 @@ export const ROUTES = {
   BUSINESS_POSTS: '/business-posts',
   MARKETING: '/marketing',
   AGREEMENTS: '/agreements',
+  PROJECTS: '/projects',
 } as const;

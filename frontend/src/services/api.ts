@@ -13,7 +13,12 @@ import {
   CreateAppointmentRequest,
   UpdateAppointmentRequest,
   Appointment,
-  AppointmentStats
+  AppointmentStats,
+  Agreement,
+  CreateAgreementRequest,
+  Project,
+  CreateProjectRequest,
+  UpdateProjectRequest,
 } from '../types';
 
 export * from '../types'; // Re-export types so we don't break existing imports relying on api.ts
@@ -187,6 +192,39 @@ class ApiService {
 
   async deleteAgreement(id: string): Promise<ApiResponse> {
     return apiClient.request<ApiResponse>(`/agreements/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Project endpoints
+  async getMyProjects(): Promise<ApiResponse<Project[]>> {
+    return apiClient.request<ApiResponse<Project[]>>('/projects');
+  }
+
+  async getAllProjects(): Promise<ApiResponse<Project[]>> {
+    return apiClient.request<ApiResponse<Project[]>>('/projects/all');
+  }
+
+  async createProject(data: CreateProjectRequest): Promise<ApiResponse<Project>> {
+    return apiClient.request<ApiResponse<Project>>('/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProject(id: string): Promise<ApiResponse<Project>> {
+    return apiClient.request<ApiResponse<Project>>(`/projects/${id}`);
+  }
+
+  async updateProject(id: string, data: UpdateProjectRequest): Promise<ApiResponse<Project>> {
+    return apiClient.request<ApiResponse<Project>>(`/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProject(id: string): Promise<ApiResponse> {
+    return apiClient.request<ApiResponse>(`/projects/${id}`, {
       method: 'DELETE',
     });
   }

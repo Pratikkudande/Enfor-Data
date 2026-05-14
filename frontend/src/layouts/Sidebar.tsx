@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
   const channelPartnerMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'My Projects', icon: Briefcase },
-    { id: 'brokers', label: 'Broker Network', icon: Network },
+    { id: 'network', label: 'Broker Network', icon: Network },
     { id: 'leads', label: 'Leads Management', icon: Users },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },

@@ -801,6 +801,84 @@ CREATE TRIGGER trg_agreements_populate
 		return fmt.Errorf("failed to run agreements triggers migration: %w", err)
 	}
 
+	// Migration 009: Create projects table
+	projectsMigration := `
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    builder_name VARCHAR(255) NOT NULL,
+    project_type VARCHAR(50) NOT NULL CHECK (project_type IN ('residential','commercial','mixed')),
+    description TEXT NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    total_units INTEGER NOT NULL CHECK (total_units > 0),
+    available_units INTEGER NOT NULL DEFAULT 0 CHECK (available_units >= 0),
+    price_range_min DECIMAL(15,2) NOT NULL CHECK (price_range_min > 0),
+    price_range_max DECIMAL(15,2) NOT NULL CHECK (price_range_max > 0),
+    amenities TEXT[] DEFAULT '{}',
+    launch_date DATE NOT NULL,
+    possession_date DATE NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'upcoming'
+        CHECK (status IN ('upcoming','launched','under_construction','ready','sold_out')),
+    brochure_url VARCHAR(500),
+    channel_partner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    partner_name VARCHAR(200),
+    partner_firm VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_partner_created
+    ON projects(channel_partner_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_projects_status
+    ON projects(status);
+
+CREATE INDEX IF NOT EXISTS idx_projects_city_state
+    ON projects(city, state);
+`
+	_, err = db.Exec(projectsMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run projects migration: %w", err)
+	}
+
+	projectsTriggers := `
+CREATE OR REPLACE FUNCTION update_projects_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_projects_updated_at ON projects;
+CREATE TRIGGER trg_projects_updated_at
+    BEFORE UPDATE ON projects
+    FOR EACH ROW EXECUTE FUNCTION update_projects_updated_at();
+
+CREATE OR REPLACE FUNCTION populate_project_partner_info()
+RETURNS TRIGGER AS $$
+BEGIN
+    SELECT u.first_name || ' ' || u.last_name, u.firm_name
+    INTO NEW.partner_name, NEW.partner_firm
+    FROM users u
+    WHERE u.id = NEW.channel_partner_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_projects_populate ON projects;
+CREATE TRIGGER trg_projects_populate
+    BEFORE INSERT ON projects
+    FOR EACH ROW EXECUTE FUNCTION populate_project_partner_info();
+`
+	_, err = db.Exec(projectsTriggers)
+	if err != nil {
+		return fmt.Errorf("failed to run projects triggers migration: %w", err)
+	}
+
 	log.Println("Database migrations completed successfully")
 	return nil
 }
