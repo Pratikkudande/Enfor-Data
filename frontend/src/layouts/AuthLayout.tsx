@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
+import logo from '../assets/enfordata-logo.svg';
 
 const AuthLayout: React.FC = () => {
   return (
@@ -8,43 +9,49 @@ const AuthLayout: React.FC = () => {
       <div className="w-full max-w-6xl flex bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Left Side - Branding */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-12 items-center justify-center">
-          <div className="text-center text-white">
-            <div className="mb-8">
-              <h1 className="text-4xl font-bold mb-4">ENFOR DATA</h1>
-              <p className="text-xl text-blue-100">Real Estate Business Platform</p>
+          <div className="w-full max-w-md text-center text-white">
+            <div className="mb-6 flex justify-center">
+              <div className="bg-white/95 rounded-md p-3 inline-block shadow-lg">
+                <img src={logo} alt="Enfor Data" className="h-16" />
+              </div>
             </div>
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+
+            <p className="text-blue-100 mb-8 opacity-90">Real Estate Business Platform</p>
+
+            <div className="space-y-6 text-left mt-6">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mt-1">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 2L3 7v11a1 1 0 001 1h12a1 1 0 001-1V7l-7-5z" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Property Management</h3>
-                  <p className="text-blue-200 text-sm">Manage all your properties in one place</p>
+                <div>
+                  <h3 className="font-semibold text-white">Property Management</h3>
+                  <p className="text-blue-200 text-sm opacity-90">Manage all your properties in one place</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mt-1">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">WhatsApp Integration</h3>
-                  <p className="text-blue-200 text-sm">Direct client communication and marketing</p>
+                <div>
+                  <h3 className="font-semibold text-white">WhatsApp Integration</h3>
+                  <p className="text-blue-200 text-sm opacity-90">Direct client communication and marketing</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mt-1">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Broker Network</h3>
-                  <p className="text-blue-200 text-sm">Connect with brokers across India</p>
+                <div>
+                  <h3 className="font-semibold text-white">Broker Network</h3>
+                  <p className="text-blue-200 text-sm opacity-90">Connect with brokers across India</p>
                 </div>
               </div>
             </div>

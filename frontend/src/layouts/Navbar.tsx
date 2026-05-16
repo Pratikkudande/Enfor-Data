@@ -5,6 +5,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
 import NotificationDropdown from '../components/notifications/NotificationDropdown';
+import logo from '../assets/enfordata-logo.svg';
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -73,8 +74,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
             <Menu className="h-5 w-5 text-gray-600" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-base sm:text-xl font-bold text-blue-600 truncate">ENFOR DATA</h1>
-            <p className="text-xs text-gray-500 hidden sm:block">Real Estate Business Platform</p>
+            <img src={logo} alt="Enfor Data" className="h-8" />
           </div>
         </div>
 

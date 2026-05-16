@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import StatsCard from './StatsCard';
 import NotificationDemo from '../../components/demo/NotificationDemo';
+import ChannelPartnerDashboard from './ChannelPartnerDashboard';
 import { DashboardStats } from '../../types';
 import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../context/AuthContext';
@@ -24,7 +25,12 @@ interface BrokerDashboardProps {
 
 const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }) => {
   const navigate = useNavigate();
-  const { dashboardStats: ctxStats } = useAuth();
+  const { dashboardStats: ctxStats, user } = useAuth();
+
+  // Render channel partner dashboard for that role
+  if (user?.role === 'channel_partner') {
+    return <ChannelPartnerDashboard />;
+  }
   const [stats, setStats] = useState<DashboardStats | undefined>(initialStats);
   const [loading, setLoading] = useState<boolean>(!initialStats && !ctxStats);
   const [error, setError] = useState<string | null>(null);

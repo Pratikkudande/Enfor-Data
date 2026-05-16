@@ -712,6 +712,173 @@ CREATE TRIGGER sync_broker_info_to_appointments_trigger
 		return fmt.Errorf("failed to run appointments migration: %w", err)
 	}
 
+	// Migration 008: Create agreements table
+	agreementsMigration := `
+CREATE TABLE IF NOT EXISTS agreements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    client_id   UUID REFERENCES clients(id) ON DELETE SET NULL,
+    broker_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date   DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active'
+        CHECK (status IN ('active', 'expired', 'terminated')),
+    property_title   VARCHAR(255),
+    property_address TEXT,
+    client_name      VARCHAR(200),
+    broker_name      VARCHAR(200),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT chk_agreement_dates CHECK (end_date > start_date)
+);
+
+ALTER TABLE agreements ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES clients(id) ON DELETE SET NULL;
+ALTER TABLE agreements ADD COLUMN IF NOT EXISTS client_name VARCHAR(200);
+
+CREATE INDEX IF NOT EXISTS idx_agreements_broker_created
+    ON agreements(broker_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agreements_broker_status
+    ON agreements(broker_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_agreements_property
+    ON agreements(property_id);
+
+CREATE INDEX IF NOT EXISTS idx_agreements_client
+    ON agreements(client_id) WHERE client_id IS NOT NULL;
+`
+	_, err = db.Exec(agreementsMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run agreements migration: %w", err)
+	}
+
+	// Agreements triggers (separate exec to avoid dollar-quote conflicts)
+	agreementsTriggers := `
+CREATE OR REPLACE FUNCTION update_agreements_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_agreements_updated_at ON agreements;
+CREATE TRIGGER trg_agreements_updated_at
+    BEFORE UPDATE ON agreements
+    FOR EACH ROW EXECUTE FUNCTION update_agreements_updated_at();
+
+CREATE OR REPLACE FUNCTION populate_agreement_denormalized()
+RETURNS TRIGGER AS $$
+BEGIN
+    SELECT p.title, p.address || ', ' || p.city
+    INTO NEW.property_title, NEW.property_address
+    FROM properties p
+    WHERE p.id = NEW.property_id;
+
+    IF NEW.client_id IS NOT NULL THEN
+        SELECT c.first_name || ' ' || c.last_name
+        INTO NEW.client_name
+        FROM clients c
+        WHERE c.id = NEW.client_id;
+    END IF;
+
+    SELECT u.first_name || ' ' || u.last_name
+    INTO NEW.broker_name
+    FROM users u
+    WHERE u.id = NEW.broker_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_agreements_populate ON agreements;
+CREATE TRIGGER trg_agreements_populate
+    BEFORE INSERT ON agreements
+    FOR EACH ROW EXECUTE FUNCTION populate_agreement_denormalized();
+`
+	_, err = db.Exec(agreementsTriggers)
+	if err != nil {
+		return fmt.Errorf("failed to run agreements triggers migration: %w", err)
+	}
+
+	// Migration 009: Create projects table
+	projectsMigration := `
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    builder_name VARCHAR(255) NOT NULL,
+    project_type VARCHAR(50) NOT NULL CHECK (project_type IN ('residential','commercial','mixed')),
+    description TEXT NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    total_units INTEGER NOT NULL CHECK (total_units > 0),
+    available_units INTEGER NOT NULL DEFAULT 0 CHECK (available_units >= 0),
+    price_range_min DECIMAL(15,2) NOT NULL CHECK (price_range_min > 0),
+    price_range_max DECIMAL(15,2) NOT NULL CHECK (price_range_max > 0),
+    amenities TEXT[] DEFAULT '{}',
+    launch_date DATE NOT NULL,
+    possession_date DATE NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'upcoming'
+        CHECK (status IN ('upcoming','launched','under_construction','ready','sold_out')),
+    brochure_url VARCHAR(500),
+    channel_partner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    partner_name VARCHAR(200),
+    partner_firm VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_partner_created
+    ON projects(channel_partner_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_projects_status
+    ON projects(status);
+
+CREATE INDEX IF NOT EXISTS idx_projects_city_state
+    ON projects(city, state);
+`
+	_, err = db.Exec(projectsMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run projects migration: %w", err)
+	}
+
+	projectsTriggers := `
+CREATE OR REPLACE FUNCTION update_projects_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_projects_updated_at ON projects;
+CREATE TRIGGER trg_projects_updated_at
+    BEFORE UPDATE ON projects
+    FOR EACH ROW EXECUTE FUNCTION update_projects_updated_at();
+
+CREATE OR REPLACE FUNCTION populate_project_partner_info()
+RETURNS TRIGGER AS $$
+BEGIN
+    SELECT u.first_name || ' ' || u.last_name, u.firm_name
+    INTO NEW.partner_name, NEW.partner_firm
+    FROM users u
+    WHERE u.id = NEW.channel_partner_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_projects_populate ON projects;
+CREATE TRIGGER trg_projects_populate
+    BEFORE INSERT ON projects
+    FOR EACH ROW EXECUTE FUNCTION populate_project_partner_info();
+`
+	_, err = db.Exec(projectsTriggers)
+	if err != nil {
+		return fmt.Errorf("failed to run projects triggers migration: %w", err)
+	}
+
 	log.Println("Database migrations completed successfully")
 	return nil
 }
@@ -746,6 +913,384 @@ CREATE TABLE IF NOT EXISTS connections (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT uq_connection UNIQUE (broker_a, broker_b),
     CONSTRAINT chk_connection_order CHECK (broker_a < broker_b)
+);
+CREATE INDEX IF NOT EXISTS idx_connections_broker_a ON connections(broker_a);
+CREATE INDEX IF NOT EXISTS idx_connections_broker_b ON connections(broker_b);
+
+-- Conversations between connected brokers
+CREATE TABLE IF NOT EXISTS conversations (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    participant_a UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    participant_b UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    last_message_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_conversation UNIQUE (participant_a, participant_b),
+    CONSTRAINT chk_conversation_order CHECK (participant_a < participant_b)
+);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_a ON conversations(participant_a);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_b ON conversations(participant_b);
+CREATE INDEX IF NOT EXISTS idx_conversations_last_message ON conversations(last_message_at DESC);
+
+-- Messages within conversations
+CREATE TABLE IF NOT EXISTS messages (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content         TEXT NOT NULL,
+    message_type    VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file')),
+    is_read         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(conversation_id, is_read) WHERE is_read = FALSE;
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run network migrations: %w", err)
+	}
+
+	log.Println("Network migrations completed successfully")
+	return nil
+}
+
+// RunWhatsAppMigrations creates the WhatsApp marketing tables.
+func (db *DB) RunWhatsAppMigrations() error {
+	sql := `
+-- WhatsApp account configuration per user
+CREATE TABLE IF NOT EXISTS whatsapp_accounts (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    phone_number      VARCHAR(20) NOT NULL,
+    business_name     VARCHAR(255) NOT NULL,
+    is_verified       BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_code VARCHAR(10),
+    verification_expires_at TIMESTAMP WITH TIME ZONE,
+    access_token      TEXT,
+    phone_number_id   VARCHAR(100),
+    business_account_id VARCHAR(100),
+    app_id            VARCHAR(100),
+    app_secret        TEXT,
+    webhook_verify_token TEXT,
+    status            VARCHAR(20) NOT NULL DEFAULT 'pending'
+                          CHECK (status IN ('pending', 'verifying', 'active', 'suspended', 'disconnected')),
+    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_whatsapp_user UNIQUE (user_id),
+    CONSTRAINT uq_whatsapp_phone UNIQUE (phone_number)
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_user ON whatsapp_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_phone ON whatsapp_accounts(phone_number);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_status ON whatsapp_accounts(status);
+DROP TRIGGER IF EXISTS update_whatsapp_accounts_updated_at ON whatsapp_accounts;
+CREATE TRIGGER update_whatsapp_accounts_updated_at
+    BEFORE UPDATE ON whatsapp_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- WhatsApp message templates
+CREATE TABLE IF NOT EXISTS whatsapp_templates (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    content     TEXT NOT NULL,
+    variables   TEXT[] DEFAULT '{}',
+    category    VARCHAR(50) NOT NULL DEFAULT 'marketing'
+                    CHECK (category IN ('marketing', 'utility', 'authentication')),
+    language    VARCHAR(10) NOT NULL DEFAULT 'en',
+    status      VARCHAR(20) NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft', 'pending', 'approved', 'rejected')),
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_user ON whatsapp_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_status ON whatsapp_templates(status);
+DROP TRIGGER IF EXISTS update_whatsapp_templates_updated_at ON whatsapp_templates;
+CREATE TRIGGER update_whatsapp_templates_updated_at
+    BEFORE UPDATE ON whatsapp_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- WhatsApp campaigns
+CREATE TABLE IF NOT EXISTS whatsapp_campaigns (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id     UUID REFERENCES whatsapp_templates(id) ON DELETE SET NULL,
+    name            VARCHAR(255) NOT NULL,
+    message_content TEXT NOT NULL,
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'all_clients'
+                        CHECK (target_audience IN ('all_clients', 'buyers', 'sellers', 'tenants', 'owners', 'custom')),
+    custom_recipients TEXT[] DEFAULT '{}',
+    scheduled_at    TIMESTAMP WITH TIME ZONE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'draft'
+                        CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+    total_recipients INTEGER DEFAULT 0,
+    sent_count      INTEGER DEFAULT 0,
+    delivered_count INTEGER DEFAULT 0,
+    failed_count    INTEGER DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_campaigns_user ON whatsapp_campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_campaigns_status ON whatsapp_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_campaigns_scheduled ON whatsapp_campaigns(scheduled_at) WHERE scheduled_at IS NOT NULL;
+DROP TRIGGER IF EXISTS update_whatsapp_campaigns_updated_at ON whatsapp_campaigns;
+CREATE TRIGGER update_whatsapp_campaigns_updated_at
+    BEFORE UPDATE ON whatsapp_campaigns
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- WhatsApp message logs
+CREATE TABLE IF NOT EXISTS whatsapp_message_logs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id   UUID REFERENCES whatsapp_campaigns(id) ON DELETE SET NULL,
+    client_id     UUID REFERENCES clients(id) ON DELETE SET NULL,
+    phone_number  VARCHAR(20) NOT NULL,
+    message_content TEXT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'pending'
+                      CHECK (status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+    error_message TEXT,
+    whatsapp_message_id VARCHAR(255),
+    sent_at       TIMESTAMP WITH TIME ZONE,
+    delivered_at  TIMESTAMP WITH TIME ZONE,
+    read_at       TIMESTAMP WITH TIME ZONE,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_user ON whatsapp_message_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_campaign ON whatsapp_message_logs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_client ON whatsapp_message_logs(client_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_status ON whatsapp_message_logs(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_message_logs(created_at DESC);
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run WhatsApp migrations: %w", err)
+	}
+
+	log.Println("WhatsApp migrations completed successfully")
+	return nil
+}
+
+// RunSMSMarketingMigrations creates the SMS marketing tables.
+func (db *DB) RunSMSMarketingMigrations() error {
+	sql := `
+-- SMS account configuration per user
+CREATE TABLE IF NOT EXISTS sms_accounts (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider          VARCHAR(50) NOT NULL DEFAULT 'twilio'
+                          CHECK (provider IN ('twilio', 'aws_sns', 'custom')),
+    account_sid       VARCHAR(255),
+    auth_token        TEXT,
+    from_number       VARCHAR(20),
+    api_key           TEXT,
+    api_secret        TEXT,
+    region            VARCHAR(50),
+    status            VARCHAR(20) NOT NULL DEFAULT 'inactive'
+                          CHECK (status IN ('active', 'inactive', 'suspended')),
+    monthly_limit     INTEGER DEFAULT 1000,
+    used_this_month   INTEGER DEFAULT 0,
+    reset_date        DATE DEFAULT (CURRENT_DATE + INTERVAL '1 month'),
+    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_sms_user UNIQUE (user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_user ON sms_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_status ON sms_accounts(status);
+DROP TRIGGER IF EXISTS update_sms_accounts_updated_at ON sms_accounts;
+CREATE TRIGGER update_sms_accounts_updated_at
+    BEFORE UPDATE ON sms_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- SMS message templates
+CREATE TABLE IF NOT EXISTS sms_templates (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    content     TEXT NOT NULL,
+    variables   TEXT[] DEFAULT '{}',
+    category    VARCHAR(50) NOT NULL DEFAULT 'marketing'
+                    CHECK (category IN ('marketing', 'transactional', 'reminder', 'notification')),
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_user ON sms_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_category ON sms_templates(category);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_active ON sms_templates(is_active);
+DROP TRIGGER IF EXISTS update_sms_templates_updated_at ON sms_templates;
+CREATE TRIGGER update_sms_templates_updated_at
+    BEFORE UPDATE ON sms_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- SMS campaigns
+CREATE TABLE IF NOT EXISTS sms_campaigns (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id     UUID REFERENCES sms_templates(id) ON DELETE SET NULL,
+    name            VARCHAR(255) NOT NULL,
+    message_content TEXT NOT NULL,
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'all_clients'
+                        CHECK (target_audience IN ('all_clients', 'buyers', 'sellers', 'tenants', 'owners', 'custom')),
+    custom_recipients TEXT[] DEFAULT '{}',
+    scheduled_at    TIMESTAMP WITH TIME ZONE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'draft'
+                        CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+    total_recipients INTEGER DEFAULT 0,
+    sent_count      INTEGER DEFAULT 0,
+    delivered_count INTEGER DEFAULT 0,
+    failed_count    INTEGER DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_user ON sms_campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_status ON sms_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled ON sms_campaigns(scheduled_at) WHERE scheduled_at IS NOT NULL;
+DROP TRIGGER IF EXISTS update_sms_campaigns_updated_at ON sms_campaigns;
+CREATE TRIGGER update_sms_campaigns_updated_at
+    BEFORE UPDATE ON sms_campaigns
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- SMS message logs
+CREATE TABLE IF NOT EXISTS sms_message_logs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id   UUID REFERENCES sms_campaigns(id) ON DELETE SET NULL,
+    client_id     UUID REFERENCES clients(id) ON DELETE SET NULL,
+    phone_number  VARCHAR(20) NOT NULL,
+    message_content TEXT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'pending'
+                      CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'undelivered')),
+    error_message TEXT,
+    provider_message_id VARCHAR(255),
+    cost_amount   DECIMAL(10, 4),
+    cost_currency VARCHAR(3) DEFAULT 'USD',
+    sent_at       TIMESTAMP WITH TIME ZONE,
+    delivered_at  TIMESTAMP WITH TIME ZONE,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_user ON sms_message_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_campaign ON sms_message_logs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_client ON sms_message_logs(client_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_status ON sms_message_logs(status);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at DESC);
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run SMS marketing migrations: %w", err)
+	}
+
+	log.Println("SMS marketing migrations completed successfully")
+	return nil
+}
+
+// RunSubscriptionMigrations creates the subscription and payment tables.
+func (db *DB) RunSubscriptionMigrations() error {
+	sql := `
+-- Subscription plans (predefined plans)
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name            VARCHAR(100) NOT NULL,
+    slug            VARCHAR(50) UNIQUE NOT NULL,
+    description     TEXT,
+    price_monthly   DECIMAL(10, 2) NOT NULL,
+    price_yearly    DECIMAL(10, 2),
+    features        JSONB NOT NULL DEFAULT '{}',
+    limits          JSONB NOT NULL DEFAULT '{}',
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order      INTEGER DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_slug ON subscription_plans(slug);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_active ON subscription_plans(is_active);
+DROP TRIGGER IF EXISTS update_subscription_plans_updated_at ON subscription_plans;
+CREATE TRIGGER update_subscription_plans_updated_at
+    BEFORE UPDATE ON subscription_plans
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- User subscriptions
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id           UUID NOT NULL REFERENCES subscription_plans(id),
+    status            VARCHAR(20) NOT NULL DEFAULT 'active'
+                          CHECK (status IN ('trial', 'active', 'past_due', 'cancelled', 'expired')),
+    billing_cycle     VARCHAR(10) NOT NULL DEFAULT 'monthly'
+                          CHECK (billing_cycle IN ('monthly', 'yearly')),
+    current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    current_period_end   TIMESTAMP WITH TIME ZONE NOT NULL,
+    trial_start       TIMESTAMP WITH TIME ZONE,
+    trial_end         TIMESTAMP WITH TIME ZONE,
+    cancelled_at      TIMESTAMP WITH TIME ZONE,
+    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_user_subscription UNIQUE (user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user ON user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_period_end ON user_subscriptions(current_period_end);
+DROP TRIGGER IF EXISTS update_user_subscriptions_updated_at ON user_subscriptions;
+CREATE TRIGGER update_user_subscriptions_updated_at
+    BEFORE UPDATE ON user_subscriptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Feature usage tracking
+CREATE TABLE IF NOT EXISTS feature_usage (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    feature_name    VARCHAR(100) NOT NULL,
+    usage_count     INTEGER NOT NULL DEFAULT 0,
+    period_start    TIMESTAMP WITH TIME ZONE NOT NULL,
+    period_end      TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_user_feature_period UNIQUE (user_id, feature_name, period_start)
+);
+CREATE INDEX IF NOT EXISTS idx_feature_usage_user_feature ON feature_usage(user_id, feature_name);
+CREATE INDEX IF NOT EXISTS idx_feature_usage_period ON feature_usage(period_start, period_end);
+DROP TRIGGER IF EXISTS update_feature_usage_updated_at ON feature_usage;
+CREATE TRIGGER update_feature_usage_updated_at
+    BEFORE UPDATE ON feature_usage
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run subscription migrations: %w", err)
+	}
+
+	// Insert default subscription plans
+	plansSql := `
+INSERT INTO subscription_plans (name, slug, description, price_monthly, price_yearly, features, limits, sort_order)
+VALUES 
+    ('Free Trial', 'free-trial', 'Perfect for getting started', 0.00, 0.00, 
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true}',
+     '{"properties": 10, "clients": 50, "whatsapp_messages": 100, "sms_messages": 50, "appointments": 20}', 1),
+    
+    ('Basic', 'basic', 'Essential features for small brokers', 999.00, 9990.00,
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true, "network": true}',
+     '{"properties": 100, "clients": 500, "whatsapp_messages": 1000, "sms_messages": 500, "appointments": 100}', 2),
+    
+    ('Professional', 'professional', 'Advanced features for growing businesses', 1999.00, 19990.00,
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true, "network": true, "analytics": true, "bulk_operations": true}',
+     '{"properties": 500, "clients": 2000, "whatsapp_messages": 5000, "sms_messages": 2500, "appointments": 500}', 3),
+    
+    ('Enterprise', 'enterprise', 'Complete solution for large teams', 4999.00, 49990.00,
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true, "network": true, "analytics": true, "bulk_operations": true, "api_access": true, "priority_support": true}',
+     '{"properties": -1, "clients": -1, "whatsapp_messages": 25000, "sms_messages": 12500, "appointments": -1}', 4)
+ON CONFLICT (slug) DO NOTHING;
+`
+
+	_, err = db.Exec(plansSql)
+	if err != nil {
+		return fmt.Errorf("failed to insert default subscription plans: %w", err)
+	}
+
+	log.Println("Subscription migrations completed successfully")
+	return nil
+}oker_a < broker_b)
 );
 CREATE INDEX IF NOT EXISTS idx_connections_broker_a ON connections(broker_a);
 CREATE INDEX IF NOT EXISTS idx_connections_broker_b ON connections(broker_b);
@@ -1458,6 +2003,437 @@ CREATE INDEX IF NOT EXISTS idx_payments_billing_cycle ON payments(billing_cycle)
 		// Don't return error here as this is a fix, not a critical migration
 	}
 	
+	log.Println("Subscription migrations completed successfully")
+	return nil
+}
+=======
+}
+>>>>>>> fa908ec290d8ebe2e49f2de73483095060fd0fb6
+er_b)
+);
+CREATE INDEX IF NOT EXISTS idx_connections_broker_a ON connections(broker_a);
+CREATE INDEX IF NOT EXISTS idx_connections_broker_b ON connections(broker_b);
+
+-- Conversations between connected brokers
+CREATE TABLE IF NOT EXISTS conversations (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    participant_a UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    participant_b UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    last_message_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_conversation UNIQUE (participant_a, participant_b),
+    CONSTRAINT chk_conversation_order CHECK (participant_a < participant_b)
+);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_a ON conversations(participant_a);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_b ON conversations(participant_b);
+CREATE INDEX IF NOT EXISTS idx_conversations_last_message ON conversations(last_message_at DESC);
+
+-- Messages within conversations
+CREATE TABLE IF NOT EXISTS messages (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content         TEXT NOT NULL,
+    message_type    VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file')),
+    is_read         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(conversation_id, is_read) WHERE is_read = FALSE;
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run network migrations: %w", err)
+	}
+
+	log.Println("Network migrations completed successfully")
+	return nil
+}
+
+// RunWhatsAppMigrations creates the WhatsApp marketing tables.
+func (db *DB) RunWhatsAppMigrations() error {
+	sql := `
+-- WhatsApp account configuration per user
+CREATE TABLE IF NOT EXISTS whatsapp_accounts (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    phone_number      VARCHAR(20) NOT NULL,
+    business_name     VARCHAR(255) NOT NULL,
+    is_verified       BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_code VARCHAR(10),
+    verification_expires_at TIMESTAMP WITH TIME ZONE,
+    access_token      TEXT,
+    phone_number_id   VARCHAR(100),
+    business_account_id VARCHAR(100),
+    app_id            VARCHAR(100),
+    app_secret        TEXT,
+    webhook_verify_token TEXT,
+    status            VARCHAR(20) NOT NULL DEFAULT 'pending'
+                          CHECK (status IN ('pending', 'verifying', 'active', 'suspended', 'disconnected')),
+    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_whatsapp_user UNIQUE (user_id),
+    CONSTRAINT uq_whatsapp_phone UNIQUE (phone_number)
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_user ON whatsapp_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_phone ON whatsapp_accounts(phone_number);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_status ON whatsapp_accounts(status);
+DROP TRIGGER IF EXISTS update_whatsapp_accounts_updated_at ON whatsapp_accounts;
+CREATE TRIGGER update_whatsapp_accounts_updated_at
+    BEFORE UPDATE ON whatsapp_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- WhatsApp message templates
+CREATE TABLE IF NOT EXISTS whatsapp_templates (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    content     TEXT NOT NULL,
+    variables   TEXT[] DEFAULT '{}',
+    category    VARCHAR(50) NOT NULL DEFAULT 'marketing'
+                    CHECK (category IN ('marketing', 'utility', 'authentication')),
+    language    VARCHAR(10) NOT NULL DEFAULT 'en',
+    status      VARCHAR(20) NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft', 'pending', 'approved', 'rejected')),
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_user ON whatsapp_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_status ON whatsapp_templates(status);
+DROP TRIGGER IF EXISTS update_whatsapp_templates_updated_at ON whatsapp_templates;
+CREATE TRIGGER update_whatsapp_templates_updated_at
+    BEFORE UPDATE ON whatsapp_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- WhatsApp campaigns
+CREATE TABLE IF NOT EXISTS whatsapp_campaigns (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id     UUID REFERENCES whatsapp_templates(id) ON DELETE SET NULL,
+    name            VARCHAR(255) NOT NULL,
+    message_content TEXT NOT NULL,
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'all_clients'
+                        CHECK (target_audience IN ('all_clients', 'buyers', 'sellers', 'tenants', 'owners', 'custom')),
+    custom_recipients TEXT[] DEFAULT '{}',
+    scheduled_at    TIMESTAMP WITH TIME ZONE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'draft'
+                        CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+    total_recipients INTEGER DEFAULT 0,
+    sent_count      INTEGER DEFAULT 0,
+    delivered_count INTEGER DEFAULT 0,
+    failed_count    INTEGER DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_campaigns_user ON whatsapp_campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_campaigns_status ON whatsapp_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_campaigns_scheduled ON whatsapp_campaigns(scheduled_at) WHERE scheduled_at IS NOT NULL;
+DROP TRIGGER IF EXISTS update_whatsapp_campaigns_updated_at ON whatsapp_campaigns;
+CREATE TRIGGER update_whatsapp_campaigns_updated_at
+    BEFORE UPDATE ON whatsapp_campaigns
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- WhatsApp message logs
+CREATE TABLE IF NOT EXISTS whatsapp_message_logs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id   UUID REFERENCES whatsapp_campaigns(id) ON DELETE SET NULL,
+    client_id     UUID REFERENCES clients(id) ON DELETE SET NULL,
+    phone_number  VARCHAR(20) NOT NULL,
+    message_content TEXT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'pending'
+                      CHECK (status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+    error_message TEXT,
+    whatsapp_message_id VARCHAR(255),
+    sent_at       TIMESTAMP WITH TIME ZONE,
+    delivered_at  TIMESTAMP WITH TIME ZONE,
+    read_at       TIMESTAMP WITH TIME ZONE,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_user ON whatsapp_message_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_campaign ON whatsapp_message_logs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_client ON whatsapp_message_logs(client_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_status ON whatsapp_message_logs(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_message_logs(created_at DESC);
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run WhatsApp migrations: %w", err)
+	}
+
+	log.Println("WhatsApp migrations completed successfully")
+	return nil
+}
+
+// RunSMSMarketingMigrations creates the SMS marketing tables.
+func (db *DB) RunSMSMarketingMigrations() error {
+	sql := `
+-- SMS account configuration per user
+CREATE TABLE IF NOT EXISTS sms_accounts (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider          VARCHAR(50) NOT NULL DEFAULT 'twilio'
+                          CHECK (provider IN ('twilio', 'aws_sns', 'custom')),
+    account_sid       VARCHAR(255),
+    auth_token        TEXT,
+    from_number       VARCHAR(20),
+    api_key           TEXT,
+    api_secret        TEXT,
+    region            VARCHAR(50),
+    status            VARCHAR(20) NOT NULL DEFAULT 'inactive'
+                          CHECK (status IN ('active', 'inactive', 'suspended')),
+    monthly_limit     INTEGER DEFAULT 1000,
+    used_this_month   INTEGER DEFAULT 0,
+    reset_date        DATE DEFAULT (CURRENT_DATE + INTERVAL '1 month'),
+    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_sms_user UNIQUE (user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_user ON sms_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_status ON sms_accounts(status);
+DROP TRIGGER IF EXISTS update_sms_accounts_updated_at ON sms_accounts;
+CREATE TRIGGER update_sms_accounts_updated_at
+    BEFORE UPDATE ON sms_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- SMS message templates
+CREATE TABLE IF NOT EXISTS sms_templates (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    content     TEXT NOT NULL,
+    variables   TEXT[] DEFAULT '{}',
+    category    VARCHAR(50) NOT NULL DEFAULT 'marketing'
+                    CHECK (category IN ('marketing', 'transactional', 'reminder', 'notification')),
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_user ON sms_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_category ON sms_templates(category);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_active ON sms_templates(is_active);
+DROP TRIGGER IF EXISTS update_sms_templates_updated_at ON sms_templates;
+CREATE TRIGGER update_sms_templates_updated_at
+    BEFORE UPDATE ON sms_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- SMS campaigns
+CREATE TABLE IF NOT EXISTS sms_campaigns (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id     UUID REFERENCES sms_templates(id) ON DELETE SET NULL,
+    name            VARCHAR(255) NOT NULL,
+    message_content TEXT NOT NULL,
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'all_clients'
+                        CHECK (target_audience IN ('all_clients', 'buyers', 'sellers', 'tenants', 'owners', 'custom')),
+    custom_recipients TEXT[] DEFAULT '{}',
+    scheduled_at    TIMESTAMP WITH TIME ZONE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'draft'
+                        CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+    total_recipients INTEGER DEFAULT 0,
+    sent_count      INTEGER DEFAULT 0,
+    delivered_count INTEGER DEFAULT 0,
+    failed_count    INTEGER DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_user ON sms_campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_status ON sms_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled ON sms_campaigns(scheduled_at) WHERE scheduled_at IS NOT NULL;
+DROP TRIGGER IF EXISTS update_sms_campaigns_updated_at ON sms_campaigns;
+CREATE TRIGGER update_sms_campaigns_updated_at
+    BEFORE UPDATE ON sms_campaigns
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- SMS message logs
+CREATE TABLE IF NOT EXISTS sms_message_logs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    campaign_id   UUID REFERENCES sms_campaigns(id) ON DELETE SET NULL,
+    client_id     UUID REFERENCES clients(id) ON DELETE SET NULL,
+    phone_number  VARCHAR(20) NOT NULL,
+    message_content TEXT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'pending'
+                      CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'undelivered')),
+    error_message TEXT,
+    provider_message_id VARCHAR(255),
+    cost_amount   DECIMAL(10, 4),
+    cost_currency VARCHAR(3) DEFAULT 'USD',
+    sent_at       TIMESTAMP WITH TIME ZONE,
+    delivered_at  TIMESTAMP WITH TIME ZONE,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_user ON sms_message_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_campaign ON sms_message_logs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_client ON sms_message_logs(client_id);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_status ON sms_message_logs(status);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at DESC);
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run SMS marketing migrations: %w", err)
+	}
+
+	log.Println("SMS marketing migrations completed successfully")
+	return nil
+}
+
+// RunSubscriptionMigrations creates the subscription and payment tables.
+func (db *DB) RunSubscriptionMigrations() error {
+	sql := `
+-- Subscription plans (predefined plans)
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name            VARCHAR(100) NOT NULL,
+    slug            VARCHAR(50) UNIQUE NOT NULL,
+    description     TEXT,
+    price_monthly   DECIMAL(10, 2) NOT NULL,
+    price_yearly    DECIMAL(10, 2),
+    features        JSONB NOT NULL DEFAULT '{}',
+    limits          JSONB NOT NULL DEFAULT '{}',
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order      INTEGER DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_slug ON subscription_plans(slug);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_active ON subscription_plans(is_active);
+DROP TRIGGER IF EXISTS update_subscription_plans_updated_at ON subscription_plans;
+CREATE TRIGGER update_subscription_plans_updated_at
+    BEFORE UPDATE ON subscription_plans
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- User subscriptions
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id           UUID NOT NULL REFERENCES subscription_plans(id),
+    status            VARCHAR(20) NOT NULL DEFAULT 'active'
+                          CHECK (status IN ('trial', 'active', 'past_due', 'cancelled', 'expired')),
+    billing_cycle     VARCHAR(10) NOT NULL DEFAULT 'monthly'
+                          CHECK (billing_cycle IN ('monthly', 'yearly')),
+    current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    current_period_end   TIMESTAMP WITH TIME ZONE NOT NULL,
+    trial_start       TIMESTAMP WITH TIME ZONE,
+    trial_end         TIMESTAMP WITH TIME ZONE,
+    cancelled_at      TIMESTAMP WITH TIME ZONE,
+    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_user_subscription UNIQUE (user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user ON user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_period_end ON user_subscriptions(current_period_end);
+DROP TRIGGER IF EXISTS update_user_subscriptions_updated_at ON user_subscriptions;
+CREATE TRIGGER update_user_subscriptions_updated_at
+    BEFORE UPDATE ON user_subscriptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Feature usage tracking
+CREATE TABLE IF NOT EXISTS feature_usage (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    feature_name    VARCHAR(100) NOT NULL,
+    usage_count     INTEGER NOT NULL DEFAULT 0,
+    period_start    TIMESTAMP WITH TIME ZONE NOT NULL,
+    period_end      TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_user_feature_period UNIQUE (user_id, feature_name, period_start)
+);
+CREATE INDEX IF NOT EXISTS idx_feature_usage_user_feature ON feature_usage(user_id, feature_name);
+CREATE INDEX IF NOT EXISTS idx_feature_usage_period ON feature_usage(period_start, period_end);
+DROP TRIGGER IF EXISTS update_feature_usage_updated_at ON feature_usage;
+CREATE TRIGGER update_feature_usage_updated_at
+    BEFORE UPDATE ON feature_usage
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Payment records
+CREATE TABLE IF NOT EXISTS payments (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subscription_id     UUID REFERENCES user_subscriptions(id) ON DELETE SET NULL,
+    plan_id             UUID REFERENCES subscription_plans(id) ON DELETE SET NULL,
+    amount              DECIMAL(10, 2) NOT NULL,
+    currency            VARCHAR(3) NOT NULL DEFAULT 'INR',
+    status              VARCHAR(20) NOT NULL DEFAULT 'pending'
+                            CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded')),
+    payment_method      VARCHAR(50) NOT NULL DEFAULT 'razorpay'
+                            CHECK (payment_method IN ('razorpay', 'stripe', 'paypal', 'bank_transfer')),
+    
+    -- Razorpay specific fields
+    razorpay_order_id   VARCHAR(100),
+    razorpay_payment_id VARCHAR(100),
+    razorpay_signature  VARCHAR(255),
+    
+    -- Generic payment gateway fields
+    gateway_order_id    VARCHAR(100),
+    gateway_payment_id  VARCHAR(100),
+    gateway_response    JSONB,
+    
+    -- Billing information
+    billing_cycle       VARCHAR(10) CHECK (billing_cycle IN ('monthly', 'yearly')),
+    billing_period_start TIMESTAMP WITH TIME ZONE,
+    billing_period_end   TIMESTAMP WITH TIME ZONE,
+    
+    -- Metadata
+    description         TEXT,
+    failure_reason      TEXT,
+    refund_amount       DECIMAL(10, 2),
+    refund_reason       TEXT,
+    refunded_at         TIMESTAMP WITH TIME ZONE,
+    
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_subscription ON payments(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_razorpay_order ON payments(razorpay_order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_razorpay_payment ON payments(razorpay_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at DESC);
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+CREATE TRIGGER update_payments_updated_at
+    BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+`
+
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run subscription migrations: %w", err)
+	}
+
+	// Insert default subscription plans
+	plansSql := `
+INSERT INTO subscription_plans (name, slug, description, price_monthly, price_yearly, features, limits, sort_order)
+VALUES 
+    ('Free Trial', 'free-trial', 'Perfect for getting started', 0.00, 0.00, 
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true}',
+     '{"properties": 10, "clients": 50, "whatsapp_messages": 100, "sms_messages": 50, "appointments": 20}', 1),
+    
+    ('Basic', 'basic', 'Essential features for small brokers', 999.00, 9990.00,
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true, "network": true}',
+     '{"properties": 100, "clients": 500, "whatsapp_messages": 1000, "sms_messages": 500, "appointments": 100}', 2),
+    
+    ('Professional', 'professional', 'Advanced features for growing businesses', 1999.00, 19990.00,
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true, "network": true, "analytics": true, "bulk_operations": true}',
+     '{"properties": 500, "clients": 2000, "whatsapp_messages": 5000, "sms_messages": 2500, "appointments": 500}', 3),
+    
+    ('Enterprise', 'enterprise', 'Complete solution for large teams', 4999.00, 49990.00,
+     '{"properties": true, "clients": true, "appointments": true, "whatsapp": true, "sms": true, "network": true, "analytics": true, "bulk_operations": true, "api_access": true, "priority_support": true}',
+     '{"properties": -1, "clients": -1, "whatsapp_messages": 25000, "sms_messages": 12500, "appointments": -1}', 4)
+ON CONFLICT (slug) DO NOTHING;
+`
+
+	_, err = db.Exec(plansSql)
+	if err != nil {
+		return fmt.Errorf("failed to insert default subscription plans: %w", err)
+	}
+
 	log.Println("Subscription migrations completed successfully")
 	return nil
 }

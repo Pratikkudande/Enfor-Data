@@ -110,6 +110,8 @@ export interface Agreement {
   property_id: string;
   property_title?: string;
   property_address?: string;
+  client_id?: string;
+  client_name?: string;
   broker_id: string;
   start_date: string;
   end_date: string;
@@ -120,6 +122,7 @@ export interface Agreement {
 
 export interface CreateAgreementRequest {
   property_id: string;
+  client_id?: string;
   start_date: string;
   end_date: string;
 }
@@ -150,23 +153,65 @@ export interface Project {
   name: string;
   builder_name: string;
   location: string;
+  address: string;
   city: string;
   state: string;
   project_type: 'residential' | 'commercial' | 'mixed';
+  description: string;
   total_units: number;
   available_units: number;
   price_range_min: number;
   price_range_max: number;
   amenities: string[];
-  description: string;
-  images: string[];
   brochure_url?: string;
   channel_partner_id: string;
+  partner_name?: string;
+  partner_firm?: string;
   launch_date: string;
   possession_date: string;
-  status: 'upcoming' | 'launched' | 'under_construction' | 'ready';
+  status: 'upcoming' | 'launched' | 'under_construction' | 'ready' | 'sold_out';
   created_at: string;
   updated_at: string;
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  builder_name: string;
+  project_type: 'residential' | 'commercial' | 'mixed';
+  description: string;
+  location: string;
+  address: string;
+  city: string;
+  state: string;
+  total_units: number;
+  available_units: number;
+  price_range_min: number;
+  price_range_max: number;
+  amenities: string[];
+  launch_date: string;
+  possession_date: string;
+  status: 'upcoming' | 'launched' | 'under_construction' | 'ready' | 'sold_out';
+  brochure_url?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  builder_name?: string;
+  project_type?: 'residential' | 'commercial' | 'mixed';
+  description?: string;
+  location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  total_units?: number;
+  available_units?: number;
+  price_range_min?: number;
+  price_range_max?: number;
+  amenities?: string[];
+  launch_date?: string;
+  possession_date?: string;
+  status?: 'upcoming' | 'launched' | 'under_construction' | 'ready' | 'sold_out';
+  brochure_url?: string;
 }
 
 export interface BusinessPost {

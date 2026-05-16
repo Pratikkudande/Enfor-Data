@@ -13,7 +13,12 @@ import {
   CreateAppointmentRequest,
   UpdateAppointmentRequest,
   Appointment,
-  AppointmentStats
+  AppointmentStats,
+  Agreement,
+  CreateAgreementRequest,
+  Project,
+  CreateProjectRequest,
+  UpdateProjectRequest,
 } from '../types';
 
 export * from '../types'; // Re-export types so we don't break existing imports relying on api.ts
@@ -56,6 +61,15 @@ class ApiService {
   // File upload
   async uploadProfilePhoto(file: File): Promise<ApiResponse<{ profile_image: string }>> {
     return apiClient.upload('/upload/profile-photo', file, 'profile_photo');
+  }
+
+  // Bulk Excel uploads
+  async uploadClientsExcel(file: File): Promise<ApiResponse> {
+    return apiClient.upload('/upload/clients-excel', file, 'file');
+  }
+
+  async uploadPropertiesExcel(file: File): Promise<ApiResponse> {
+    return apiClient.upload('/upload/properties-excel', file, 'file');
   }
 
   // Property endpoints
@@ -151,6 +165,68 @@ class ApiService {
 
   async getAppointmentStats(): Promise<ApiResponse<AppointmentStats>> {
     return apiClient.request<ApiResponse<AppointmentStats>>('/appointments/stats');
+  }
+
+  // Agreement endpoints
+  async getAgreements(): Promise<ApiResponse<Agreement[]>> {
+    return apiClient.request<ApiResponse<Agreement[]>>('/agreements');
+  }
+
+  async createAgreement(data: CreateAgreementRequest): Promise<ApiResponse<Agreement>> {
+    return apiClient.request<ApiResponse<Agreement>>('/agreements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAgreement(id: string): Promise<ApiResponse<Agreement>> {
+    return apiClient.request<ApiResponse<Agreement>>(`/agreements/${id}`);
+  }
+
+  async updateAgreement(id: string, status: string): Promise<ApiResponse<Agreement>> {
+    return apiClient.request<ApiResponse<Agreement>>(`/agreements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async deleteAgreement(id: string): Promise<ApiResponse> {
+    return apiClient.request<ApiResponse>(`/agreements/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Project endpoints
+  async getMyProjects(): Promise<ApiResponse<Project[]>> {
+    return apiClient.request<ApiResponse<Project[]>>('/projects');
+  }
+
+  async getAllProjects(): Promise<ApiResponse<Project[]>> {
+    return apiClient.request<ApiResponse<Project[]>>('/projects/all');
+  }
+
+  async createProject(data: CreateProjectRequest): Promise<ApiResponse<Project>> {
+    return apiClient.request<ApiResponse<Project>>('/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProject(id: string): Promise<ApiResponse<Project>> {
+    return apiClient.request<ApiResponse<Project>>(`/projects/${id}`);
+  }
+
+  async updateProject(id: string, data: UpdateProjectRequest): Promise<ApiResponse<Project>> {
+    return apiClient.request<ApiResponse<Project>>(`/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProject(id: string): Promise<ApiResponse> {
+    return apiClient.request<ApiResponse>(`/projects/${id}`, {
+      method: 'DELETE',
+    });
   }
 }
 

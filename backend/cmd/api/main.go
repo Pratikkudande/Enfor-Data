@@ -57,6 +57,8 @@ func main() {
 	otpRepo := repository.NewOTPRepository(db)
 	subscriptionRepo := repository.NewSubscriptionRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
+	agreementRepo := repository.NewAgreementRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
 
 	// Initialize services
 	smsService := service.NewSMSService(cfg)
@@ -71,6 +73,8 @@ func main() {
 	otpService := service.NewOTPService(otpRepo, userRepo, smsService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo, userRepo)
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
+	agreementService := service.NewAgreementService(agreementRepo, propertyRepo, clientRepo)
+	projectService := service.NewProjectService(projectRepo)
 	
 	// Initialize appointment reminder service
 	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
@@ -81,7 +85,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
-	uploadHandler := handler.NewUploadHandler(authService, cfg)
+	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService)
 	propertyHandler := handler.NewPropertyHandler(propertyService)
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
@@ -91,6 +95,8 @@ func main() {
 	otpHandler := handler.NewOTPHandler(otpService)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 	paymentHandler := handler.NewPaymentHandler(paymentService, subscriptionService)
+	agreementHandler := handler.NewAgreementHandler(agreementService)
+	projectHandler := handler.NewProjectHandler(projectService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -136,6 +142,8 @@ func main() {
 		{
 			// File upload routes
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
+			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
+			protected.POST("/upload/properties-excel", uploadHandler.UploadPropertiesExcel)
 
 			// Property routes (accessible to all authenticated users)
 			protected.GET("/properties/all", propertyHandler.GetAllProperties)
@@ -160,6 +168,21 @@ func main() {
 			protected.GET("/appointments/:id", appointmentHandler.GetAppointment)
 			protected.PUT("/appointments/:id", appointmentHandler.UpdateAppointment)
 			protected.DELETE("/appointments/:id", appointmentHandler.DeleteAppointment)
+
+			// Agreement routes (accessible to all authenticated users)
+			protected.POST("/agreements", agreementHandler.CreateAgreement)
+			protected.GET("/agreements", agreementHandler.GetAgreements)
+			protected.GET("/agreements/:id", agreementHandler.GetAgreement)
+			protected.PUT("/agreements/:id", agreementHandler.UpdateAgreement)
+			protected.DELETE("/agreements/:id", agreementHandler.DeleteAgreement)
+
+			// Project routes
+			protected.GET("/projects/all", projectHandler.GetAllProjects)
+			protected.GET("/projects", projectHandler.GetMyProjects)
+			protected.POST("/projects", projectHandler.CreateProject)
+			protected.GET("/projects/:id", projectHandler.GetProject)
+			protected.PUT("/projects/:id", projectHandler.UpdateProject)
+			protected.DELETE("/projects/:id", projectHandler.DeleteProject)
 
 			// ── Broker Network ────────────────────────────────────────────────
 			network := protected.Group("/network")
@@ -319,6 +342,10 @@ func main() {
 			publicSubscriptions.GET("/plans/:id", subscriptionHandler.GetPlanByID)
 			publicSubscriptions.GET("/plans/slug/:slug", subscriptionHandler.GetPlanBySlug)
 		}
+
+		// Sample download templates
+		api.GET("/download/clients-sample", uploadHandler.DownloadClientsSample)
+		api.GET("/download/properties-sample", uploadHandler.DownloadPropertiesSample)
 	}
 
 	// Start server

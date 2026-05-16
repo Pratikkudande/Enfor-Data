@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User } from 'lucide-react';
 import { apiClient, Client as ApiClient, CreateClientRequest } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import { useSearchParams } from 'react-router-dom';
 import LoadingState from '../../components/common/LoadingState';
 import ErrorState from '../../components/common/ErrorState';
@@ -238,9 +239,33 @@ const ClientsView: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
           <p className="text-gray-600 mt-1">Manage your client relationships</p>
         </div>
-        <button onClick={openAddModal} className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
-          <Plus className="h-5 w-5 mr-2" /> Add Client
-        </button>
+        <div className="mt-4 sm:mt-0 flex items-center gap-3">
+          <button onClick={openAddModal} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+            <Plus className="h-5 w-5 mr-2" /> Add Client
+          </button>
+          <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/clients-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
+            Download Sample Excel
+          </button>
+          <input type="file" accept=".xlsx,.xls,.csv" id="clientsExcelInput" className="hidden" onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              setSubmitting(true);
+              await apiClient.uploadClientsExcel(file);
+              showSuccess('Clients uploaded successfully');
+              fetchClients();
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Upload failed');
+            } finally {
+              setSubmitting(false);
+              // clear input
+              (e.target as HTMLInputElement).value = '';
+            }
+          }} />
+          <button onClick={() => document.getElementById('clientsExcelInput')?.click()} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
+            Upload Excel
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
