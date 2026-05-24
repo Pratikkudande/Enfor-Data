@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
-import logo from '../assets/enfordata-logo.svg';
+import logo from '../assets/enfordata-logo.jpeg';
 
 const AuthLayout: React.FC = () => {
   return (

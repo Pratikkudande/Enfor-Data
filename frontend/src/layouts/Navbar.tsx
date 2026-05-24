@@ -5,7 +5,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
 import NotificationDropdown from '../components/notifications/NotificationDropdown';
-import logo from '../assets/enfordata-logo.svg';
+import logo from '../assets/enfordata-logo.jpeg';
 
 interface NavbarProps {
   onMenuToggle: () => void;
