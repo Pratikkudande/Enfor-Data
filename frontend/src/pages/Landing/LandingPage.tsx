@@ -217,11 +217,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center animate-fade-in">
-              <img src={logo} alt="Enfor Data" className="h-10 mr-3" />
-              <div className="hidden sm:block">
-                <div className="text-lg font-bold text-gray-900">ENFOR DATA</div>
-                <div className="text-xs text-gray-500">Real Estate Platform</div>
-              </div>
+              <img src={logo} alt="Enfor Data" className="h-10" />
             </div>
             <div className="flex items-center space-x-4 animate-fade-in">
               <button
