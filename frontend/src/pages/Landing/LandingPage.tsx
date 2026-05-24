@@ -6,7 +6,6 @@ import { apiClient } from '../../services/api';
 import { 
   Building2, 
   Users, 
-  MessageSquare, 
   Network, 
   Calendar, 
   FileText,
@@ -89,32 +88,25 @@ const LandingPage: React.FC = () => {
       delay: '100ms'
     },
     {
-      icon: MessageSquare,
-      title: 'WhatsApp Business Suite',
-      description: 'Bulk messaging, chatbots, appointment reminders, and multimedia campaigns with analytics.',
-      color: 'from-purple-500 to-purple-600',
-      delay: '200ms'
-    },
-    {
       icon: Network,
       title: 'Global Broker Network',
-      description: 'Connect with 10,000+ verified brokers across 25+ cities for referrals and partnerships.',
+      description: 'Connect with verified brokers across 25+ cities for referrals and partnerships.',
       color: 'from-orange-500 to-orange-600',
-      delay: '300ms'
+      delay: '200ms'
     },
     {
       icon: Calendar,
       title: 'Smart Scheduling',
       description: 'AI-optimized appointment scheduling with conflict detection and automated reminders.',
       color: 'from-teal-500 to-teal-600',
-      delay: '400ms'
+      delay: '300ms'
     },
     {
       icon: FileText,
       title: 'Legal Document Hub',
       description: 'Automated agreement generation, e-signatures, renewal tracking, and compliance management.',
       color: 'from-red-500 to-red-600',
-      delay: '500ms'
+      delay: '400ms'
     }
   ];
 
@@ -328,7 +320,7 @@ const LandingPage: React.FC = () => {
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        WhatsApp Business Marketing Suite
+                        SMS Marketing Suite
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
