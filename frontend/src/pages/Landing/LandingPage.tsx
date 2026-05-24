@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import logo from '../../assets/enfordata-logo.svg';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/routePaths';
+import { apiClient } from '../../services/api';
 import { 
   Building2, 
   Users, 
@@ -31,9 +32,36 @@ import {
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
+  const [liveStats, setLiveStats] = useState({
+    brokers: 0,
+    properties: 0,
+    clients: 0,
+    loaded: false,
+  });
 
   useEffect(() => {
     setIsVisible(true);
+
+    // Fetch real platform stats from the public /api/stats endpoint
+    const fetchStats = async () => {
+      try {
+        const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)
+          ?.replace('/api', '') ?? 'http://localhost:8080';
+        const res = await fetch(`${baseUrl}/api/stats`);
+        if (!res.ok) throw new Error('stats fetch failed');
+        const data = await res.json();
+        setLiveStats({
+          brokers: data.brokers ?? 0,
+          properties: data.properties ?? 0,
+          clients: data.clients ?? 0,
+          loaded: true,
+        });
+      } catch {
+        setLiveStats((prev) => ({ ...prev, loaded: true }));
+      }
+    };
+
+    fetchStats();
   }, []);
 
   const handleGetStarted = () => {
@@ -142,10 +170,22 @@ const LandingPage: React.FC = () => {
   ];
 
   const stats = [
-    { number: '10,000+', label: 'Active Brokers', icon: Users },
-    { number: '50,000+', label: 'Properties Listed', icon: Building2 },
-    { number: '1M+', label: 'Messages Sent', icon: MessageSquare },
-    { number: '25+', label: 'Cities Connected', icon: Globe }
+    {
+      number: liveStats.loaded ? `${liveStats.brokers}+` : '…',
+      label: 'Active Brokers',
+      icon: Users,
+    },
+    {
+      number: liveStats.loaded ? `${liveStats.properties}+` : '…',
+      label: 'Properties Listed',
+      icon: Building2,
+    },
+    {
+      number: liveStats.loaded ? `${liveStats.clients}+` : '…',
+      label: 'Clients Managed',
+      icon: Users,
+    },
+    { number: '25+', label: 'Cities Connected', icon: Globe },
   ];
 
   const whyChooseUs = [
