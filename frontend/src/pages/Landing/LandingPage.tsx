@@ -75,62 +75,69 @@ const LandingPage: React.FC = () => {
   const features = [
     {
       icon: Building2,
-      title: 'Smart Property Management',
-      description: 'AI-powered property listing with advanced search, virtual tours, and automated valuation tools.',
+      title: 'Property Management',
+      description: 'List, track, and manage all your properties — apartments, houses, commercial spaces, and plots — with status tracking, filters, and client linking.',
       color: 'from-blue-500 to-blue-600',
       delay: '0ms'
     },
     {
       icon: Users,
-      title: 'Intelligent Client CRM',
-      description: 'Advanced client profiling with behavior analytics, preferences tracking, and automated follow-ups.',
+      title: 'Client CRM',
+      description: 'Maintain a complete client database with buyer, seller, tenant, and owner profiles. Track budgets, requirements, and follow-up notes in one place.',
       color: 'from-green-500 to-green-600',
       delay: '100ms'
     },
     {
       icon: Network,
-      title: 'Global Broker Network',
-      description: 'Connect with verified brokers across 25+ cities for referrals and partnerships.',
+      title: 'Broker Network',
+      description: 'Discover and connect with verified brokers across India. Expand your reach, share listings, and grow your referral business.',
       color: 'from-orange-500 to-orange-600',
       delay: '200ms'
     },
     {
       icon: Calendar,
-      title: 'Smart Scheduling',
-      description: 'AI-optimized appointment scheduling with conflict detection and automated reminders.',
+      title: 'Appointment Scheduling',
+      description: 'Schedule site visits, meetings, and calls with clients. Get a clear calendar view and never miss a follow-up.',
       color: 'from-teal-500 to-teal-600',
       delay: '300ms'
     },
     {
       icon: FileText,
-      title: 'Legal Document Hub',
-      description: 'Automated agreement generation, e-signatures, renewal tracking, and compliance management.',
+      title: 'Agreement Management',
+      description: 'Create and track property agreements with start and end dates. Link agreements to properties and clients, and monitor active vs. expired contracts.',
       color: 'from-red-500 to-red-600',
       delay: '400ms'
+    },
+    {
+      icon: BarChart3,
+      title: 'Project Listings (Channel Partners)',
+      description: 'Channel partners can list real estate projects with unit availability, price ranges, amenities, and possession timelines to showcase to brokers.',
+      color: 'from-purple-500 to-purple-600',
+      delay: '500ms'
     }
   ];
 
   const benefits = [
     {
       icon: TrendingUp,
-      title: 'Boost Revenue by 40%',
-      description: 'Increase your income through better lead management, automated follow-ups, and referral optimization.',
-      stat: '40%',
-      statLabel: 'Revenue Increase'
+      title: 'Everything in One Place',
+      description: 'Properties, clients, appointments, agreements, and your broker network — all managed from a single dashboard without switching between tools.',
+      stat: '1',
+      statLabel: 'Platform for All'
     },
     {
       icon: Zap,
-      title: 'Save 60% Time',
-      description: 'Reduce administrative work with automation, streamlined workflows, and intelligent task management.',
-      stat: '60%',
-      statLabel: 'Time Saved'
+      title: 'Built for Indian Real Estate',
+      description: 'Designed specifically for Indian brokers and channel partners — with Indian states, cities, property types, and workflows that match how you actually work.',
+      stat: '100%',
+      statLabel: 'India Focused'
     },
     {
       icon: Shield,
-      title: 'Professional Excellence',
-      description: 'Deliver world-class service with organized data, timely communication, and professional tools.',
-      stat: '99.9%',
-      statLabel: 'Client Satisfaction'
+      title: 'Secure & Role-Based',
+      description: 'Separate dashboards and permissions for brokers, channel partners, and admins. Your data stays yours — scoped to your account.',
+      stat: 'JWT',
+      statLabel: 'Secure Auth'
     }
   ];
 
@@ -138,7 +145,7 @@ const LandingPage: React.FC = () => {
     {
       name: 'Rajesh Kumar',
       role: 'Real Estate Broker, Mumbai',
-      content: 'ENFOR DATA transformed my business completely. I now manage 3x more clients and never miss renewal opportunities. The WhatsApp automation alone increased my client engagement by 200%.',
+      content: 'ENFOR DATA keeps all my properties and clients organised in one place. I can track appointments, manage agreements, and see my full pipeline without any spreadsheets.',
       rating: 5,
       avatar: 'RK',
       company: 'Kumar Properties'
@@ -146,7 +153,7 @@ const LandingPage: React.FC = () => {
     {
       name: 'Priya Sharma',
       role: 'Channel Partner, Delhi',
-      content: 'The platform is incredibly intuitive. The broker network feature helped me expand to 5 new cities, and my referral income doubled in just 6 months. Best investment for my business!',
+      content: 'As a channel partner, I can list all my projects with unit availability and price ranges. Brokers can browse them directly — it has made connecting with the right people much easier.',
       rating: 5,
       avatar: 'PS',
       company: 'Sharma Realty'
@@ -154,7 +161,7 @@ const LandingPage: React.FC = () => {
     {
       name: 'Amit Patel',
       role: 'Real Estate Broker, Bangalore',
-      content: 'Outstanding support and features. The automated agreement system saved me countless hours, and the analytics help me make data-driven decisions. Highly recommended!',
+      content: 'The agreement tracking feature alone is worth it. I know exactly which agreements are active, which are expiring, and which clients they are linked to — all in one view.',
       rating: 5,
       avatar: 'AP',
       company: 'Patel Estates'
@@ -183,23 +190,23 @@ const LandingPage: React.FC = () => {
   const whyChooseUs = [
     {
       icon: Award,
-      title: 'Industry Leader',
-      description: 'Trusted by 10,000+ professionals across India'
+      title: 'Built for Brokers',
+      description: 'Every feature is designed around how Indian real estate brokers actually work'
     },
     {
       icon: Shield,
-      title: 'Secure & Reliable',
-      description: 'ISO 27001 certified with 99.9% uptime guarantee'
+      title: 'Secure by Design',
+      description: 'JWT authentication, role-based access, and data scoped to your account'
     },
     {
       icon: HeadphonesIcon,
-      title: '24/7 Support',
-      description: 'Round-the-clock customer support in multiple languages'
+      title: 'Two Roles, One Platform',
+      description: 'Separate workflows for brokers and channel partners under one roof'
     },
     {
       icon: Sparkles,
-      title: 'Regular Updates',
-      description: 'Monthly feature releases based on user feedback'
+      title: 'Always Improving',
+      description: 'New features added based on real broker and channel partner feedback'
     }
   ];
 
@@ -261,8 +268,8 @@ const LandingPage: React.FC = () => {
                 Business
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-                The ultimate AI-powered business management platform for real estate brokers and builders. 
-                Manage properties, clients, and grow your network with intelligent automation tools.
+                The complete business management platform for real estate brokers and channel partners in India.
+                Manage properties, clients, appointments, agreements, and your broker network — all in one place.
               </p>
             </div>
             
@@ -316,23 +323,23 @@ const LandingPage: React.FC = () => {
                     <ul className="text-left space-y-3 mb-8 text-gray-600">
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Smart Property & Client Management
+                        Property listing with status tracking
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        SMS Marketing Suite
+                        Client CRM — buyers, sellers, tenants & owners
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Global Broker Network & Referrals
+                        Appointment scheduling & calendar view
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        AI-Powered Appointment Scheduling
+                        Agreement creation & expiry tracking
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Automated Agreement Management
+                        Broker network & SMS marketing
                       </li>
                     </ul>
                     <button
@@ -357,19 +364,19 @@ const LandingPage: React.FC = () => {
                     <ul className="text-left space-y-3 mb-8 text-gray-600">
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Advanced Project Portfolio Management
+                        Project listings with unit availability & pricing
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Verified Broker Network Access
+                        Broker network access to promote projects
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Intelligent Lead Management System
+                        Possession & launch date tracking
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        Multi-Channel Marketing Tools
+                        Amenities showcase & brochure link
                       </li>
                       <li className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
@@ -446,12 +453,12 @@ const LandingPage: React.FC = () => {
               Powerful Features
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 animate-fade-in-up">
-              Everything You Need to 
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Dominate </span>
-              Your Market
+              Everything You Need to
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Grow </span>
+              Your Business
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto animate-fade-in-up" style={{animationDelay: '200ms'}}>
-              Comprehensive AI-powered tools designed specifically for real estate professionals to streamline operations and maximize revenue.
+              Purpose-built tools for Indian real estate professionals — covering every part of your daily workflow.
             </p>
           </div>
           
