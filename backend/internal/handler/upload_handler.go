@@ -123,6 +123,8 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 		req.State = get("state")
 		req.PostalCode = get("postal_code")
 		req.Requirements = get("requirements")
+		req.PropertyAddress = get("property_address")
+		req.MeasurementUnit = get("measurement_unit")
 
 		if v := get("budget_min"); v != "" {
 			if f64, err := strconv.ParseFloat(v, 64); err == nil {
@@ -137,6 +139,31 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 		if v := get("expected_amount"); v != "" {
 			if f64, err := strconv.ParseFloat(v, 64); err == nil {
 				req.ExpectedAmount = &f64
+			}
+		}
+		if v := get("min_price"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.MinPrice = &f64
+			}
+		}
+		if v := get("max_price"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.MaxPrice = &f64
+			}
+		}
+		if v := get("buildup_area"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.BuildupArea = &f64
+			}
+		}
+		if v := get("carpet_area"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.CarpetArea = &f64
+			}
+		}
+		if v := get("deposit_budget"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.DepositBudget = &f64
 			}
 		}
 
@@ -262,67 +289,74 @@ func (h *UploadHandler) UploadPropertiesExcel(c *gin.Context) {
 func (h *UploadHandler) DownloadClientsSample(c *gin.Context) {
 	f := excelize.NewFile()
 	sheet := f.GetSheetName(0)
-	headers := []string{"first_name","last_name","email","phone","type","preferred_location","address","city","state","postal_code","requirements","budget_min","budget_max","expected_amount","notes"}
-	// Write headers
+
+	headers := []string{
+		"first_name", "last_name", "email", "phone", "type",
+		"preferred_location", "address", "city", "state", "postal_code",
+		"requirements",
+		"budget_min", "budget_max", "expected_amount",
+		"min_price", "max_price", "property_address",
+		"buildup_area", "carpet_area", "measurement_unit",
+		"deposit_budget", "notes",
+	}
+
+	// Write headers row 1
 	for i, v := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		f.SetCellValue(sheet, cell, v)
 	}
-	// Style headers bold and light background
-	headerStyle, _ := f.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}, Fill: excelize.Fill{Type: "pattern", Color: []string{"#F3F4F6"}, Pattern: 1}})
-	_ = f.SetCellStyle(sheet, "A1", "O1", headerStyle)
+	lastCol, _ := excelize.CoordinatesToCellName(len(headers), 1)
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"#F3F4F6"}, Pattern: 1},
+	})
+	_ = f.SetCellStyle(sheet, "A1", lastCol, headerStyle)
 
-	// Visible description row (row 2) so users see guidance immediately
-	descriptions := []string{}
-	for _, v := range headers {
-		switch v {
-		case "first_name":
-			descriptions = append(descriptions, "Required: First name")
-		case "last_name":
-			descriptions = append(descriptions, "Required: Last name")
-		case "email":
-			descriptions = append(descriptions, "Required: Valid email")
-		case "phone":
-			descriptions = append(descriptions, "Required: Phone number")
-		case "type":
-			descriptions = append(descriptions, "Required: buyer|seller|tenant|owner|list_property_for_rent")
-		case "preferred_location":
-			descriptions = append(descriptions, "Required: Location")
-		case "address":
-			descriptions = append(descriptions, "Required: Full address")
-		case "city":
-			descriptions = append(descriptions, "Required: City")
-		case "state":
-			descriptions = append(descriptions, "Required: State")
-		case "postal_code":
-			descriptions = append(descriptions, "Required: Postal/ZIP")
-		case "requirements":
-			descriptions = append(descriptions, "Required: Short text")
-		case "budget_min":
-			descriptions = append(descriptions, "Optional: Numeric")
-		case "budget_max":
-			descriptions = append(descriptions, "Optional: Numeric")
-		case "expected_amount":
-			descriptions = append(descriptions, "Optional: Numeric")
-		case "notes":
-			descriptions = append(descriptions, "Optional: Notes")
-		default:
-			descriptions = append(descriptions, "")
-		}
+	// Description row 2
+	descMap := map[string]string{
+		"first_name":        "Required: First name",
+		"last_name":         "Required: Last name",
+		"email":             "Optional: Valid email",
+		"phone":             "Required: Phone number",
+		"type":              "Required: buyer|seller|tenant|owner|list_property_for_rent",
+		"preferred_location": "Optional: Preferred location",
+		"address":           "Optional: Client address",
+		"city":              "Optional: City",
+		"state":             "Optional: State",
+		"postal_code":       "Optional: Postal code",
+		"requirements":      "Optional: Enquiry/requirements",
+		"budget_min":        "Optional: Min budget (buyer/tenant)",
+		"budget_max":        "Optional: Max budget (buyer/tenant)",
+		"expected_amount":   "Optional: Expected amount (list_property_for_rent)",
+		"min_price":         "Optional: Min price (seller)",
+		"max_price":         "Optional: Max price (seller)",
+		"property_address":  "Optional: Property address (seller)",
+		"buildup_area":      "Optional: Buildup area (numeric)",
+		"carpet_area":       "Optional: Carpet area (numeric)",
+		"measurement_unit":  "Optional: Sq Ft|Sq Meter|Acre|Guntha",
+		"deposit_budget":    "Optional: Deposit budget (tenant)",
+		"notes":             "Optional: Notes",
 	}
-	for i, d := range descriptions {
+	for i, v := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
-		f.SetCellValue(sheet, cell, d)
+		f.SetCellValue(sheet, cell, descMap[v])
 	}
 
-	// Example row to guide users (row 3)
-	example := []interface{}{"Ramesh", "Kumar", "ramesh@example.com", "+911234567890", "buyer", "Andheri", "Street 12, Building X", "Mumbai", "Maharashtra", "400053", "Looking for 2 BHK", 5000000, 8000000, "", "Optional notes here"}
+	// Example row 3
+	example := []interface{}{
+		"Ramesh", "Kumar", "ramesh@example.com", "+911234567890", "buyer",
+		"Andheri", "Street 12, Building X", "Mumbai", "Maharashtra", "400053",
+		"Looking for 2 BHK",
+		5000000, 8000000, "", "", "", "",
+		1200, 950, "Sq Ft",
+		"", "Optional notes",
+	}
 	for i, v := range example {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 3)
 		f.SetCellValue(sheet, cell, v)
 	}
 
-	// Add dropdown validation for `type` column (E) starting from row 3
+	// Dropdown for type column (E)
 	dv := &excelize.DataValidation{
 		Type:         "list",
 		Formula1:     `"buyer,seller,tenant,owner,list_property_for_rent"`,
@@ -330,17 +364,25 @@ func (h *UploadHandler) DownloadClientsSample(c *gin.Context) {
 	}
 	_ = f.AddDataValidation(sheet+"!E3:E1000", dv)
 
-	// Set some column widths for readability
-	_ = f.SetColWidth(sheet, "A", "O", 20)
+	// Dropdown for measurement_unit column (T = col 20)
+	dvUnit := &excelize.DataValidation{
+		Type:         "list",
+		Formula1:     `"Sq Ft,Sq Meter,Acre,Guntha"`,
+		ShowDropDown: true,
+	}
+	_ = f.AddDataValidation(sheet+"!T3:T1000", dvUnit)
 
-	// Create INSTRUCTIONS sheet with detailed guidance
+	_ = f.SetColWidth(sheet, "A", "V", 22)
+
+	// INSTRUCTIONS sheet
 	instr := "INSTRUCTIONS"
 	f.NewSheet(instr)
 	ins := []string{
 		"How to use this template:",
-		"- Do not change header names.",
-		"- Add one record per row starting from row 2.",
-		"- Required fields are marked in the header comments.",
+		"- Do not change header names in row 1.",
+		"- Row 2 contains field descriptions.",
+		"- Add one record per row starting from row 3.",
+		"- Only first_name, last_name, phone and type are required.",
 		"",
 		"Column guide:",
 	}
@@ -348,49 +390,37 @@ func (h *UploadHandler) DownloadClientsSample(c *gin.Context) {
 		cell, _ := excelize.CoordinatesToCellName(1, i+1)
 		f.SetCellValue(instr, cell, line)
 	}
-	for i, h := range headers {
+	instrDescMap := map[string]string{
+		"first_name":        "Required. First name.",
+		"last_name":         "Required. Last name.",
+		"email":             "Optional. Valid email address.",
+		"phone":             "Required. Phone number.",
+		"type":              "Required. buyer|seller|tenant|owner|list_property_for_rent",
+		"preferred_location": "Optional. Preferred location/area.",
+		"address":           "Optional. Client residential address.",
+		"city":              "Optional. City name.",
+		"state":             "Optional. State name.",
+		"postal_code":       "Optional. Postal/ZIP code.",
+		"requirements":      "Optional. Enquiry or requirements text.",
+		"budget_min":        "Optional. Minimum budget (buyer/tenant).",
+		"budget_max":        "Optional. Maximum budget (buyer/tenant).",
+		"expected_amount":   "Optional. Expected amount (list_property_for_rent).",
+		"min_price":         "Optional. Minimum price (seller).",
+		"max_price":         "Optional. Maximum price (seller).",
+		"property_address":  "Optional. Address of property to sell (seller).",
+		"buildup_area":      "Optional. Buildup area (numeric).",
+		"carpet_area":       "Optional. Carpet area (numeric).",
+		"measurement_unit":  "Optional. Sq Ft|Sq Meter|Acre|Guntha",
+		"deposit_budget":    "Optional. Deposit budget (tenant).",
+		"notes":             "Optional. Free text notes.",
+	}
+	for i, col := range headers {
 		row := len(ins) + i + 2
 		cellH, _ := excelize.CoordinatesToCellName(1, row)
 		cellD, _ := excelize.CoordinatesToCellName(2, row)
-		// header name
-		f.SetCellValue(instr, cellH, h)
-		// short description in next column
-		desc := ""
-		switch h {
-		case "first_name":
-			desc = "Required. First name (2-100 chars)."
-		case "last_name":
-			desc = "Required. Last name (2-100 chars)."
-		case "email":
-			desc = "Required. Valid email address."
-		case "phone":
-			desc = "Required. Phone number."
-		case "type":
-			desc = "Required. buyer|seller|tenant|owner|list_property_for_rent"
-		case "preferred_location":
-			desc = "Required. City or locality."
-		case "address":
-			desc = "Required. Full postal address."
-		case "city":
-			desc = "Required. City name."
-		case "state":
-			desc = "Required. State name."
-		case "postal_code":
-			desc = "Required. Postal / ZIP code."
-		case "requirements":
-			desc = "Required. Short text describing requirements."
-		case "budget_min":
-			desc = "Optional. Numeric."
-		case "budget_max":
-			desc = "Optional. Numeric."
-		case "expected_amount":
-			desc = "Optional. Numeric (for sellers)."
-		case "notes":
-			desc = "Optional. Free text notes."
-		}
-		f.SetCellValue(instr, cellD, desc)
+		f.SetCellValue(instr, cellH, col)
+		f.SetCellValue(instr, cellD, instrDescMap[col])
 	}
-	// set instruction sheet column widths
 	_ = f.SetColWidth(instr, "A", "B", 50)
 
 	var buf bytes.Buffer
