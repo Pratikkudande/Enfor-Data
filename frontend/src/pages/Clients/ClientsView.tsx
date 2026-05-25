@@ -133,7 +133,7 @@ const ClientsView: React.FC = () => {
     switch (type) {
       case 'buyer': return 'Buyer';
       case 'seller': return 'Sell Property';
-      case 'tenant': return 'Rent Client';
+      case 'tenant': return 'Rent a Property';
       case 'list_property_for_rent': return 'Property for Rent';
       case 'owner': return 'Owner';
       default: return type.replace(/_/g, ' ');
@@ -323,7 +323,7 @@ const ClientsView: React.FC = () => {
               <option value="all">All Types</option>
               <option value="buyer">Buyer</option>
               <option value="seller">Sell Property</option>
-              <option value="tenant">Rent Client</option>
+              <option value="tenant">Rent a Property</option>
               <option value="list_property_for_rent">Property for Rent</option>
             </select>
           </div>
