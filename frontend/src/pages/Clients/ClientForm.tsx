@@ -144,13 +144,13 @@ const ClientForm: React.FC<ClientFormProps> = ({
                   disabled={isViewOnly} className={inputCls(isViewOnly)} placeholder="+91 9876543210" required />
               </div>
               <div>
-                {label('Email ID', true)}
+                {label('Email ID')}
                 <input type="email" name="email" value={formData.email} onChange={onInputChange}
-                  disabled={isViewOnly} className={inputCls(isViewOnly)} required />
+                  disabled={isViewOnly} className={inputCls(isViewOnly)} />
               </div>
             </div>
 
-            {/* Client Address — optional for all types */}
+            {/* Client Address — optional */}
             <div>
               {label('Client Address')}
               <textarea name="address" value={formData.address} onChange={onInputChange}
@@ -161,29 +161,29 @@ const ClientForm: React.FC<ClientFormProps> = ({
             {/* Sell Property: Property Address */}
             {showPropertyAddr && (
               <div>
-                {label('Property Address', true)}
+                {label('Property Address')}
                 <textarea name="propertyAddress" value={formData.propertyAddress} onChange={onInputChange}
                   disabled={isViewOnly} rows={2} className={inputCls(isViewOnly)}
-                  placeholder="Full address of the property to be sold" required={!isViewOnly} />
+                  placeholder="Full address of the property to be sold" />
               </div>
             )}
 
             {/* Location + City */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                {label(isBuyer ? 'Preferred Location' : 'Property Location', true)}
+                {label(isBuyer ? 'Preferred Location' : 'Property Location')}
                 <input type="text" name="location" value={formData.location} onChange={onInputChange}
                   disabled={isViewOnly} className={inputCls(isViewOnly)}
-                  placeholder={isBuyer ? 'Area/Locality' : 'Property area/location'} required />
+                  placeholder={isBuyer ? 'Area/Locality' : 'Property area/location'} />
               </div>
               <div>
-                {label('City', true)}
+                {label('City')}
                 <input type="text" name="city" value={formData.city} onChange={onInputChange}
-                  disabled={isViewOnly} className={inputCls(isViewOnly)} required />
+                  disabled={isViewOnly} className={inputCls(isViewOnly)} />
               </div>
             </div>
 
-            {/* State + Postal Code — optional */}
+            {/* State + Postal Code */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 {label('State')}
@@ -202,9 +202,9 @@ const ClientForm: React.FC<ClientFormProps> = ({
 
             {/* Enquiry */}
             <div>
-              {label('Enquiry', true)}
+              {label('Enquiry')}
               <select name="enquiry" value={formData.enquiry} onChange={onInputChange}
-                disabled={isViewOnly} className={inputCls(isViewOnly)} required>
+                disabled={isViewOnly} className={inputCls(isViewOnly)}>
                 <option value="">Select Property Type</option>
                 {enquiryOptions.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
