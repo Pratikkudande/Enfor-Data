@@ -58,14 +58,20 @@ const ClientsView: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', location: '', contactNo: '', email: '',
     address: '', city: '', state: '', postalCode: '', enquiry: '',
-    budgetMin: '', budgetMax: '', expectedAmount: ''
+    budgetMin: '', budgetMax: '', expectedAmount: '',
+    minPrice: '', maxPrice: '', propertyAddress: '',
+    buildupArea: '', carpetArea: '', measurementUnit: '',
+    depositBudget: '',
   });
 
   const resetFormState = () => {
     setFormData({
       firstName: '', lastName: '', location: '', contactNo: '', email: '',
       address: '', city: '', state: '', postalCode: '', enquiry: '',
-      budgetMin: '', budgetMax: '', expectedAmount: ''
+      budgetMin: '', budgetMax: '', expectedAmount: '',
+      minPrice: '', maxPrice: '', propertyAddress: '',
+      buildupArea: '', carpetArea: '', measurementUnit: '',
+      depositBudget: '',
     });
     setSelectedClientType('buyer');
     setEditingClientId(null);
@@ -91,14 +97,19 @@ const ClientsView: React.FC = () => {
     setFormData({
       firstName: client.first_name, lastName: client.last_name,
       location: client.preferred_location, contactNo: client.phone,
-      email: client.email, address: client.address, city: client.city,
-      state: client.state, postalCode: client.postal_code,
+      email: client.email, address: client.address ?? '', city: client.city ?? '',
+      state: client.state ?? '', postalCode: client.postal_code ?? '',
       enquiry: client.requirements,
       budgetMin: client.budget_min ? client.budget_min.toString() : '',
       budgetMax: client.budget_max ? client.budget_max.toString() : '',
-      expectedAmount: client.expected_amount
-        ? client.expected_amount.toString()
-        : '',
+      expectedAmount: client.expected_amount ? client.expected_amount.toString() : '',
+      minPrice: (client as any).min_price ? (client as any).min_price.toString() : '',
+      maxPrice: (client as any).max_price ? (client as any).max_price.toString() : '',
+      propertyAddress: (client as any).property_address ?? '',
+      buildupArea: (client as any).buildup_area ? (client as any).buildup_area.toString() : '',
+      carpetArea: (client as any).carpet_area ? (client as any).carpet_area.toString() : '',
+      measurementUnit: (client as any).measurement_unit ?? '',
+      depositBudget: (client as any).deposit_budget ? (client as any).deposit_budget.toString() : '',
     });
     setShowAddModal(true);
   };
@@ -117,6 +128,17 @@ const ClientsView: React.FC = () => {
       const matchesType = filterType === 'all' || client.type === filterType;
       return matchesSearch && matchesType;
     });
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'buyer': return 'Buyer';
+      case 'seller': return 'Sell Property';
+      case 'tenant': return 'Rent Client';
+      case 'list_property_for_rent': return 'Property for Rent';
+      case 'owner': return 'Owner';
+      default: return type.replace(/_/g, ' ');
+    }
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -160,7 +182,8 @@ const ClientsView: React.FC = () => {
         first_name: formData.firstName, last_name: formData.lastName,
         email: formData.email, phone: formData.contactNo,
         type: editingClientType === 'owner' ? 'owner' : selectedClientType,
-        preferred_location: formData.location, address: formData.address,
+        preferred_location: formData.location,
+        address: formData.address,
         city: formData.city, state: formData.state,
         postal_code: formData.postalCode, requirements: formData.enquiry,
       };
@@ -191,6 +214,23 @@ const ClientsView: React.FC = () => {
           setFormError('Min Budget cannot be greater than Max Budget');
           return;
         }
+      }
+
+      // Sell Property fields
+      if (selectedClientType === 'seller') {
+        if (formData.minPrice.trim()) clientData.min_price = parseFloat(formData.minPrice);
+        if (formData.maxPrice.trim()) clientData.max_price = parseFloat(formData.maxPrice);
+        if (formData.propertyAddress.trim()) clientData.property_address = formData.propertyAddress.trim();
+      }
+
+      // Area fields
+      if (formData.buildupArea.trim()) clientData.buildup_area = parseFloat(formData.buildupArea);
+      if (formData.carpetArea.trim()) clientData.carpet_area = parseFloat(formData.carpetArea);
+      if (formData.measurementUnit.trim()) clientData.measurement_unit = formData.measurementUnit;
+
+      // Deposit budget for tenant
+      if (selectedClientType === 'tenant' && formData.depositBudget.trim()) {
+        clientData.deposit_budget = parseFloat(formData.depositBudget);
       }
 
       const response = editingClientId
@@ -281,10 +321,10 @@ const ClientsView: React.FC = () => {
           <div className="flex gap-4">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all">All Types</option>
-              <option value="buyer">Buy Property</option>
+              <option value="buyer">Buyer</option>
               <option value="seller">Sell Property</option>
-              <option value="tenant">Rent Property</option>
-              <option value="list_property_for_rent">List Property for Rent</option>
+              <option value="tenant">Rent Client</option>
+              <option value="list_property_for_rent">Property for Rent</option>
             </select>
           </div>
         </div>
@@ -300,6 +340,7 @@ const ClientsView: React.FC = () => {
               key={client.id}
               client={client}
               getTypeColor={getTypeColor}
+              getTypeLabel={getTypeLabel}
               getStatusColor={getStatusColor}
               formatBudget={formatBudget}
               onView={openViewModal}

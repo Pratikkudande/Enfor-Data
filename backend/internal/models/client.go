@@ -18,12 +18,27 @@ type Client struct {
 	Type   string `json:"type" db:"type"`
 	Status string `json:"status" db:"status"`
 
-	// Budget Information (optional - mainly for buyers/tenants)
+	// Budget Information (buyers/tenants)
 	BudgetMin *float64 `json:"budget_min,omitempty" db:"budget_min"`
 	BudgetMax *float64 `json:"budget_max,omitempty" db:"budget_max"`
 
-	// Expected Amount (for sellers and list_property_for_rent)
+	// Expected Amount (sellers / list_property_for_rent)
 	ExpectedAmount *float64 `json:"expected_amount,omitempty" db:"expected_amount"`
+
+	// Sell Property: price range
+	MinPrice *float64 `json:"min_price,omitempty" db:"min_price"`
+	MaxPrice *float64 `json:"max_price,omitempty" db:"max_price"`
+
+	// Sell Property: property address
+	PropertyAddress *string `json:"property_address,omitempty" db:"property_address"`
+
+	// Area fields (buyer, seller, list_property_for_rent)
+	BuildupArea     *float64 `json:"buildup_area,omitempty" db:"buildup_area"`
+	CarpetArea      *float64 `json:"carpet_area,omitempty" db:"carpet_area"`
+	MeasurementUnit *string  `json:"measurement_unit,omitempty" db:"measurement_unit"`
+
+	// Rent Client: deposit budget
+	DepositBudget *float64 `json:"deposit_budget,omitempty" db:"deposit_budget"`
 
 	// Location & Requirements
 	PreferredLocation string `json:"preferred_location" db:"preferred_location"`
@@ -39,7 +54,7 @@ type Client struct {
 	// Ownership
 	BrokerID string `json:"broker_id" db:"broker_id"`
 
-	// Denormalized broker info (for performance)
+	// Denormalized broker info
 	BrokerName *string `json:"broker_name,omitempty" db:"broker_name"`
 	BrokerCity *string `json:"broker_city,omitempty" db:"broker_city"`
 
@@ -47,4 +62,3 @@ type Client struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
-

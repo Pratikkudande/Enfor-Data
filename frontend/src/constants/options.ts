@@ -23,5 +23,13 @@ export const enquiryOptions = [
   'ROW House',
   'Bunglow',
   'Shops',
-  'Office'
+  'Office',
+  'Plot',
+];
+
+export const measurementUnits = [
+  'Sq Ft',
+  'Sq Meter',
+  'Acre',
+  'Guntha',
 ];
