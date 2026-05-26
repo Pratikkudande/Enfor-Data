@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, User } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, User, Upload, Loader2, CheckCircle, XCircle, FileSpreadsheet } from 'lucide-react';
 import { apiClient, Client as ApiClient, CreateClientRequest } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
 import { useSearchParams } from 'react-router-dom';
@@ -22,14 +22,23 @@ const ClientsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState<string>('');
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isExpectedAmountType = (type: string) => type !== 'buyer' && type !== 'tenant';
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
-    window.setTimeout(() => setSuccessMessage(null), 3000);
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const showError = (msg: string) => {
+    setErrorMessage(msg);
+    window.setTimeout(() => setErrorMessage(null), 6000);
   };
 
   const fetchClients = async () => {
@@ -286,31 +295,48 @@ const ClientsView: React.FC = () => {
           <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/clients-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
             Download Sample Excel
           </button>
-          <input type="file" accept=".xlsx,.xls,.csv" id="clientsExcelInput" className="hidden" onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            try {
-              setSubmitting(true);
-              const response = await apiClient.uploadClientsExcel(file);
-              const data = (response as any)?.data;
-              const created = data?.created ?? 0;
-              const duplicates = data?.duplicates ?? 0;
-              const errors = data?.errors ?? [];
-              let msg = `${created} client${created !== 1 ? 's' : ''} uploaded successfully`;
-              if (duplicates > 0) msg += `, ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
-              if (errors.length > 0) msg += `, ${errors.length} row${errors.length !== 1 ? 's' : ''} failed`;
-              showSuccess(msg);
-              fetchClients();
-            } catch (err) {
-              setError(err instanceof Error ? err.message : 'Upload failed');
-            } finally {
-              setSubmitting(false);
-              // clear input
-              (e.target as HTMLInputElement).value = '';
-            }
-          }} />
-          <button onClick={() => document.getElementById('clientsExcelInput')?.click()} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
-            Upload Excel
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            id="clientsExcelInput"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUploadFileName(file.name);
+              setUploading(true);
+              try {
+                const response = await apiClient.uploadClientsExcel(file);
+                const data = (response as any)?.data;
+                const created = data?.created ?? 0;
+                const duplicates = data?.duplicates ?? 0;
+                const errors = data?.errors ?? [];
+                let msg = `${created} client${created !== 1 ? 's' : ''} imported successfully`;
+                if (duplicates > 0) msg += ` · ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
+                if (errors.length > 0) msg += ` · ${errors.length} row${errors.length !== 1 ? 's' : ''} failed`;
+                showSuccess(msg);
+                fetchClients();
+              } catch (err) {
+                showError(err instanceof Error ? err.message : 'Upload failed. Please check your file and try again.');
+              } finally {
+                setUploading(false);
+                setUploadFileName('');
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-2" />
+            )}
+            {uploading ? 'Uploading…' : 'Upload Excel'}
           </button>
         </div>
       </div>
@@ -386,11 +412,39 @@ const ClientsView: React.FC = () => {
       )}
 
       {successMessage && (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50">
-          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {successMessage}
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50 max-w-sm">
+          <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <span className="text-sm">{successMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50 max-w-sm">
+          <XCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <span className="text-sm">{errorMessage}</span>
+        </div>
+      )}
+
+      {uploading && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 min-w-[280px]">
+            <div className="relative">
+              <FileSpreadsheet className="h-12 w-12 text-green-500" />
+              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-900 font-semibold text-base">Importing clients…</p>
+              {uploadFileName && (
+                <p className="text-gray-500 text-sm mt-1 truncate max-w-[220px]">{uploadFileName}</p>
+              )}
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full animate-pulse w-3/4" />
+            </div>
+            <p className="text-gray-400 text-xs">Please wait, do not close this page</p>
+          </div>
         </div>
       )}
     </div>

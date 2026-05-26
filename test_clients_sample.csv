@@ -1,0 +1,21 @@
+first_name,last_name,email,phone,type,preferred_location,address,city,state,postal_code,requirements,budget_min,budget_max,expected_amount,min_price,max_price,property_address,buildup_area,carpet_area,measurement_unit,deposit_budget,notes
+Ramesh,Kumar,ramesh.kumar@gmail.com,+919876543210,buyer,Andheri West,,Mumbai,Maharashtra,400053,Looking for 2 BHK near metro,3000000,5000000,,,,, 950,800,Sq Ft,,Needs parking
+Priya,Sharma,priya.sharma@gmail.com,+919876543211,seller,Bandra East,Flat 12 Sea View Apts Bandra,Mumbai,Maharashtra,400051,Selling 3 BHK flat,,,, 8000000,12000000,Flat 12 Sea View Apts Bandra Mumbai,1400,1100,Sq Ft,,Ready to negotiate
+Amit,Patel,amit.patel@gmail.com,+919876543212,tenant,Koregaon Park,,Pune,Maharashtra,411001,Need 2 BHK furnished,25000,40000,,,,, 900,750,Sq Ft,100000,Prefer ground floor
+Sneha,Reddy,sneha.reddy@gmail.com,+919876543213,list_property_for_rent,Jubilee Hills,Plot 45 Road 12 Jubilee Hills,Hyderabad,Telangana,500033,2 BHK flat for rent,,,2500000,,,Plot 45 Road 12 Jubilee Hills,1100,900,Sq Ft,,Available immediately
+Vikram,Singh,vikram.singh@gmail.com,+919876543214,buyer,Indiranagar,,Bangalore,Karnataka,560038,Looking for 3 BHK or villa,6000000,10000000,,,,, 1800,1500,Sq Ft,,School nearby preferred
+Anjali,Menon,anjali.menon@gmail.com,+919876543215,seller,Kochi Marine Drive,Wing B 3rd Floor Marine Residency,Kochi,Kerala,682001,Selling 2 BHK sea view,,,, 5500000,7000000,Wing B 3rd Floor Marine Residency Kochi,1050,850,Sq Ft,,Urgent sale
+Rahul,Verma,rahul.verma@gmail.com,+919876543216,buyer,Anna Nagar,,Chennai,Tamil Nadu,600040,1 BHK or 2 BHK for investment,2000000,3500000,,,,, 650,550,Sq Ft,,Ready to buy
+Kavita,Joshi,kavita.joshi@gmail.com,+919876543217,tenant,Vastrapur,,Ahmedabad,Gujarat,380015,2 BHK semi-furnished,18000,28000,,,,, 850,700,Sq Ft,80000,Pet friendly building
+Suresh,Nair,suresh.nair@gmail.com,+919876543218,buyer,Whitefield,,Bangalore,Karnataka,560066,3 BHK in gated community,7000000,12000000,,,,, 1600,1300,Sq Ft,,Gym and pool required
+Deepa,Iyer,deepa.iyer@gmail.com,+919876543219,seller,T Nagar,Old No 5 New No 10 Pondy Bazaar,Chennai,Tamil Nadu,600017,Selling commercial shop,,,, 3000000,4500000,Old No 5 New No 10 Pondy Bazaar Chennai,400,400,Sq Ft,,Ground floor shop
+Manish,Gupta,manish.gupta@gmail.com,+919876543220,buyer,Sector 62,,Noida,Uttar Pradesh,201309,2 BHK ready to move,4000000,6500000,,,,, 1100,900,Sq Ft,,Metro connectivity must
+Pooja,Desai,pooja.desai@gmail.com,+919876543221,list_property_for_rent,Satellite,B-204 Shivalik Apartments Satellite,Ahmedabad,Gujarat,380015,3 BHK for rent,,,35000,,,B-204 Shivalik Apartments Satellite,1400,1150,Sq Ft,,Fully furnished
+Arjun,Mehta,arjun.mehta@gmail.com,+919876543222,tenant,Powai,,Mumbai,Maharashtra,400076,2 BHK near Hiranandani,30000,45000,,,,, 950,800,Sq Ft,150000,Corporate lease preferred
+Lakshmi,Pillai,lakshmi.pillai@gmail.com,+919876543223,buyer,Thiruvananthapuram,,Thiruvananthapuram,Kerala,695001,Plot for house construction,,,,,,, 2000,2000,Sq Ft,,Corner plot preferred
+Rohit,Agarwal,rohit.agarwal@gmail.com,+919876543224,seller,Gomti Nagar,H-45 Vikas Nagar Gomti Nagar,Lucknow,Uttar Pradesh,226010,Selling 4 BHK bungalow,,,, 9000000,13000000,H-45 Vikas Nagar Gomti Nagar Lucknow,2800,2200,Sq Ft,,Motivated seller
+Nisha,Kapoor,nisha.kapoor@gmail.com,+919876543225,buyer,Dwarka,,Delhi,Delhi,110075,2 BHK for self use,4500000,7000000,,,,, 1050,850,Sq Ft,,DDA preferred
+Sanjay,Rao,sanjay.rao@gmail.com,+919876543226,tenant,Madhapur,,Hyderabad,Telangana,500081,3 BHK for family,35000,55000,,,,, 1500,1200,Sq Ft,200000,Gated community
+Meena,Krishnan,meena.krishnan@gmail.com,+919876543227,list_property_for_rent,Adyar,12 Gandhi Nagar 2nd Street Adyar,Chennai,Tamil Nadu,600020,2 BHK for rent,,,22000,,,12 Gandhi Nagar 2nd Street Adyar,950,780,Sq Ft,,Bachelors not allowed
+Tarun,Bose,tarun.bose@gmail.com,+919876543228,buyer,Salt Lake,,Kolkata,West Bengal,700091,3 BHK in Salt Lake Sector V,5000000,8000000,,,,, 1300,1050,Sq Ft,,IT park proximity
+Geeta,Pandey,geeta.pandey@gmail.com,+919876543229,seller,Kalyani Nagar,C-301 Kalyani Residency Kalyani Nagar,Pune,Maharashtra,411006,Selling 2 BHK flat,,,, 6500000,8500000,C-301 Kalyani Residency Kalyani Nagar Pune,1100,900,Sq Ft,,Immediate possession
