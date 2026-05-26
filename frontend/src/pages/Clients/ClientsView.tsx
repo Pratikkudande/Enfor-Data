@@ -291,8 +291,15 @@ const ClientsView: React.FC = () => {
             if (!file) return;
             try {
               setSubmitting(true);
-              await apiClient.uploadClientsExcel(file);
-              showSuccess('Clients uploaded successfully');
+              const response = await apiClient.uploadClientsExcel(file);
+              const data = (response as any)?.data;
+              const created = data?.created ?? 0;
+              const duplicates = data?.duplicates ?? 0;
+              const errors = data?.errors ?? [];
+              let msg = `${created} client${created !== 1 ? 's' : ''} uploaded successfully`;
+              if (duplicates > 0) msg += `, ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
+              if (errors.length > 0) msg += `, ${errors.length} row${errors.length !== 1 ? 's' : ''} failed`;
+              showSuccess(msg);
               fetchClients();
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Upload failed');

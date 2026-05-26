@@ -153,3 +153,16 @@ func (r *ClientRepository) Delete(id string) error {
 	}
 	return nil
 }
+
+// PhoneExistsForBroker returns true if a client with the same phone already exists for this broker.
+func (r *ClientRepository) PhoneExistsForBroker(phone, brokerID string) (bool, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM clients WHERE phone = $1 AND broker_id = $2`,
+		phone, brokerID,
+	).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check phone existence: %w", err)
+	}
+	return count > 0, nil
+}

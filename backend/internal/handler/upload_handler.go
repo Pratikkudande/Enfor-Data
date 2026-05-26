@@ -94,6 +94,7 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 	}
 
 	created := 0
+	duplicates := 0
 	errorsList := []string{}
 
 	for r := 1; r < len(rows); r++ {
@@ -169,13 +170,25 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 
 		// Attempt create
 		if _, err := h.clientSvc.CreateClient(&req, userID.(string)); err != nil {
-			errorsList = append(errorsList, fmt.Sprintf("row %d: %v", r+1, err))
+			// Separate duplicate errors from other errors for clearer reporting
+			if strings.Contains(err.Error(), "already exists") {
+				duplicates++
+			} else {
+				errorsList = append(errorsList, fmt.Sprintf("row %d: %v", r+1, err))
+			}
 			continue
 		}
 		created++
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Message: "Clients processed", Data: gin.H{"created": created, "errors": errorsList}})
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Clients processed",
+		Data: gin.H{
+			"created":    created,
+			"duplicates": duplicates,
+			"errors":     errorsList,
+		},
+	})
 }
 
 // UploadPropertiesExcel handles bulk property Excel uploads

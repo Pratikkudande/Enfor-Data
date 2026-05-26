@@ -29,8 +29,17 @@ func (s *ClientService) CreateClient(req *dto.CreateClientRequest, brokerID stri
 		return nil, err
 	}
 
+	// Check for duplicate phone number for this broker
+	exists, err := s.clientRepo.PhoneExistsForBroker(req.Phone, brokerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check for duplicate: %w", err)
+	}
+	if exists {
+		return nil, fmt.Errorf("client with phone number %s already exists", req.Phone)
+	}
+
 	// Fetch broker information from userRepo to validate broker exists
-	_, err := s.userRepo.GetUserByID(brokerID)
+	_, err = s.userRepo.GetUserByID(brokerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch broker information: %w", err)
 	}
