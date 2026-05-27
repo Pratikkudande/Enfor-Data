@@ -26,6 +26,15 @@ func NewPropertyService(propertyRepo *repository.PropertyRepository, clientRepo 
 
 // CreateProperty creates a new property with business logic validation
 func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerID string) (*models.Property, error) {
+	// Check for duplicate property (same address, city, state)
+	isDuplicate, err := s.propertyRepo.CheckDuplicate(req.Address, req.City, req.State)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check duplicate property: %w", err)
+	}
+	if isDuplicate {
+		return nil, fmt.Errorf("property already exists with the same address, city and state")
+	}
+
 	// Validate type-specific requirements
 	if err := validatePropertyTypeRequirements(req.Type, req.Bedrooms, req.Bathrooms); err != nil {
 		return nil, err

@@ -111,12 +111,34 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 			return strings.TrimSpace(row[idx])
 		}
 
+		firstName := get("first_name")
+		lastName := get("last_name")
+		email := get("email")
+		phone := get("phone")
+		clientType := get("type")
+
+		// 1. Skip blank rows
+		if firstName == "" && lastName == "" && email == "" && phone == "" {
+			continue
+		}
+
+		// 2. Skip description rows (contain "Required:" or "Optional:")
+		if strings.Contains(strings.ToLower(firstName), "required:") || strings.Contains(strings.ToLower(firstName), "optional:") ||
+			strings.Contains(strings.ToLower(clientType), "required:") {
+			continue
+		}
+
+		// 3. Skip example rows
+		if firstName == "Ramesh" && lastName == "Kumar" {
+			continue
+		}
+
 		var req dto.CreateClientRequest
-		req.FirstName = get("first_name")
-		req.LastName = get("last_name")
-		req.Email = get("email")
-		req.Phone = get("phone")
-		req.Type = get("type")
+		req.FirstName = firstName
+		req.LastName = lastName
+		req.Email = email
+		req.Phone = phone
+		req.Type = strings.ToLower(strings.TrimSpace(clientType))
 		req.PreferredLocation = get("preferred_location")
 		req.Address = get("address")
 		req.City = get("city")
@@ -209,6 +231,7 @@ func (h *UploadHandler) UploadPropertiesExcel(c *gin.Context) {
 
 	created := 0
 	errorsList := []string{}
+	seenProperties := make(map[string]bool)
 
 	for r := 1; r < len(rows); r++ {
 		row := rows[r]
@@ -219,10 +242,41 @@ func (h *UploadHandler) UploadPropertiesExcel(c *gin.Context) {
 			return strings.TrimSpace(row[idx])
 		}
 
+		title := get("title")
+		propertyType := get("type")
+		listingType := get("listing_type")
+		location := get("location")
+		address := get("address")
+		city := get("city")
+		state := get("state")
+
+		// 1. Skip blank rows
+		if title == "" && location == "" && address == "" {
+			continue
+		}
+
+		// 2. Skip description rows
+		if strings.Contains(strings.ToLower(title), "required:") || strings.Contains(strings.ToLower(propertyType), "required:") {
+			continue
+		}
+
+		// 3. Skip example rows
+		if title == "Nice 2BHK" {
+			continue
+		}
+
+		// 4. Check duplicate in the same file
+		addrKey := fmt.Sprintf("%s|%s|%s", strings.ToLower(address), strings.ToLower(city), strings.ToLower(state))
+		if seenProperties[addrKey] {
+			errorsList = append(errorsList, fmt.Sprintf("row %d: duplicate property entry in same file", r+1))
+			continue
+		}
+		seenProperties[addrKey] = true
+
 		var req dto.CreatePropertyRequest
-		req.Title = get("title")
-		req.Type = get("type")
-		req.ListingType = get("listing_type")
+		req.Title = title
+		req.Type = strings.ToLower(strings.TrimSpace(propertyType))
+		req.ListingType = strings.ToLower(strings.TrimSpace(listingType))
 		if v := get("price"); v != "" {
 			if f64, err := strconv.ParseFloat(v, 64); err == nil { req.Price = f64 }
 		}
@@ -235,10 +289,10 @@ func (h *UploadHandler) UploadPropertiesExcel(c *gin.Context) {
 		if v := get("bathrooms"); v != "" {
 			if iv, err := strconv.Atoi(v); err == nil { req.Bathrooms = &iv }
 		}
-		req.Location = get("location")
-		req.Address = get("address")
-		req.City = get("city")
-		req.State = get("state")
+		req.Location = location
+		req.Address = address
+		req.City = city
+		req.State = state
 		req.Description = get("description")
 		if v := get("amenities"); v != "" {
 			// comma separated

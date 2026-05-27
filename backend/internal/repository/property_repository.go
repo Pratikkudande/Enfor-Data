@@ -349,3 +349,22 @@ func (r *PropertyRepository) SoftDelete(id string) error {
 
 	return nil
 }
+
+// CheckDuplicate checks if a property with the same address, city, and state already exists.
+func (r *PropertyRepository) CheckDuplicate(address, city, state string) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM properties 
+			WHERE LOWER(TRIM(address)) = LOWER(TRIM($1)) 
+			  AND LOWER(TRIM(city)) = LOWER(TRIM($2)) 
+			  AND LOWER(TRIM(state)) = LOWER(TRIM($3))
+			  AND deleted_at IS NULL
+		)
+	`
+	var exists bool
+	err := r.db.QueryRow(query, address, city, state).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check duplicate: %w", err)
+	}
+	return exists, nil
+}
