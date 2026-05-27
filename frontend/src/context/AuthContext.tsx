@@ -87,9 +87,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 },
                 propertiesByStatus: {
                   available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-                  sold: 0,
-                  rented: 0,
-                  under_negotiation: 0,
+                  sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
+                  rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
+                  hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
+                  closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
+                  under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
                 },
               };
 
@@ -203,9 +205,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
             propertiesByStatus: {
               available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-              sold: 0,
-              rented: 0,
-              under_negotiation: 0,
+              sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
+              rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
+              hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
+              closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
+              under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
             },
           };
 
@@ -292,9 +296,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
             propertiesByStatus: {
               available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-              sold: 0,
-              rented: 0,
-              under_negotiation: 0,
+              sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
+              rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
+              hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
+              closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
+              under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
             },
           };
 

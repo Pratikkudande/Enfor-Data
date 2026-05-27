@@ -26,6 +26,15 @@ func NewPropertyService(propertyRepo *repository.PropertyRepository, clientRepo 
 
 // CreateProperty creates a new property with business logic validation
 func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerID string) (*models.Property, error) {
+	// Check for duplicate property (same address, city, state)
+	isDuplicate, err := s.propertyRepo.CheckDuplicate(req.Address, req.City, req.State)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check duplicate property: %w", err)
+	}
+	if isDuplicate {
+		return nil, fmt.Errorf("property already exists with the same address, city and state")
+	}
+
 	// Validate type-specific requirements
 	if err := validatePropertyTypeRequirements(req.Type, req.Bedrooms, req.Bathrooms); err != nil {
 		return nil, err
@@ -73,6 +82,11 @@ func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerI
 		property.Amenities = []string{}
 	}
 
+	// Handle photos array - ensure it's not nil
+	if property.Photos == nil {
+		property.Photos = []string{}
+	}
+
 	// Create property in repository
 	if err := s.propertyRepo.Create(property); err != nil {
 		return nil, fmt.Errorf("failed to create property: %w", err)
@@ -82,17 +96,35 @@ func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerI
 }
 
 // GetAllProperties returns all properties from all brokers (read-only network view)
-func (s *PropertyService) GetAllProperties() ([]models.Property, error) {
+// Sold properties are filtered out unless they belong to the requesting broker.
+func (s *PropertyService) GetAllProperties(requestingBrokerID string) ([]models.Property, error) {
 	properties, err := s.propertyRepo.GetAllProperties()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all properties: %w", err)
 	}
-	return properties, nil
+
+	filtered := make([]models.Property, 0, len(properties))
+	for _, p := range properties {
+		if p.Status == "sold" && p.BrokerID != requestingBrokerID {
+			continue
+		}
+		filtered = append(filtered, p)
+	}
+
+	return filtered, nil
 }
 
 // GetPropertyByIDPublic retrieves any property by ID without ownership check (read-only)
-func (s *PropertyService) GetPropertyByIDPublic(id string) (*models.Property, error) {
-	return s.propertyRepo.GetByIDPublic(id)
+// Restricts access to sold properties unless the requesting broker is the owner.
+func (s *PropertyService) GetPropertyByIDPublic(id string, requestingBrokerID string) (*models.Property, error) {
+	property, err := s.propertyRepo.GetByIDPublic(id)
+	if err != nil {
+		return nil, err
+	}
+	if property.Status == "sold" && property.BrokerID != requestingBrokerID {
+		return nil, fmt.Errorf("access denied: property is sold and only visible to the owner")
+	}
+	return property, nil
 }
 
 // GetBrokerProperties retrieves all properties for a specific broker
@@ -165,6 +197,9 @@ func (s *PropertyService) UpdateProperty(id string, req *dto.UpdatePropertyReque
 	if req.Amenities != nil {
 		property.Amenities = req.Amenities
 	}
+	if req.Photos != nil {
+		property.Photos = req.Photos
+	}
 	if req.Status != nil {
 		property.Status = *req.Status
 	}
@@ -183,6 +218,10 @@ func (s *PropertyService) UpdateProperty(id string, req *dto.UpdatePropertyReque
 
 	if property.Amenities == nil {
 		property.Amenities = []string{}
+	}
+
+	if property.Photos == nil {
+		property.Photos = []string{}
 	}
 
 	if err := s.propertyRepo.Update(property); err != nil {
@@ -231,8 +270,8 @@ func (s *PropertyService) resolvePropertyClient(clientID *string, brokerID strin
 
 // validatePropertyTypeRequirements validates type-specific requirements.
 func validatePropertyTypeRequirements(propertyType string, bedrooms, bathrooms *int) error {
-	// For apartments and houses, bedrooms and bathrooms are required
-	if propertyType == "apartment" || propertyType == "house" {
+	// For apartments, houses, row houses, PG, and bungalows, bedrooms and bathrooms are required
+	if propertyType == "apartment" || propertyType == "house" || propertyType == "row_house" || propertyType == "pg" || propertyType == "bungalow" {
 		if bedrooms == nil {
 			return fmt.Errorf("bedrooms are required for property type '%s'", propertyType)
 		}
@@ -249,7 +288,7 @@ func validatePropertyTypeRequirements(propertyType string, bedrooms, bathrooms *
 		}
 	}
 
-	// For commercial and plot, bedrooms and bathrooms are optional
+	// For commercial, plot, and shop, bedrooms and bathrooms are optional
 	// No additional validation needed for these types
 
 	return nil

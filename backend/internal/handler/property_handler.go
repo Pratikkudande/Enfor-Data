@@ -27,7 +27,16 @@ func NewPropertyHandler(propertyService *service.PropertyService) *PropertyHandl
 
 // GetAllProperties handles GET /api/properties/all - returns all brokers' properties (read-only)
 func (h *PropertyHandler) GetAllProperties(c *gin.Context) {
-	properties, err := h.propertyService.GetAllProperties()
+	brokerID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "Authentication required",
+		})
+		return
+	}
+
+	properties, err := h.propertyService.GetAllProperties(brokerID.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal server error",
@@ -43,8 +52,21 @@ func (h *PropertyHandler) GetAllProperties(c *gin.Context) {
 
 // GetAnyProperty handles GET /api/properties/view/:id - any broker can view any property (read-only)
 func (h *PropertyHandler) GetAnyProperty(c *gin.Context) {
-	property, err := h.propertyService.GetPropertyByIDPublic(c.Param("id"))
+	brokerID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "Authentication required",
+		})
+		return
+	}
+
+	property, err := h.propertyService.GetPropertyByIDPublic(c.Param("id"), brokerID.(string))
 	if err != nil {
+		if strings.Contains(err.Error(), "access denied") {
+			c.JSON(http.StatusForbidden, ErrorResponse{Error: "Forbidden", Message: err.Error()})
+			return
+		}
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, ErrorResponse{Error: "Not found", Message: "Property not found"})
 			return
@@ -120,8 +142,14 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 		// Check for specific business logic errors
 		if err.Error() == "bedrooms are required for property type 'apartment'" ||
 			err.Error() == "bedrooms are required for property type 'house'" ||
+			err.Error() == "bedrooms are required for property type 'row_house'" ||
+			err.Error() == "bedrooms are required for property type 'pg'" ||
+			err.Error() == "bedrooms are required for property type 'bungalow'" ||
 			err.Error() == "bathrooms are required for property type 'apartment'" ||
 			err.Error() == "bathrooms are required for property type 'house'" ||
+			err.Error() == "bathrooms are required for property type 'row_house'" ||
+			err.Error() == "bathrooms are required for property type 'pg'" ||
+			err.Error() == "bathrooms are required for property type 'bungalow'" ||
 			err.Error() == "bedrooms must be a positive number" ||
 			err.Error() == "bathrooms must be a positive number" ||
 			strings.Contains(err.Error(), "invalid client_id") ||

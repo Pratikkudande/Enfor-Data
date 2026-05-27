@@ -6,6 +6,27 @@ import { getStatusColor, formatPrice } from './utils';
 import { networkApi } from '../../services/networkApi';
 import { ROUTES } from '../../routes/routePaths';
 
+import { API_CONFIG } from '../../config/api';
+
+export const getPropertyImageUrl = (property: Property) => {
+  const photo = property.photos?.[0] || property.images?.[0];
+  if (!photo) {
+    return 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
+  }
+  if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:')) {
+    return photo;
+  }
+  // If it already has base URL or upload path
+  if (photo.startsWith('/uploads/') || photo.startsWith('uploads/')) {
+    const filename = photo.split('/').pop();
+    return `${API_CONFIG.BASE_URL}/uploads/${filename}`;
+  }
+  if (photo.includes('/uploads/')) {
+    return photo;
+  }
+  return `${API_CONFIG.BASE_URL}/uploads/${photo}`;
+};
+
 interface PropertyCardProps {
   property: Property;
   currentUserId: string;
@@ -13,13 +34,29 @@ interface PropertyCardProps {
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (property: Property) => void;
+  onStatusChange: (propertyId: string, status: string) => Promise<void>;
 }
 
-const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, isBusy, onView, onEdit, onDelete }) => {
+const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, isBusy, onView, onEdit, onDelete, onStatusChange }) => {
   const isOwner = property.broker_id === currentUserId;
   const navigate = useNavigate();
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | null>(null);
   const [loadingConnection, setLoadingConnection] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const hasImage = !!(property.photos?.[0] || property.images?.[0]);
+
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value;
+    if (newStatus === property.status) return;
+    setUpdatingStatus(true);
+    try {
+      await onStatusChange(property.id, newStatus);
+    } catch (err) {
+      console.error('Failed to change status:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   // Check connection status with the property broker
   useEffect(() => {
@@ -103,16 +140,39 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
       isOwner ? 'border-blue-100' : 'border-gray-100'
     }`}>
       {/* Image */}
-      <div className="relative">
-        <img
-          src={property.images?.[0] || 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
-          alt={property.title}
-          className="w-full h-48 object-cover"
-        />
-        <div className="absolute top-3 right-3">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
-            {property.status.replace('_', ' ').toUpperCase()}
-          </span>
+      <div className="relative h-48 bg-gray-50 flex items-center justify-center border-b border-gray-100">
+        {hasImage ? (
+          <img
+            src={getPropertyImageUrl(property)}
+            alt={property.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-gray-400 select-none">
+            <Building className="h-10 w-10 stroke-[1.2] mb-1 text-gray-300" />
+            <span className="text-[10px] font-semibold tracking-wider text-gray-400">NO PHOTO UPLOADED</span>
+          </div>
+        )}
+        <div className="absolute top-3 right-3 z-10">
+          {isOwner ? (
+            <select
+              value={property.status}
+              onChange={handleStatusChange}
+              disabled={updatingStatus}
+              className={`px-2 py-0.5 text-xs font-semibold rounded-full border-0 cursor-pointer shadow-sm focus:ring-2 focus:ring-blue-500 outline-none ${getStatusColor(property.status)}`}
+            >
+              <option value="available" className="bg-white text-gray-800">Available</option>
+              <option value="sold" className="bg-white text-gray-800">Sold</option>
+              <option value="rented" className="bg-white text-gray-800">Rented</option>
+              <option value="hold" className="bg-white text-gray-800">Hold</option>
+              <option value="closed" className="bg-white text-gray-800">Closed</option>
+              <option value="under_discussion" className="bg-white text-gray-800">Under Discussion</option>
+            </select>
+          ) : (
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
+              {property.status.replace('_', ' ').toUpperCase()}
+            </span>
+          )}
         </div>
         <div className="absolute top-3 left-3 flex gap-2">
           <span className="bg-blue-600 text-white px-2 py-1 text-xs font-medium rounded">

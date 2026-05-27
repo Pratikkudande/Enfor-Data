@@ -1,7 +1,9 @@
 import React from 'react';
+import { Camera } from 'lucide-react';
 import { PropertyFormData } from './types';
 import { commonAmenities } from './constants';
 import { indianStates } from '../../constants/options';
+import { API_CONFIG } from '../../config/api';
 
 interface PropertyFormModalProps {
   formMode: 'create' | 'edit';
@@ -11,11 +13,13 @@ interface PropertyFormModalProps {
   submitting: boolean;
   clients: any[];
   selectedAmenities: string[];
+  currentPhotos?: string[];
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   handleTypeChange: (type: PropertyFormData['type']) => void;
   setFormData: React.Dispatch<React.SetStateAction<PropertyFormData>>;
   handleAmenityToggle: (amenity: string) => void;
   handleFormSubmit: (e: React.FormEvent) => void;
+  onOpenPhotoUpload?: () => void;
   onClose: () => void;
 }
 
@@ -27,11 +31,13 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   submitting,
   clients,
   selectedAmenities,
+  currentPhotos = [],
   handleInputChange,
   handleTypeChange,
   setFormData,
   handleAmenityToggle,
   handleFormSubmit,
+  onOpenPhotoUpload,
   onClose
 }) => {
   const getInputClass = (fieldName: string, baseClass: string) => (
@@ -66,12 +72,16 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Property Type</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 {[
                   { value: 'apartment', label: 'Apartment' },
                   { value: 'house', label: 'House' },
+                  { value: 'row_house', label: 'Row House' },
+                  { value: 'bungalow', label: 'Bungalow' },
                   { value: 'commercial', label: 'Commercial' },
                   { value: 'plot', label: 'Plot' },
+                  { value: 'shop', label: 'Shop' },
+                  { value: 'pg', label: 'PG' },
                 ].map((type) => (
                   <button
                     key={type.value}
@@ -128,7 +138,9 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     <option value="available">Available</option>
                     <option value="sold">Sold</option>
                     <option value="rented">Rented</option>
-                    <option value="under_negotiation">Under Negotiation</option>
+                    <option value="hold">Hold</option>
+                    <option value="closed">Closed</option>
+                    <option value="under_discussion">Under Discussion</option>
                   </select>
                 </div>
               )}
@@ -190,7 +202,7 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
           </div>
 
-          {(formData.type === 'apartment' || formData.type === 'house') && (
+          {(formData.type === 'apartment' || formData.type === 'house' || formData.type === 'row_house' || formData.type === 'pg' || formData.type === 'bungalow') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="bedrooms" className="block text-sm font-medium text-gray-700 mb-1">
@@ -368,6 +380,62 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
             <p className="text-sm text-gray-500 mt-2">{selectedAmenities.length} amenities selected</p>
           </div>
+
+          {/* Property Photos Section */}
+          {formMode === 'edit' && onOpenPhotoUpload && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Property Photos</label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                {currentPhotos.length > 0 ? (
+                  <div>
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+                      {currentPhotos.slice(0, 4).map((photo, index) => (
+                        <div key={photo} className="relative">
+                          <img
+                            src={`${API_CONFIG.BASE_URL}/uploads/${photo}`}
+                            alt={`Property photo ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                          />
+                          {index === 3 && currentPhotos.length > 4 && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                              <span className="text-white text-sm font-medium">+{currentPhotos.length - 4}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-3">{currentPhotos.length}/5 photos uploaded</p>
+                      <button
+                        type="button"
+                        onClick={onOpenPhotoUpload}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center mx-auto"
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Manage Photos
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Camera className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <p className="text-gray-600 mb-4">No photos uploaded yet</p>
+                    <button
+                      type="button"
+                      onClick={onOpenPhotoUpload}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center mx-auto"
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Upload Photos
+                    </button>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-3 text-center">
+                  Upload up to 5 high-quality photos to showcase your property
+                </p>
+              </div>
+            </div>
+          )}
 
           {formError && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">

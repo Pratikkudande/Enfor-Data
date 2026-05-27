@@ -4,20 +4,20 @@ import (
 	"time"
 )
 
-// SMSAccount represents a Twilio SMS account for a user
+// SMSAccount represents a MSG91 SMS account for a user
 type SMSAccount struct {
-	ID                      string     `json:"id" db:"id"`
-	UserID                  string     `json:"user_id" db:"user_id"`
-	TwilioAccountSID        *string    `json:"twilio_account_sid,omitempty" db:"twilio_account_sid"`
-	TwilioAuthTokenEncrypted *string   `json:"-" db:"twilio_auth_token_encrypted"` // Never expose in JSON
-	TwilioPhoneNumber       string     `json:"twilio_phone_number" db:"twilio_phone_number"`
-	Status                  string     `json:"status" db:"status"` // "connected", "not_connected", "suspended"
-	ConnectionError         *string    `json:"connection_error,omitempty" db:"connection_error"`
-	MessageLimit            int        `json:"message_limit" db:"message_limit"`
-	MessagesSentToday       int        `json:"messages_sent_today" db:"messages_sent_today"`
-	LastResetDate           *time.Time `json:"last_reset_date,omitempty" db:"last_reset_date"`
-	ConnectedAt             *time.Time `json:"connected_at,omitempty" db:"connected_at"`
-	LastUsedAt              *time.Time `json:"last_used_at,omitempty" db:"last_used_at"`
+	ID                     string     `json:"id" db:"id"`
+	UserID                 string     `json:"user_id" db:"user_id"`
+	MSG91AuthKey           *string    `json:"msg91_auth_key,omitempty" db:"msg91_auth_key"`
+	MSG91AuthKeyEncrypted  *string    `json:"-" db:"msg91_auth_key_encrypted"` // Never expose in JSON
+	MSG91SenderID          string     `json:"msg91_sender_id" db:"msg91_sender_id"`
+	Status                 string     `json:"status" db:"status"` // "connected", "not_connected", "suspended"
+	ConnectionError        *string    `json:"connection_error,omitempty" db:"connection_error"`
+	MessageLimit           int        `json:"message_limit" db:"message_limit"`
+	MessagesSentToday      int        `json:"messages_sent_today" db:"messages_sent_today"`
+	LastResetDate          *time.Time `json:"last_reset_date,omitempty" db:"last_reset_date"`
+	ConnectedAt            *time.Time `json:"connected_at,omitempty" db:"connected_at"`
+	LastUsedAt             *time.Time `json:"last_used_at,omitempty" db:"last_used_at"`
 	CreatedAt               time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt               time.Time  `json:"updated_at" db:"updated_at"`
 }

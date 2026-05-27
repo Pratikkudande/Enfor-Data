@@ -11,6 +11,7 @@ import PropertyCard from './PropertyCard';
 import PropertyFormModal from './PropertyFormModal';
 import PropertyViewModal from './PropertyViewModal';
 import PropertyDeleteModal from './PropertyDeleteModal';
+import PropertyPhotoUpload from './PropertyPhotoUpload';
 import { useAuth } from '../../context/AuthContext';
 
 const PropertiesView: React.FC = () => {
@@ -22,6 +23,7 @@ const PropertiesView: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterOwner, setFilterOwner] = useState('all');
+  const [filterListingType, setFilterListingType] = useState('all');
   const [properties, setProperties] = useState<Property[]>([]);
   const [clients, setClients] = useState<ApiClientClient[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,6 +33,7 @@ const PropertiesView: React.FC = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -104,10 +107,10 @@ const PropertiesView: React.FC = () => {
     else if (parseFloat(formData.price) <= 0) errors.price = 'Price must be greater than 0';
     if (!formData.area) errors.area = 'Area is required';
     else if (parseFloat(formData.area) <= 0) errors.area = 'Area must be greater than 0';
-    if (formData.type === 'apartment' || formData.type === 'house') {
-      if (!formData.bedrooms) errors.bedrooms = 'Bedrooms are required for apartments and houses';
+    if (formData.type === 'apartment' || formData.type === 'house' || formData.type === 'row_house' || formData.type === 'pg' || formData.type === 'bungalow') {
+      if (!formData.bedrooms) errors.bedrooms = 'Bedrooms are required for apartments, houses, row houses, PG, and bungalows';
       else if (parseInt(formData.bedrooms, 10) < 0) errors.bedrooms = 'Bedrooms must be a positive number';
-      if (!formData.bathrooms) errors.bathrooms = 'Bathrooms are required for apartments and houses';
+      if (!formData.bathrooms) errors.bathrooms = 'Bathrooms are required for apartments, houses, row houses, PG, and bungalows';
       else if (parseInt(formData.bathrooms, 10) < 0) errors.bathrooms = 'Bathrooms must be a positive number';
     }
     if (!formData.location.trim()) errors.location = 'Location is required';
@@ -184,6 +187,20 @@ const PropertiesView: React.FC = () => {
     if (validationErrors[name]) setValidationErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  const handleStatusChange = async (propertyId: string, newStatus: string) => {
+    try {
+      const response = await apiClient.updateProperty(propertyId, { status: newStatus as any });
+      if (response.data) {
+        const updated = transformProperty(response.data);
+        setProperties((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+        showTimedSuccessMessage('Property status updated successfully!');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update property status');
+      window.setTimeout(() => setError(null), 3000);
+    }
+  };
+
   const handleAmenityToggle = (amenity: string) => {
     setSelectedAmenities((prev) => prev.includes(amenity) ? prev.filter((i) => i !== amenity) : [...prev, amenity]);
   };
@@ -191,8 +208,8 @@ const PropertiesView: React.FC = () => {
   const handleTypeChange = (type: PropertyFormData['type']) => {
     setFormData((prev) => ({
       ...prev, type,
-      bedrooms: type === 'commercial' || type === 'plot' ? '' : prev.bedrooms,
-      bathrooms: type === 'commercial' || type === 'plot' ? '' : prev.bathrooms,
+      bedrooms: type === 'commercial' || type === 'plot' || type === 'shop' ? '' : prev.bedrooms,
+      bathrooms: type === 'commercial' || type === 'plot' || type === 'shop' ? '' : prev.bathrooms,
     }));
     if (validationErrors.bedrooms || validationErrors.bathrooms)
       setValidationErrors((prev) => ({ ...prev, bedrooms: '', bathrooms: '' }));
@@ -239,6 +256,18 @@ const PropertiesView: React.FC = () => {
     setSelectedProperty(property); setShowDeleteModal(true);
   };
 
+  const handleOpenPhotoUpload = () => {
+    setShowPhotoUpload(true);
+  };
+
+  const handlePhotosUpdated = (photos: string[]) => {
+    if (selectedProperty) {
+      const updatedProperty = { ...selectedProperty, photos };
+      setSelectedProperty(updatedProperty);
+      setProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
+    }
+  };
+
   const handleDeleteProperty = async () => {
     if (!selectedProperty) return;
     setDeleting(true);
@@ -268,7 +297,8 @@ const PropertiesView: React.FC = () => {
       filterOwner === 'all' ||
       (filterOwner === 'mine' && property.broker_id === currentUserId) ||
       (filterOwner === 'others' && property.broker_id !== currentUserId);
-    return matchesSearch && matchesStatus && matchesType && matchesOwner;
+    const matchesListingType = filterListingType === 'all' || property.listing_type === filterListingType;
+    return matchesSearch && matchesStatus && matchesType && matchesOwner && matchesListingType;
   });
 
   const myCount = properties.filter((p) => p.broker_id === currentUserId).length;
@@ -350,15 +380,25 @@ const PropertiesView: React.FC = () => {
               ))}
             </div>
             <select
+              value={filterListingType}
+              onChange={(e) => setFilterListingType(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            >
+              <option value="all">Sell / Rent</option>
+              <option value="sale">Sell</option>
+              <option value="rent">Rent</option>
+            </select>
+            <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
               <option value="all">All Status</option>
               <option value="available">Available</option>
-              <option value="sold">Sold</option>
               <option value="rented">Rented</option>
-              <option value="under_negotiation">Under Negotiation</option>
+              <option value="hold">Hold</option>
+              <option value="closed">Closed</option>
+              <option value="under_discussion">Under Discussion</option>
             </select>
             <select
               value={filterType}
@@ -370,6 +410,10 @@ const PropertiesView: React.FC = () => {
               <option value="house">House</option>
               <option value="commercial">Commercial</option>
               <option value="plot">Plot</option>
+              <option value="row_house">Row House</option>
+              <option value="shop">Shop</option>
+              <option value="pg">PG</option>
+              <option value="bungalow">Bungalow</option>
             </select>
           </div>
         </div>
@@ -404,6 +448,7 @@ const PropertiesView: React.FC = () => {
               onView={handleViewProperty}
               onEdit={handleEditProperty}
               onDelete={handleDeleteClick}
+              onStatusChange={handleStatusChange}
             />
           ))}
         </div>
@@ -430,9 +475,11 @@ const PropertiesView: React.FC = () => {
         <PropertyFormModal
           formMode={formMode} formData={formData} validationErrors={validationErrors}
           formError={formError} submitting={submitting} clients={clients}
-          selectedAmenities={selectedAmenities} handleInputChange={handleInputChange}
+          selectedAmenities={selectedAmenities} currentPhotos={selectedProperty?.photos || []}
+          handleInputChange={handleInputChange}
           handleTypeChange={handleTypeChange} setFormData={setFormData}
           handleAmenityToggle={handleAmenityToggle} handleFormSubmit={handleFormSubmit}
+          onOpenPhotoUpload={formMode === 'edit' ? handleOpenPhotoUpload : undefined}
           onClose={() => { setShowFormModal(false); resetFormState(); }}
         />
       )}
@@ -444,6 +491,7 @@ const PropertiesView: React.FC = () => {
           onClose={() => setShowViewModal(false)}
           onEdit={handleEditProperty}
           onDelete={handleDeleteClick}
+          onManagePhotos={selectedProperty.broker_id === currentUserId ? handleOpenPhotoUpload : undefined}
         />
       )}
 
@@ -452,6 +500,15 @@ const PropertiesView: React.FC = () => {
           property={selectedProperty} deleting={deleting} formError={formError}
           onClose={() => { setShowDeleteModal(false); setFormError(null); }}
           onConfirm={handleDeleteProperty}
+        />
+      )}
+
+      {showPhotoUpload && selectedProperty && (
+        <PropertyPhotoUpload
+          propertyId={selectedProperty.id}
+          currentPhotos={selectedProperty.photos || []}
+          onPhotosUpdated={handlePhotosUpdated}
+          onClose={() => setShowPhotoUpload(false)}
         />
       )}
 

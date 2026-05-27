@@ -39,7 +39,7 @@ func (s *SMSMarketingService) GetAccountStatus(userID string) (*models.SMSAccoun
 	return account, nil
 }
 
-func (s *SMSMarketingService) ConnectAccount(userID, accountSID, authToken, phoneNumber string) error {
+func (s *SMSMarketingService) ConnectAccount(userID, authKey, senderID string) error {
 	// Check if account already exists
 	existing, err := s.repo.GetAccountByUserID(userID)
 	if err != nil {
@@ -50,9 +50,9 @@ func (s *SMSMarketingService) ConnectAccount(userID, accountSID, authToken, phon
 
 	if existing != nil {
 		// Update existing account
-		existing.TwilioAccountSID = &accountSID
-		existing.TwilioAuthTokenEncrypted = &authToken // TODO: Encrypt in production
-		existing.TwilioPhoneNumber = phoneNumber
+		existing.MSG91AuthKey = &authKey
+		existing.MSG91AuthKeyEncrypted = &authKey // TODO: Encrypt in production
+		existing.MSG91SenderID = senderID
 		existing.Status = "connected"
 		existing.ConnectedAt = &now
 
@@ -61,14 +61,14 @@ func (s *SMSMarketingService) ConnectAccount(userID, accountSID, authToken, phon
 
 	// Create new account
 	account := &models.SMSAccount{
-		UserID:                   userID,
-		TwilioAccountSID:         &accountSID,
-		TwilioAuthTokenEncrypted: &authToken, // TODO: Encrypt in production
-		TwilioPhoneNumber:        phoneNumber,
-		Status:                   "connected",
-		MessageLimit:             1000,
-		MessagesSentToday:        0,
-		ConnectedAt:              &now,
+		UserID:                userID,
+		MSG91AuthKey:          &authKey,
+		MSG91AuthKeyEncrypted: &authKey, // TODO: Encrypt in production
+		MSG91SenderID:         senderID,
+		Status:                "connected",
+		MessageLimit:          1000,
+		MessagesSentToday:     0,
+		ConnectedAt:           &now,
 	}
 
 	return s.repo.CreateAccount(account)
@@ -145,7 +145,7 @@ func (s *SMSMarketingService) SendBulkMessage(userID string, clientIDs []string,
 			successful++
 		}
 
-		// Rate limiting: 1 message per second to avoid Twilio rate limits
+		// Rate limiting: 1 message per second to avoid MSG91 rate limits
 		time.Sleep(1 * time.Second)
 	}
 

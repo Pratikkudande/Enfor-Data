@@ -157,6 +157,8 @@ func main() {
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
 			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
 			protected.POST("/upload/properties-excel", uploadHandler.UploadPropertiesExcel)
+			protected.POST("/upload/property-photos/:id", uploadHandler.UploadPropertyPhotos)
+			protected.DELETE("/upload/property-photos/:id/:filename", uploadHandler.DeletePropertyPhoto)
 
 			// Property routes (accessible to all authenticated users)
 			protected.GET("/properties/all", propertyHandler.GetAllProperties)

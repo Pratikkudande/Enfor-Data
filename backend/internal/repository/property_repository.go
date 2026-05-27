@@ -27,8 +27,8 @@ func (r *PropertyRepository) Create(property *models.Property) error {
 		INSERT INTO properties (
 			title, type, listing_type, price, area,
 			bedrooms, bathrooms, location, address, city, state,
-			description, amenities, status, broker_id, client_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			description, amenities, photos, status, broker_id, client_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING id, broker_name, broker_city, client_name, created_at, updated_at
 	`
 
@@ -47,6 +47,7 @@ func (r *PropertyRepository) Create(property *models.Property) error {
 		property.State,
 		property.Description,
 		pq.Array(property.Amenities), // Handle PostgreSQL array type
+		pq.Array(property.Photos),    // Handle PostgreSQL array type
 		property.Status,
 		property.BrokerID,
 		property.ClientID,
@@ -73,7 +74,7 @@ func (r *PropertyRepository) GetByBrokerID(brokerID string) ([]models.Property, 
 		SELECT 
 			id, title, type, listing_type, price, area,
 			bedrooms, bathrooms, location, address, city, state,
-			description, amenities, status, broker_id, client_id,
+			description, amenities, photos, status, broker_id, client_id,
 			broker_name, broker_city, client_name, created_at, updated_at
 		FROM properties
 		WHERE broker_id = $1 AND deleted_at IS NULL
@@ -106,6 +107,7 @@ func (r *PropertyRepository) GetByBrokerID(brokerID string) ([]models.Property, 
 			&property.State,
 			&property.Description,
 			pq.Array(&property.Amenities), // Handle PostgreSQL array type
+			pq.Array(&property.Photos),    // Handle PostgreSQL array type
 			&property.Status,
 			&property.BrokerID,
 			&property.ClientID,
@@ -142,7 +144,7 @@ func (r *PropertyRepository) GetByID(id string) (*models.Property, error) {
 		SELECT 
 			id, title, type, listing_type, price, area,
 			bedrooms, bathrooms, location, address, city, state,
-			description, amenities, status, broker_id, client_id,
+			description, amenities, photos, status, broker_id, client_id,
 			broker_name, broker_city, client_name, created_at, updated_at
 		FROM properties
 		WHERE id = $1 AND deleted_at IS NULL
@@ -165,6 +167,7 @@ func (r *PropertyRepository) GetByID(id string) (*models.Property, error) {
 		&property.State,
 		&property.Description,
 		pq.Array(&property.Amenities), // Handle PostgreSQL array type
+		pq.Array(&property.Photos),    // Handle PostgreSQL array type
 		&property.Status,
 		&property.BrokerID,
 		&property.ClientID,
@@ -191,8 +194,8 @@ func (r *PropertyRepository) Update(property *models.Property) error {
 		UPDATE properties SET
 			title = $1, type = $2, listing_type = $3, price = $4, area = $5,
 			bedrooms = $6, bathrooms = $7, location = $8, address = $9, city = $10,
-			state = $11, description = $12, amenities = $13, status = $14, client_id = $15
-		WHERE id = $16 AND deleted_at IS NULL
+			state = $11, description = $12, amenities = $13, photos = $14, status = $15, client_id = $16
+		WHERE id = $17 AND deleted_at IS NULL
 		RETURNING broker_name, broker_city, client_name, created_at, updated_at
 	`
 
@@ -211,6 +214,7 @@ func (r *PropertyRepository) Update(property *models.Property) error {
 		property.State,
 		property.Description,
 		pq.Array(property.Amenities),
+		pq.Array(property.Photos),
 		property.Status,
 		property.ClientID,
 		property.ID,
@@ -238,7 +242,7 @@ func (r *PropertyRepository) GetAllProperties() ([]models.Property, error) {
 		SELECT 
 			p.id, p.title, p.type, p.listing_type, p.price, p.area,
 			p.bedrooms, p.bathrooms, p.location, p.address, p.city, p.state,
-			p.description, p.amenities, p.status, p.broker_id, p.client_id,
+			p.description, p.amenities, p.photos, p.status, p.broker_id, p.client_id,
 			p.broker_name, p.broker_city, p.client_name,
 			u.whatsapp_number  AS broker_whatsapp,
 			u.email            AS broker_email,
@@ -264,7 +268,7 @@ func (r *PropertyRepository) GetAllProperties() ([]models.Property, error) {
 		err := rows.Scan(
 			&p.ID, &p.Title, &p.Type, &p.ListingType, &p.Price, &p.Area,
 			&p.Bedrooms, &p.Bathrooms, &p.Location, &p.Address, &p.City, &p.State,
-			&p.Description, pq.Array(&p.Amenities), &p.Status, &p.BrokerID, &p.ClientID,
+			&p.Description, pq.Array(&p.Amenities), pq.Array(&p.Photos), &p.Status, &p.BrokerID, &p.ClientID,
 			&p.BrokerName, &p.BrokerCity, &p.ClientName,
 			&p.BrokerWhatsapp, &p.BrokerEmail,
 			&p.ClientPhone, &p.ClientEmail,
@@ -290,7 +294,7 @@ func (r *PropertyRepository) GetByIDPublic(id string) (*models.Property, error) 
 		SELECT 
 			p.id, p.title, p.type, p.listing_type, p.price, p.area,
 			p.bedrooms, p.bathrooms, p.location, p.address, p.city, p.state,
-			p.description, p.amenities, p.status, p.broker_id, p.client_id,
+			p.description, p.amenities, p.photos, p.status, p.broker_id, p.client_id,
 			p.broker_name, p.broker_city, p.client_name,
 			u.whatsapp_number  AS broker_whatsapp,
 			u.email            AS broker_email,
@@ -306,7 +310,7 @@ func (r *PropertyRepository) GetByIDPublic(id string) (*models.Property, error) 
 	err := r.db.QueryRow(query, id).Scan(
 		&p.ID, &p.Title, &p.Type, &p.ListingType, &p.Price, &p.Area,
 		&p.Bedrooms, &p.Bathrooms, &p.Location, &p.Address, &p.City, &p.State,
-		&p.Description, pq.Array(&p.Amenities), &p.Status, &p.BrokerID, &p.ClientID,
+		&p.Description, pq.Array(&p.Amenities), pq.Array(&p.Photos), &p.Status, &p.BrokerID, &p.ClientID,
 		&p.BrokerName, &p.BrokerCity, &p.ClientName,
 		&p.BrokerWhatsapp, &p.BrokerEmail,
 		&p.ClientPhone, &p.ClientEmail,
@@ -344,4 +348,23 @@ func (r *PropertyRepository) SoftDelete(id string) error {
 	}
 
 	return nil
+}
+
+// CheckDuplicate checks if a property with the same address, city, and state already exists.
+func (r *PropertyRepository) CheckDuplicate(address, city, state string) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM properties 
+			WHERE LOWER(TRIM(address)) = LOWER(TRIM($1)) 
+			  AND LOWER(TRIM(city)) = LOWER(TRIM($2)) 
+			  AND LOWER(TRIM(state)) = LOWER(TRIM($3))
+			  AND deleted_at IS NULL
+		)
+	`
+	var exists bool
+	err := r.db.QueryRow(query, address, city, state).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check duplicate: %w", err)
+	}
+	return exists, nil
 }
