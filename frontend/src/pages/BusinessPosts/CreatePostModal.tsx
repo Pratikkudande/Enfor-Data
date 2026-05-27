@@ -5,14 +5,16 @@ import ProgressBar from './CreatePostSteps/ProgressBar';
 import Step1Category from './CreatePostSteps/Step1Category';
 import Step2Details from './CreatePostSteps/Step2Details';
 import Step3Contact from './CreatePostSteps/Step3Contact';
-import { Building2, Sofa, Users, FileText } from 'lucide-react';
+import { Users, Wrench, Briefcase, Home, FileText } from 'lucide-react';
+import { BusinessPost } from '../../types';
 
 interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onPostCreated?: (post: BusinessPost) => void;
 }
 
-const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) => {
+const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPostCreated }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
@@ -24,36 +26,37 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
     contactName: '',
     contactPhone: '',
     contactEmail: '',
-    images: []
+    contactAddress: '',
+    contactWhatsapp: '',
+    serviceArea: '',
+    images: [],
   });
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Partial<Record<keyof PostFormData, string>>>({});
 
   if (!isOpen) return null;
 
+  const isVendor = formData.category === 'vendor';
+
   const handleInputChange = (field: keyof PostFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const newImages = [...formData.images, ...files].slice(0, 5);
-
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setImagePreviews(prev => [...prev, ...newPreviews].slice(0, 5));
-    setFormData(prev => ({ ...prev, images: newImages }));
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prev) => [...prev, ...newPreviews].slice(0, 5));
+    setFormData((prev) => ({ ...prev, images: newImages }));
   };
 
   const removeImage = (index: number) => {
     URL.revokeObjectURL(imagePreviews[index]);
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setFormData((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
   const validateStep = (step: number): boolean => {
@@ -65,24 +68,34 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
     } else if (step === 2) {
       if (!formData.title.trim()) newErrors.title = 'Title is required';
       if (!formData.description.trim()) newErrors.description = 'Description is required';
-      if (!formData.location.trim()) newErrors.location = 'Location is required';
 
-      if (formData.subcategory !== 'requirement') {
-        if (!formData.price.trim()) {
-          newErrors.price = 'Price is required';
-        } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
-          newErrors.price = 'Please enter a valid price';
+      if (isVendor) {
+        if (!formData.contactPhone.trim()) newErrors.contactPhone = 'Contact number is required';
+        if (!formData.serviceArea.trim()) newErrors.serviceArea = 'Service area is required';
+      } else {
+        if (!formData.location.trim()) newErrors.location = 'Location is required';
+        if (formData.subcategory !== 'requirement') {
+          if (!formData.price.trim()) {
+            newErrors.price = 'Price is required';
+          } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+            newErrors.price = 'Please enter a valid price';
+          }
         }
       }
     } else if (step === 3) {
-      if (!formData.contactName.trim()) newErrors.contactName = 'Name is required';
-      if (!formData.contactPhone.trim()) {
-        newErrors.contactPhone = 'Phone number is required';
-      } else if (!/^[6-9]\d{9}$/.test(formData.contactPhone.replace(/[^\d]/g, ''))) {
-        newErrors.contactPhone = 'Please enter a valid phone number';
-      }
-      if (formData.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
-        newErrors.contactEmail = 'Please enter a valid email';
+      if (!isVendor) {
+        if (!formData.contactName.trim()) newErrors.contactName = 'Name is required';
+        if (!formData.contactPhone.trim()) {
+          newErrors.contactPhone = 'Phone number is required';
+        } else if (!/^[6-9]\d{9}$/.test(formData.contactPhone.replace(/[^\d]/g, ''))) {
+          newErrors.contactPhone = 'Please enter a valid 10-digit phone number';
+        }
+        if (
+          formData.contactEmail &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)
+        ) {
+          newErrors.contactEmail = 'Please enter a valid email';
+        }
       }
     }
 
@@ -92,38 +105,92 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
     }
   };
 
   const handleBack = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
   const handleSubmit = () => {
-    if (validateStep(3)) {
-      console.log('Form submitted:', formData);
-      onClose();
-    }
+    if (!validateStep(3)) return;
+
+    const isVendorPost = formData.category === 'vendor';
+
+    const newPost: BusinessPost = {
+      id: String(Date.now()),
+      title: formData.title.trim(),
+      category: formData.category as BusinessPost['category'],
+      subcategory: formData.subcategory,
+      description: formData.description.trim(),
+      price: formData.price && !isVendorPost ? Number(formData.price) : undefined,
+      images: imagePreviews, // object URLs for preview; replace with upload URLs in production
+      location: isVendorPost ? formData.serviceArea.trim() : formData.location.trim(),
+      contact_info: {
+        name: isVendorPost ? formData.title.trim() : formData.contactName.trim(),
+        phone: formData.contactPhone.trim(),
+        email: formData.contactEmail.trim() || undefined,
+        whatsapp: isVendorPost ? (formData.contactWhatsapp.trim() || formData.contactPhone.trim()) : undefined,
+        address: isVendorPost ? formData.contactAddress.trim() || undefined : undefined,
+      },
+      rating: isVendorPost && formData.price ? Number(formData.price) : undefined,
+      user_id: 'current_user',
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    onPostCreated?.(newPost);
+
+    // Reset form state
+    setFormData({
+      title: '',
+      category: '',
+      subcategory: '',
+      description: '',
+      price: '',
+      location: '',
+      contactName: '',
+      contactPhone: '',
+      contactEmail: '',
+      contactAddress: '',
+      contactWhatsapp: '',
+      serviceArea: '',
+      images: [],
+    });
+    setImagePreviews([]);
+    setErrors({});
+    setCurrentStep(1);
+
+    onClose();
   };
 
   const getCategoryInfo = () => {
     switch (formData.category) {
-      case 'property':
+      case 'furniture_office':
         return {
-          icon: Building2,
-          color: 'from-blue-500 to-cyan-500',
+          icon: Briefcase,
+          color: 'from-blue-500 to-indigo-500',
           bgColor: 'bg-blue-50',
           textColor: 'text-blue-700',
-          borderColor: 'border-blue-200'
+          borderColor: 'border-blue-200',
         };
-      case 'furniture':
+      case 'furniture_house':
         return {
-          icon: Sofa,
+          icon: Home,
           color: 'from-green-500 to-emerald-500',
           bgColor: 'bg-green-50',
           textColor: 'text-green-700',
-          borderColor: 'border-green-200'
+          borderColor: 'border-green-200',
+        };
+      case 'vendor':
+        return {
+          icon: Wrench,
+          color: 'from-purple-500 to-violet-500',
+          bgColor: 'bg-purple-50',
+          textColor: 'text-purple-700',
+          borderColor: 'border-purple-200',
         };
       case 'staff':
         return {
@@ -131,7 +198,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
           color: 'from-orange-500 to-amber-500',
           bgColor: 'bg-orange-50',
           textColor: 'text-orange-700',
-          borderColor: 'border-orange-200'
+          borderColor: 'border-orange-200',
         };
       default:
         return {
@@ -139,7 +206,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
           color: 'from-gray-500 to-slate-500',
           bgColor: 'bg-gray-50',
           textColor: 'text-gray-700',
-          borderColor: 'border-gray-200'
+          borderColor: 'border-gray-200',
         };
     }
   };
@@ -153,12 +220,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-cyan-50">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Create Business Post</h2>
-            <p className="text-sm text-gray-600 mt-1">Share your business opportunity with the network</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Share your business opportunity with the network
+            </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-lg transition-colors">
             <X className="h-6 w-6 text-gray-500" />
           </button>
         </div>
@@ -167,17 +233,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
 
         <div className="flex-1 overflow-y-auto p-6">
           {currentStep === 1 && (
-            <Step1Category 
-              formData={formData} 
-              errors={errors} 
-              handleInputChange={handleInputChange} 
+            <Step1Category
+              formData={formData}
+              errors={errors}
+              handleInputChange={handleInputChange}
             />
           )}
-
           {currentStep === 2 && (
-            <Step2Details 
-              formData={formData} 
-              errors={errors} 
+            <Step2Details
+              formData={formData}
+              errors={errors}
               handleInputChange={handleInputChange}
               categoryInfo={categoryInfo}
               CategoryIcon={CategoryIcon}
@@ -186,11 +251,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose }) =>
               removeImage={removeImage}
             />
           )}
-
           {currentStep === 3 && (
-            <Step3Contact 
-              formData={formData} 
-              errors={errors} 
+            <Step3Contact
+              formData={formData}
+              errors={errors}
               handleInputChange={handleInputChange}
               categoryInfo={categoryInfo}
               CategoryIcon={CategoryIcon}
