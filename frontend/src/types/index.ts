@@ -37,7 +37,7 @@ export interface Property {
   amenities: string[];
   photos?: string[];
   images?: string[];
-  status: 'available' | 'sold' | 'rented' | 'under_negotiation';
+  status: 'available' | 'sold' | 'rented' | 'hold' | 'closed' | 'under_discussion' | 'under_negotiation';
   owner_id?: string;
   broker_id: string;
   broker_name?: string;
@@ -257,7 +257,10 @@ export interface DashboardStats {
     available: number;
     sold: number;
     rented: number;
-    under_negotiation: number;
+    hold: number;
+    closed: number;
+    under_discussion: number;
+    under_negotiation?: number;
   };
 }
 
@@ -343,7 +346,7 @@ export interface UpdatePropertyRequest {
   amenities?: string[];
   photos?: string[];
   client_id?: string;
-  status?: 'available' | 'sold' | 'rented' | 'under_negotiation';
+  status?: 'available' | 'sold' | 'rented' | 'hold' | 'closed' | 'under_discussion' | 'under_negotiation';
 }
 
 export interface CreateClientRequest {

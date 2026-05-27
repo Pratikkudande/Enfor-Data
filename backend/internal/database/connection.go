@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS properties (
     
     -- Status and Ownership
     status VARCHAR(50) NOT NULL DEFAULT 'available' 
-        CHECK (status IN ('available', 'sold', 'rented', 'under_negotiation')),
+        CHECK (status IN ('available', 'sold', 'rented', 'hold', 'closed', 'under_discussion', 'under_negotiation')),
     broker_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     client_id UUID,
     
@@ -908,6 +908,20 @@ CREATE TRIGGER trg_projects_populate
 	_, err = db.Exec(projectsTriggers)
 	if err != nil {
 		return fmt.Errorf("failed to run projects triggers migration: %w", err)
+	}
+
+	// Update property status check constraint for existing databases
+	propertyStatusCheckFix := `
+DO $$
+BEGIN
+    ALTER TABLE properties DROP CONSTRAINT IF EXISTS properties_status_check;
+    ALTER TABLE properties ADD CONSTRAINT properties_status_check 
+        CHECK (status IN ('available', 'sold', 'rented', 'hold', 'closed', 'under_discussion', 'under_negotiation'));
+END $$;
+`
+	_, err = db.Exec(propertyStatusCheckFix)
+	if err != nil {
+		return fmt.Errorf("failed to run property status check constraint migration: %w", err)
 	}
 
 	log.Println("Database migrations completed successfully")

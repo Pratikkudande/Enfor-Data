@@ -34,13 +34,28 @@ interface PropertyCardProps {
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (property: Property) => void;
+  onStatusChange: (propertyId: string, status: string) => Promise<void>;
 }
 
-const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, isBusy, onView, onEdit, onDelete }) => {
+const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, isBusy, onView, onEdit, onDelete, onStatusChange }) => {
   const isOwner = property.broker_id === currentUserId;
   const navigate = useNavigate();
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | null>(null);
   const [loadingConnection, setLoadingConnection] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value;
+    if (newStatus === property.status) return;
+    setUpdatingStatus(true);
+    try {
+      await onStatusChange(property.id, newStatus);
+    } catch (err) {
+      console.error('Failed to change status:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   // Check connection status with the property broker
   useEffect(() => {
@@ -130,10 +145,26 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
           alt={property.title}
           className="w-full h-48 object-cover"
         />
-        <div className="absolute top-3 right-3">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
-            {property.status.replace('_', ' ').toUpperCase()}
-          </span>
+        <div className="absolute top-3 right-3 z-10">
+          {isOwner ? (
+            <select
+              value={property.status}
+              onChange={handleStatusChange}
+              disabled={updatingStatus}
+              className={`px-2 py-0.5 text-xs font-semibold rounded-full border-0 cursor-pointer shadow-sm focus:ring-2 focus:ring-blue-500 outline-none ${getStatusColor(property.status)}`}
+            >
+              <option value="available" className="bg-white text-gray-800">Available</option>
+              <option value="sold" className="bg-white text-gray-800">Sold</option>
+              <option value="rented" className="bg-white text-gray-800">Rented</option>
+              <option value="hold" className="bg-white text-gray-800">Hold</option>
+              <option value="closed" className="bg-white text-gray-800">Closed</option>
+              <option value="under_discussion" className="bg-white text-gray-800">Under Discussion</option>
+            </select>
+          ) : (
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
+              {property.status.replace('_', ' ').toUpperCase()}
+            </span>
+          )}
         </div>
         <div className="absolute top-3 left-3 flex gap-2">
           <span className="bg-blue-600 text-white px-2 py-1 text-xs font-medium rounded">

@@ -23,6 +23,7 @@ const PropertiesView: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterOwner, setFilterOwner] = useState('all');
+  const [filterListingType, setFilterListingType] = useState('all');
   const [properties, setProperties] = useState<Property[]>([]);
   const [clients, setClients] = useState<ApiClientClient[]>([]);
   const [loading, setLoading] = useState(false);
@@ -186,6 +187,20 @@ const PropertiesView: React.FC = () => {
     if (validationErrors[name]) setValidationErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  const handleStatusChange = async (propertyId: string, newStatus: string) => {
+    try {
+      const response = await apiClient.updateProperty(propertyId, { status: newStatus as any });
+      if (response.data) {
+        const updated = transformProperty(response.data);
+        setProperties((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+        showTimedSuccessMessage('Property status updated successfully!');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update property status');
+      window.setTimeout(() => setError(null), 3000);
+    }
+  };
+
   const handleAmenityToggle = (amenity: string) => {
     setSelectedAmenities((prev) => prev.includes(amenity) ? prev.filter((i) => i !== amenity) : [...prev, amenity]);
   };
@@ -282,7 +297,8 @@ const PropertiesView: React.FC = () => {
       filterOwner === 'all' ||
       (filterOwner === 'mine' && property.broker_id === currentUserId) ||
       (filterOwner === 'others' && property.broker_id !== currentUserId);
-    return matchesSearch && matchesStatus && matchesType && matchesOwner;
+    const matchesListingType = filterListingType === 'all' || property.listing_type === filterListingType;
+    return matchesSearch && matchesStatus && matchesType && matchesOwner && matchesListingType;
   });
 
   const myCount = properties.filter((p) => p.broker_id === currentUserId).length;
@@ -364,15 +380,25 @@ const PropertiesView: React.FC = () => {
               ))}
             </div>
             <select
+              value={filterListingType}
+              onChange={(e) => setFilterListingType(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            >
+              <option value="all">Sell / Rent</option>
+              <option value="sale">Sell</option>
+              <option value="rent">Rent</option>
+            </select>
+            <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
               <option value="all">All Status</option>
               <option value="available">Available</option>
-              <option value="sold">Sold</option>
               <option value="rented">Rented</option>
-              <option value="under_negotiation">Under Negotiation</option>
+              <option value="hold">Hold</option>
+              <option value="closed">Closed</option>
+              <option value="under_discussion">Under Discussion</option>
             </select>
             <select
               value={filterType}
@@ -422,6 +448,7 @@ const PropertiesView: React.FC = () => {
               onView={handleViewProperty}
               onEdit={handleEditProperty}
               onDelete={handleDeleteClick}
+              onStatusChange={handleStatusChange}
             />
           ))}
         </div>

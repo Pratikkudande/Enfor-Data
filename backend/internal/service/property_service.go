@@ -87,17 +87,35 @@ func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerI
 }
 
 // GetAllProperties returns all properties from all brokers (read-only network view)
-func (s *PropertyService) GetAllProperties() ([]models.Property, error) {
+// Sold properties are filtered out unless they belong to the requesting broker.
+func (s *PropertyService) GetAllProperties(requestingBrokerID string) ([]models.Property, error) {
 	properties, err := s.propertyRepo.GetAllProperties()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all properties: %w", err)
 	}
-	return properties, nil
+
+	filtered := make([]models.Property, 0, len(properties))
+	for _, p := range properties {
+		if p.Status == "sold" && p.BrokerID != requestingBrokerID {
+			continue
+		}
+		filtered = append(filtered, p)
+	}
+
+	return filtered, nil
 }
 
 // GetPropertyByIDPublic retrieves any property by ID without ownership check (read-only)
-func (s *PropertyService) GetPropertyByIDPublic(id string) (*models.Property, error) {
-	return s.propertyRepo.GetByIDPublic(id)
+// Restricts access to sold properties unless the requesting broker is the owner.
+func (s *PropertyService) GetPropertyByIDPublic(id string, requestingBrokerID string) (*models.Property, error) {
+	property, err := s.propertyRepo.GetByIDPublic(id)
+	if err != nil {
+		return nil, err
+	}
+	if property.Status == "sold" && property.BrokerID != requestingBrokerID {
+		return nil, fmt.Errorf("access denied: property is sold and only visible to the owner")
+	}
+	return property, nil
 }
 
 // GetBrokerProperties retrieves all properties for a specific broker

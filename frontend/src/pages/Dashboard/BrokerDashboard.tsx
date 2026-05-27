@@ -64,9 +64,13 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
 
         if (!mounted) return;
 
-        const activeProperties = Array.isArray(propertiesData)
-          ? propertiesData.filter((p: any) => p.status === 'available').length
-          : 0;
+        const propertiesArray = Array.isArray(propertiesData) ? propertiesData : [];
+        const availableCount = propertiesArray.filter((p: any) => p.status === 'available').length;
+        const soldCount = propertiesArray.filter((p: any) => p.status === 'sold').length;
+        const rentedCount = propertiesArray.filter((p: any) => p.status === 'rented').length;
+        const holdCount = propertiesArray.filter((p: any) => p.status === 'hold').length;
+        const closedCount = propertiesArray.filter((p: any) => p.status === 'closed').length;
+        const underDiscussionCount = propertiesArray.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length;
 
         const userClientsCount = Array.isArray(clientsData) ? clientsData.length : 0;
 
@@ -74,8 +78,8 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
 
         // Construct a DashboardStats-compatible object (fill required fields conservatively)
         const derived: DashboardStats = {
-          totalProperties: Array.isArray(propertiesData) ? propertiesData.length : 0,
-          activeProperties,
+          totalProperties: propertiesArray.length,
+          activeProperties: availableCount,
           totalClients: Array.isArray(clientsData) ? clientsData.length : 0,
           userClientsCount,
           totalAppointments: apptStatsData?.total ?? 0,
@@ -89,10 +93,12 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
             owners: 0,
           },
           propertiesByStatus: {
-            available: activeProperties,
-            sold: 0,
-            rented: 0,
-            under_negotiation: 0,
+            available: availableCount,
+            sold: soldCount,
+            rented: rentedCount,
+            hold: holdCount,
+            closed: closedCount,
+            under_discussion: underDiscussionCount,
           },
         };
 
@@ -305,24 +311,38 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                <div className="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Sold</span>
               </div>
               <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.sold ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
+                <div className="w-3 h-3 bg-indigo-500 rounded-full mr-3"></div>
                 <span className="text-gray-700">Rented</span>
               </div>
               <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.rented ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-                <span className="text-gray-700">Under Negotiation</span>
+                <div className="w-3 h-3 bg-amber-500 rounded-full mr-3"></div>
+                <span className="text-gray-700">Hold</span>
               </div>
-              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.under_negotiation ?? 0}</span>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.hold ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-gray-500 rounded-full mr-3"></div>
+                <span className="text-gray-700">Closed</span>
+              </div>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.closed ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                <span className="text-gray-700">Under Discussion</span>
+              </div>
+              <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.under_discussion ?? stats?.propertiesByStatus?.under_negotiation ?? 0}</span>
             </div>
           </div>
         </div>

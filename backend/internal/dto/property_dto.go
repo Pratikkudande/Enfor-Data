@@ -60,5 +60,5 @@ type UpdatePropertyRequest struct {
 	ClientID *string `json:"client_id,omitempty" validate:"omitempty"`
 
 	// Status
-	Status *string `json:"status,omitempty" validate:"omitempty,oneof=available sold rented under_negotiation"`
+	Status *string `json:"status,omitempty" validate:"omitempty,oneof=available sold rented hold closed under_discussion"`
 }

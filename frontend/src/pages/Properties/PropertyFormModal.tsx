@@ -138,7 +138,9 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     <option value="available">Available</option>
                     <option value="sold">Sold</option>
                     <option value="rented">Rented</option>
-                    <option value="under_negotiation">Under Negotiation</option>
+                    <option value="hold">Hold</option>
+                    <option value="closed">Closed</option>
+                    <option value="under_discussion">Under Discussion</option>
                   </select>
                 </div>
               )}
