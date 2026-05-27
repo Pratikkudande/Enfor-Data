@@ -135,11 +135,18 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, current
 
         {/* Hero image */}
         <div className="relative group">
-          <img
-            src={allImages.length > 0 ? getImageUrl(allImages[currentPhotoIndex]) : 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
-            alt={property.title}
-            className="w-full h-64 object-cover rounded-t-2xl select-none"
-          />
+          {allImages.length > 0 ? (
+            <img
+              src={getImageUrl(allImages[currentPhotoIndex])}
+              alt={property.title}
+              className="w-full h-64 object-cover rounded-t-2xl select-none"
+            />
+          ) : (
+            <div className="w-full h-64 bg-gray-50 rounded-t-2xl flex flex-col items-center justify-center text-gray-400 select-none border-b border-gray-100">
+              <Building className="h-14 w-14 stroke-[1.2] mb-1.5 text-gray-300" />
+              <span className="text-xs font-semibold tracking-wider text-gray-400">NO PHOTO UPLOADED</span>
+            </div>
+          )}
           
           {/* Navigation Arrows */}
           {allImages.length > 1 && (

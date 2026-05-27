@@ -43,6 +43,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | null>(null);
   const [loadingConnection, setLoadingConnection] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const hasImage = !!(property.photos?.[0] || property.images?.[0]);
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
@@ -139,12 +140,19 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
       isOwner ? 'border-blue-100' : 'border-gray-100'
     }`}>
       {/* Image */}
-      <div className="relative">
-        <img
-          src={getPropertyImageUrl(property)}
-          alt={property.title}
-          className="w-full h-48 object-cover"
-        />
+      <div className="relative h-48 bg-gray-50 flex items-center justify-center border-b border-gray-100">
+        {hasImage ? (
+          <img
+            src={getPropertyImageUrl(property)}
+            alt={property.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-gray-400 select-none">
+            <Building className="h-10 w-10 stroke-[1.2] mb-1 text-gray-300" />
+            <span className="text-[10px] font-semibold tracking-wider text-gray-400">NO PHOTO UPLOADED</span>
+          </div>
+        )}
         <div className="absolute top-3 right-3 z-10">
           {isOwner ? (
             <select
