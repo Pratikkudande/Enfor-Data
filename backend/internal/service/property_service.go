@@ -73,6 +73,11 @@ func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerI
 		property.Amenities = []string{}
 	}
 
+	// Handle photos array - ensure it's not nil
+	if property.Photos == nil {
+		property.Photos = []string{}
+	}
+
 	// Create property in repository
 	if err := s.propertyRepo.Create(property); err != nil {
 		return nil, fmt.Errorf("failed to create property: %w", err)
@@ -165,6 +170,9 @@ func (s *PropertyService) UpdateProperty(id string, req *dto.UpdatePropertyReque
 	if req.Amenities != nil {
 		property.Amenities = req.Amenities
 	}
+	if req.Photos != nil {
+		property.Photos = req.Photos
+	}
 	if req.Status != nil {
 		property.Status = *req.Status
 	}
@@ -183,6 +191,10 @@ func (s *PropertyService) UpdateProperty(id string, req *dto.UpdatePropertyReque
 
 	if property.Amenities == nil {
 		property.Amenities = []string{}
+	}
+
+	if property.Photos == nil {
+		property.Photos = []string{}
 	}
 
 	if err := s.propertyRepo.Update(property); err != nil {
@@ -231,8 +243,8 @@ func (s *PropertyService) resolvePropertyClient(clientID *string, brokerID strin
 
 // validatePropertyTypeRequirements validates type-specific requirements.
 func validatePropertyTypeRequirements(propertyType string, bedrooms, bathrooms *int) error {
-	// For apartments and houses, bedrooms and bathrooms are required
-	if propertyType == "apartment" || propertyType == "house" {
+	// For apartments, houses, row houses, PG, and bungalows, bedrooms and bathrooms are required
+	if propertyType == "apartment" || propertyType == "house" || propertyType == "row_house" || propertyType == "pg" || propertyType == "bungalow" {
 		if bedrooms == nil {
 			return fmt.Errorf("bedrooms are required for property type '%s'", propertyType)
 		}
@@ -249,7 +261,7 @@ func validatePropertyTypeRequirements(propertyType string, bedrooms, bathrooms *
 		}
 	}
 
-	// For commercial and plot, bedrooms and bathrooms are optional
+	// For commercial, plot, and shop, bedrooms and bathrooms are optional
 	// No additional validation needed for these types
 
 	return nil

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building, MessageSquare, UserPlus } from 'lucide-react';
+import { CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building, MessageSquare, UserPlus, Camera, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Property } from '../../types';
 import { getStatusColor, formatPrice } from './utils';
 import { networkApi } from '../../services/networkApi';
 import { ROUTES } from '../../routes/routePaths';
+import { getPropertyImageUrl } from './PropertyCard';
+import { API_CONFIG } from '../../config/api';
 
 interface PropertyViewModalProps {
   property: Property;
@@ -12,13 +14,42 @@ interface PropertyViewModalProps {
   onClose: () => void;
   onEdit: (id: string) => void;
   onDelete: (property: Property) => void;
+  onManagePhotos?: () => void;
 }
 
-const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, currentUserId, onClose, onEdit, onDelete }) => {
+const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, currentUserId, onClose, onEdit, onDelete, onManagePhotos }) => {
   const isOwner = property.broker_id === currentUserId;
   const navigate = useNavigate();
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | null>(null);
   const [loadingConnection, setLoadingConnection] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
+  const allImages = [
+    ...(property.photos || []),
+    ...(property.images || [])
+  ];
+
+  const handlePrevPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentPhotoIndex(prev => (prev === 0 ? allImages.length - 1 : prev - 1));
+  };
+
+  const handleNextPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentPhotoIndex(prev => (prev === allImages.length - 1 ? 0 : prev + 1));
+  };
+
+  const getImageUrl = (imageSource: string) => {
+    if (!imageSource) return 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
+    if (imageSource.startsWith('http://') || imageSource.startsWith('https://') || imageSource.startsWith('data:')) {
+      return imageSource;
+    }
+    if (imageSource.startsWith('/uploads/') || imageSource.startsWith('uploads/')) {
+      const filename = imageSource.split('/').pop();
+      return `${API_CONFIG.BASE_URL}/uploads/${filename}`;
+    }
+    return `${API_CONFIG.BASE_URL}/uploads/${imageSource}`;
+  };
 
   // Check connection status with the property broker
   useEffect(() => {
@@ -103,12 +134,39 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, current
       <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
 
         {/* Hero image */}
-        <div className="relative">
+        <div className="relative group">
           <img
-            src={property.images?.[0] || 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
+            src={allImages.length > 0 ? getImageUrl(allImages[currentPhotoIndex]) : 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
             alt={property.title}
-            className="w-full h-64 object-cover rounded-t-2xl"
+            className="w-full h-64 object-cover rounded-t-2xl select-none"
           />
+          
+          {/* Navigation Arrows */}
+          {allImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevPhoto}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white rounded-full p-2.5 transition-all duration-200 hover:scale-105 shadow-md flex items-center justify-center z-10"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNextPhoto}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white rounded-full p-2.5 transition-all duration-200 hover:scale-105 shadow-md flex items-center justify-center z-10"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+
+              {/* Slide Counter Overlay */}
+              <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider z-10 shadow-sm">
+                {currentPhotoIndex + 1} / {allImages.length}
+              </div>
+            </>
+          )}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 bg-white/90 rounded-full p-2 text-gray-700 hover:bg-white"
@@ -274,6 +332,14 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({ property, current
                 >
                   <Edit className="h-4 w-4 mr-2" />Edit Property
                 </button>
+                {onManagePhotos && (
+                  <button
+                    onClick={() => { onManagePhotos(); }}
+                    className="bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => onDelete(property)}
                   className="bg-red-50 text-red-700 py-3 px-4 rounded-lg hover:bg-red-100 transition-colors"

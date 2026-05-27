@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS properties (
     
     -- Basic Property Information
     title VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('apartment', 'house', 'commercial', 'plot')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('apartment', 'house', 'commercial', 'plot', 'row_house', 'shop', 'pg', 'bungalow')),
     listing_type VARCHAR(50) NOT NULL CHECK (listing_type IN ('sale', 'rent')),
     
     -- Pricing and Size
@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS properties (
     -- Description and Features
     description TEXT NOT NULL,
     amenities TEXT[] DEFAULT '{}',
+    photos TEXT[] DEFAULT '{}',
     
     -- Status and Ownership
     status VARCHAR(50) NOT NULL DEFAULT 'available' 
@@ -1120,29 +1121,31 @@ DROP TABLE IF EXISTS sms_campaigns CASCADE;
 DROP TABLE IF EXISTS sms_templates CASCADE;
 DROP TABLE IF EXISTS sms_accounts CASCADE;
 
--- SMS account configuration per user
+-- SMS account configuration per user (MSG91 only)
 CREATE TABLE IF NOT EXISTS sms_accounts (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider          VARCHAR(50) NOT NULL DEFAULT 'twilio'
-                          CHECK (provider IN ('twilio', 'aws_sns', 'custom')),
-    account_sid       VARCHAR(255),
-    auth_token        TEXT,
-    from_number       VARCHAR(20),
-    api_key           TEXT,
-    api_secret        TEXT,
-    region            VARCHAR(50),
-    status            VARCHAR(20) NOT NULL DEFAULT 'inactive'
-                          CHECK (status IN ('active', 'inactive', 'suspended')),
-    monthly_limit     INTEGER DEFAULT 1000,
-    used_this_month   INTEGER DEFAULT 0,
-    reset_date        DATE DEFAULT (CURRENT_DATE + INTERVAL '1 month'),
-    created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- MSG91 specific fields
+    msg91_auth_key           VARCHAR(255),
+    msg91_auth_key_encrypted TEXT,
+    msg91_sender_id          VARCHAR(50),
+    
+    status                   VARCHAR(20) NOT NULL DEFAULT 'not_connected'
+                                 CHECK (status IN ('connected', 'not_connected', 'suspended')),
+    connection_error         TEXT,
+    message_limit            INTEGER DEFAULT 1000,
+    messages_sent_today      INTEGER DEFAULT 0,
+    last_reset_date          DATE,
+    connected_at             TIMESTAMP WITH TIME ZONE,
+    last_used_at             TIMESTAMP WITH TIME ZONE,
+    created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT uq_sms_user UNIQUE (user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_sms_accounts_user ON sms_accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_sms_accounts_status ON sms_accounts(status);
+CREATE INDEX IF NOT EXISTS idx_sms_accounts_msg91_sender_id ON sms_accounts(msg91_sender_id);
 DROP TRIGGER IF EXISTS update_sms_accounts_updated_at ON sms_accounts;
 CREATE TRIGGER update_sms_accounts_updated_at
     BEFORE UPDATE ON sms_accounts

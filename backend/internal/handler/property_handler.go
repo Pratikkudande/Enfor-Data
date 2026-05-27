@@ -120,8 +120,14 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 		// Check for specific business logic errors
 		if err.Error() == "bedrooms are required for property type 'apartment'" ||
 			err.Error() == "bedrooms are required for property type 'house'" ||
+			err.Error() == "bedrooms are required for property type 'row_house'" ||
+			err.Error() == "bedrooms are required for property type 'pg'" ||
+			err.Error() == "bedrooms are required for property type 'bungalow'" ||
 			err.Error() == "bathrooms are required for property type 'apartment'" ||
 			err.Error() == "bathrooms are required for property type 'house'" ||
+			err.Error() == "bathrooms are required for property type 'row_house'" ||
+			err.Error() == "bathrooms are required for property type 'pg'" ||
+			err.Error() == "bathrooms are required for property type 'bungalow'" ||
 			err.Error() == "bedrooms must be a positive number" ||
 			err.Error() == "bathrooms must be a positive number" ||
 			strings.Contains(err.Error(), "invalid client_id") ||

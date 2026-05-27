@@ -258,6 +258,263 @@ func (h *UploadHandler) UploadPropertiesExcel(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{Message: "Properties processed", Data: gin.H{"created": created, "errors": errorsList}})
 }
 
+// UploadPropertyPhotos handles property photo uploads (up to 5 photos)
+func (h *UploadHandler) UploadPropertyPhotos(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	propertyID := c.Param("id")
+	if propertyID == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Property ID is required"})
+		return
+	}
+
+	// Verify property ownership
+	property, err := h.propertySvc.GetPropertyByID(propertyID, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "Property not found"})
+		return
+	}
+
+	// Parse multipart form
+	err = c.Request.ParseMultipartForm(32 << 20) // 32MB max
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Failed to parse form"})
+		return
+	}
+
+	files := c.Request.MultipartForm.File["photos"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No photos provided"})
+		return
+	}
+
+	// Check photo limit (max 5 photos)
+	if len(files) > 5 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Maximum 5 photos allowed"})
+		return
+	}
+
+	var uploadedPhotos []string
+	var errors []string
+
+	for i, fileHeader := range files {
+		// Check file size (max 5MB per photo)
+		if fileHeader.Size > 5*1024*1024 {
+			errors = append(errors, fmt.Sprintf("Photo %d: File too large (max 5MB)", i+1))
+			continue
+		}
+
+		// Check file type
+		file, err := fileHeader.Open()
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Photo %d: Failed to open file", i+1))
+			continue
+		}
+
+		// Read first 512 bytes to detect content type
+		buffer := make([]byte, 512)
+		_, err = file.Read(buffer)
+		if err != nil {
+			file.Close()
+			errors = append(errors, fmt.Sprintf("Photo %d: Failed to read file", i+1))
+			continue
+		}
+		file.Seek(0, 0) // Reset file pointer
+
+		contentType := http.DetectContentType(buffer)
+		if !strings.HasPrefix(contentType, "image/") {
+			file.Close()
+			errors = append(errors, fmt.Sprintf("Photo %d: Invalid file type (images only)", i+1))
+			continue
+		}
+
+		// Generate unique filename
+		ext := filepath.Ext(fileHeader.Filename)
+		if ext == "" {
+			switch contentType {
+			case "image/jpeg":
+				ext = ".jpg"
+			case "image/png":
+				ext = ".png"
+			case "image/gif":
+				ext = ".gif"
+			case "image/webp":
+				ext = ".webp"
+			default:
+				ext = ".jpg"
+			}
+		}
+
+		filename := fmt.Sprintf("property_%s_%d_%d%s", propertyID, time.Now().Unix(), i, ext)
+		filepath := filepath.Join(h.config.Upload.Path, filename)
+
+		// Create upload directory if it doesn't exist
+		if err := os.MkdirAll(h.config.Upload.Path, 0755); err != nil {
+			file.Close()
+			errors = append(errors, fmt.Sprintf("Photo %d: Failed to create upload directory", i+1))
+			continue
+		}
+
+		// Save file
+		dst, err := os.Create(filepath)
+		if err != nil {
+			file.Close()
+			errors = append(errors, fmt.Sprintf("Photo %d: Failed to save file", i+1))
+			continue
+		}
+
+		_, err = io.Copy(dst, file)
+		file.Close()
+		dst.Close()
+
+		if err != nil {
+			os.Remove(filepath) // Clean up on error
+			errors = append(errors, fmt.Sprintf("Photo %d: Failed to copy file", i+1))
+			continue
+		}
+
+		uploadedPhotos = append(uploadedPhotos, filename)
+	}
+
+	if len(uploadedPhotos) == 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "No photos uploaded successfully",
+			Message: strings.Join(errors, "; "),
+		})
+		return
+	}
+
+	// Update property with new photos (append to existing photos)
+	existingPhotos := property.Photos
+	if existingPhotos == nil {
+		existingPhotos = []string{}
+	}
+
+	// Check total photo limit after adding new ones
+	totalPhotos := len(existingPhotos) + len(uploadedPhotos)
+	if totalPhotos > 5 {
+		// Remove uploaded files if total exceeds limit
+		for _, filename := range uploadedPhotos {
+			os.Remove(filepath.Join(h.config.Upload.Path, filename))
+		}
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error: fmt.Sprintf("Total photos would exceed limit of 5 (current: %d, uploading: %d)", len(existingPhotos), len(uploadedPhotos)),
+		})
+		return
+	}
+
+	// Update property photos
+	allPhotos := append(existingPhotos, uploadedPhotos...)
+	updateReq := dto.UpdatePropertyRequest{
+		Photos: allPhotos,
+	}
+
+	_, err = h.propertySvc.UpdateProperty(propertyID, &updateReq, userID.(string))
+	if err != nil {
+		// Clean up uploaded files on database error
+		for _, filename := range uploadedPhotos {
+			os.Remove(filepath.Join(h.config.Upload.Path, filename))
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to update property",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	response := gin.H{
+		"uploaded_photos": uploadedPhotos,
+		"total_photos":    len(allPhotos),
+	}
+
+	if len(errors) > 0 {
+		response["warnings"] = errors
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: fmt.Sprintf("Successfully uploaded %d photo(s)", len(uploadedPhotos)),
+		Data:    response,
+	})
+}
+
+// DeletePropertyPhoto handles deleting a specific property photo
+func (h *UploadHandler) DeletePropertyPhoto(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	propertyID := c.Param("id")
+	photoFilename := c.Param("filename")
+
+	if propertyID == "" || photoFilename == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Property ID and photo filename are required"})
+		return
+	}
+
+	// Verify property ownership
+	property, err := h.propertySvc.GetPropertyByID(propertyID, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "Property not found"})
+		return
+	}
+
+	// Check if photo exists in property
+	photoIndex := -1
+	for i, photo := range property.Photos {
+		if photo == photoFilename {
+			photoIndex = i
+			break
+		}
+	}
+
+	if photoIndex == -1 {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "Photo not found"})
+		return
+	}
+
+	// Remove photo from array
+	updatedPhotos := make([]string, 0, len(property.Photos)-1)
+	for i, photo := range property.Photos {
+		if i != photoIndex {
+			updatedPhotos = append(updatedPhotos, photo)
+		}
+	}
+
+	// Update property
+	updateReq := dto.UpdatePropertyRequest{
+		Photos: updatedPhotos,
+	}
+
+	_, err = h.propertySvc.UpdateProperty(propertyID, &updateReq, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to update property",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Delete physical file
+	filepath := filepath.Join(h.config.Upload.Path, photoFilename)
+	if err := os.Remove(filepath); err != nil {
+		// Log error but don't fail the request
+		fmt.Printf("Warning: Failed to delete photo file %s: %v\n", filepath, err)
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Photo deleted successfully",
+		Data: gin.H{
+			"remaining_photos": len(updatedPhotos),
+		},
+	})
+}
+
 // DownloadClientsSample generates and serves an Excel template for clients
 func (h *UploadHandler) DownloadClientsSample(c *gin.Context) {
 	f := excelize.NewFile()

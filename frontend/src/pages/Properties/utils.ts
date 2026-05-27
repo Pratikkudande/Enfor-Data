@@ -4,6 +4,7 @@ import { PropertyFormData } from './types';
 export const transformProperty = (property: any): Property => ({
   ...property,
   images: property.images || [],
+  photos: property.photos || [],
   owner_id: property.owner_id || property.broker_id,
 });
 

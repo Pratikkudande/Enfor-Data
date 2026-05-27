@@ -24,7 +24,7 @@ func NewSMSMarketingRepository(db *database.DB) *SMSMarketingRepository {
 func (r *SMSMarketingRepository) CreateAccount(account *models.SMSAccount) error {
 	query := `
 		INSERT INTO sms_accounts (
-			user_id, twilio_account_sid, twilio_auth_token_encrypted, twilio_phone_number,
+			user_id, msg91_auth_key, msg91_auth_key_encrypted, msg91_sender_id,
 			status, message_limit, messages_sent_today
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
@@ -32,15 +32,15 @@ func (r *SMSMarketingRepository) CreateAccount(account *models.SMSAccount) error
 
 	return r.db.QueryRow(
 		query,
-		account.UserID, account.TwilioAccountSID, account.TwilioAuthTokenEncrypted,
-		account.TwilioPhoneNumber, account.Status, account.MessageLimit, account.MessagesSentToday,
+		account.UserID, account.MSG91AuthKey, account.MSG91AuthKeyEncrypted,
+		account.MSG91SenderID, account.Status, account.MessageLimit, account.MessagesSentToday,
 	).Scan(&account.ID, &account.CreatedAt, &account.UpdatedAt)
 }
 
 func (r *SMSMarketingRepository) GetAccountByUserID(userID string) (*models.SMSAccount, error) {
 	account := &models.SMSAccount{}
 	query := `
-		SELECT id, user_id, twilio_account_sid, twilio_auth_token_encrypted, twilio_phone_number,
+		SELECT id, user_id, msg91_auth_key, msg91_auth_key_encrypted, msg91_sender_id,
 			   status, connection_error, message_limit, messages_sent_today, last_reset_date,
 			   connected_at, last_used_at, created_at, updated_at
 		FROM sms_accounts
@@ -48,8 +48,8 @@ func (r *SMSMarketingRepository) GetAccountByUserID(userID string) (*models.SMSA
 	`
 
 	err := r.db.QueryRow(query, userID).Scan(
-		&account.ID, &account.UserID, &account.TwilioAccountSID, &account.TwilioAuthTokenEncrypted,
-		&account.TwilioPhoneNumber, &account.Status, &account.ConnectionError, &account.MessageLimit,
+		&account.ID, &account.UserID, &account.MSG91AuthKey, &account.MSG91AuthKeyEncrypted,
+		&account.MSG91SenderID, &account.Status, &account.ConnectionError, &account.MessageLimit,
 		&account.MessagesSentToday, &account.LastResetDate, &account.ConnectedAt, &account.LastUsedAt,
 		&account.CreatedAt, &account.UpdatedAt,
 	)
@@ -67,7 +67,7 @@ func (r *SMSMarketingRepository) GetAccountByUserID(userID string) (*models.SMSA
 func (r *SMSMarketingRepository) UpdateAccount(account *models.SMSAccount) error {
 	query := `
 		UPDATE sms_accounts SET
-			twilio_account_sid = $1, twilio_auth_token_encrypted = $2, twilio_phone_number = $3,
+			msg91_auth_key = $1, msg91_auth_key_encrypted = $2, msg91_sender_id = $3,
 			status = $4, connection_error = $5, message_limit = $6, messages_sent_today = $7,
 			last_reset_date = $8, connected_at = $9, last_used_at = $10, updated_at = NOW()
 		WHERE id = $11
@@ -75,7 +75,7 @@ func (r *SMSMarketingRepository) UpdateAccount(account *models.SMSAccount) error
 
 	_, err := r.db.Exec(
 		query,
-		account.TwilioAccountSID, account.TwilioAuthTokenEncrypted, account.TwilioPhoneNumber,
+		account.MSG91AuthKey, account.MSG91AuthKeyEncrypted, account.MSG91SenderID,
 		account.Status, account.ConnectionError, account.MessageLimit, account.MessagesSentToday,
 		account.LastResetDate, account.ConnectedAt, account.LastUsedAt, account.ID,
 	)

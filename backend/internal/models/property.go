@@ -10,7 +10,7 @@ type Property struct {
 
 	// Basic Property Information
 	Title       string `json:"title" db:"title"`
-	Type        string `json:"type" db:"type"`                 // apartment, house, commercial, plot
+	Type        string `json:"type" db:"type"`                 // apartment, house, commercial, plot, row_house, shop, pg, bungalow
 	ListingType string `json:"listing_type" db:"listing_type"` // sale, rent
 
 	// Pricing and Size
@@ -30,6 +30,7 @@ type Property struct {
 	// Description and Features
 	Description string   `json:"description" db:"description"`
 	Amenities   []string `json:"amenities" db:"amenities"`
+	Photos      []string `json:"photos" db:"photos"`
 
 	// Status and Ownership
 	Status   string  `json:"status" db:"status"` // available, sold, rented, under_negotiation

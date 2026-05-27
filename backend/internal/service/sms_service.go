@@ -26,39 +26,47 @@ func NewSMSService(cfg *config.Config) *SMSService {
 	}
 }
 
-// TwilioResponse represents Twilio API response
-type TwilioResponse struct {
-	SID          string `json:"sid"`
-	Status       string `json:"status"`
-	ErrorCode    int    `json:"error_code"`
-	ErrorMessage string `json:"error_message"`
+// MSG91Response represents MSG91 API response
+type MSG91Response struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
 }
 
-// SendSMS sends an SMS using Twilio
+// SendSMS sends an SMS using MSG91
 func (s *SMSService) SendSMS(to, message string) error {
-	// Check if Twilio is enabled
-	if !s.config.Twilio.Enabled {
+	// Check if MSG91 is enabled
+	if !s.config.MSG91.Enabled {
 		fmt.Printf("\n=== SMS (DISABLED) ===\n")
 		fmt.Printf("To: %s\n", to)
 		fmt.Printf("Message: %s\n", message)
-		fmt.Printf("Note: Twilio is disabled. Enable it in config.env\n")
+		fmt.Printf("Note: MSG91 is disabled. Enable it in config.env\n")
 		fmt.Printf("=====================\n\n")
 		return nil
 	}
 
 	// Validate configuration
-	if s.config.Twilio.AccountSID == "" || s.config.Twilio.AuthToken == "" || s.config.Twilio.FromNumber == "" {
-		return fmt.Errorf("Twilio configuration incomplete. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER in config.env")
+	if s.config.MSG91.AuthKey == "" || s.config.MSG91.SenderID == "" {
+		return fmt.Errorf("MSG91 configuration incomplete. Please set MSG91_AUTH_KEY and MSG91_SENDER_ID in config.env")
 	}
 
-	// Twilio API endpoint
-	apiURL := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", s.config.Twilio.AccountSID)
+	// Clean phone number (remove any non-digit characters except +)
+	to = strings.TrimSpace(to)
+	if strings.HasPrefix(to, "+") {
+		to = to[1:] // Remove + prefix as MSG91 expects numbers without +
+	}
+
+	// MSG91 SMS API endpoint
+	apiURL := "https://api.msg91.com/api/sendhttp.php"
 
 	// Prepare form data
 	data := url.Values{}
-	data.Set("From", s.config.Twilio.FromNumber)
-	data.Set("To", to)
-	data.Set("Body", message)
+	data.Set("authkey", s.config.MSG91.AuthKey)
+	data.Set("mobiles", to)
+	data.Set("message", message)
+	data.Set("sender", s.config.MSG91.SenderID)
+	data.Set("route", s.config.MSG91.Route)
+	data.Set("response", "json")
 
 	// Create request
 	req, err := http.NewRequest("POST", apiURL, strings.NewReader(data.Encode()))
@@ -66,7 +74,6 @@ func (s *SMSService) SendSMS(to, message string) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.SetBasicAuth(s.config.Twilio.AccountSID, s.config.Twilio.AuthToken)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Send request
@@ -83,39 +90,51 @@ func (s *SMSService) SendSMS(to, message string) error {
 	}
 
 	// Log the SMS details
-	fmt.Printf("\n=== TWILIO SMS ===\n")
-	fmt.Printf("From: %s\n", s.config.Twilio.FromNumber)
+	fmt.Printf("\n=== MSG91 SMS ===\n")
+	fmt.Printf("From: %s\n", s.config.MSG91.SenderID)
 	fmt.Printf("To: %s\n", to)
 	fmt.Printf("Message: %s\n", message)
+	fmt.Printf("Route: %s\n", s.config.MSG91.Route)
 	fmt.Printf("Time: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	// Parse response
-	var twilioResp TwilioResponse
-	if err := json.Unmarshal(body, &twilioResp); err != nil {
+	var msg91Resp MSG91Response
+	if err := json.Unmarshal(body, &msg91Resp); err != nil {
+		// If JSON parsing fails, check if it's a simple success response
+		bodyStr := string(body)
+		if resp.StatusCode == 200 && (strings.Contains(bodyStr, "success") || strings.Contains(bodyStr, "sent")) {
+			fmt.Printf("Status: SUCCESS ✓\n")
+			fmt.Printf("Response: %s\n", bodyStr)
+			fmt.Printf("=================\n\n")
+			return nil
+		}
+
 		fmt.Printf("Status: FAILED ✗\n")
 		fmt.Printf("Error: Failed to parse response\n")
-		fmt.Printf("==================\n\n")
+		fmt.Printf("Raw Response: %s\n", bodyStr)
+		fmt.Printf("=================\n\n")
 		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	// Check response status
-	if resp.StatusCode != 201 && resp.StatusCode != 200 {
-		errorMsg := twilioResp.ErrorMessage
+	if resp.StatusCode != 200 || msg91Resp.Type == "error" {
+		errorMsg := msg91Resp.Message
 		if errorMsg == "" {
 			errorMsg = fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body))
 		}
 
 		fmt.Printf("Status: FAILED ✗\n")
 		fmt.Printf("Error: %s\n", errorMsg)
-		fmt.Printf("==================\n\n")
+		fmt.Printf("Error Code: %s\n", msg91Resp.Code)
+		fmt.Printf("=================\n\n")
 
 		return fmt.Errorf("SMS delivery failed: %s", errorMsg)
 	}
 
 	fmt.Printf("Status: SUCCESS ✓\n")
-	fmt.Printf("Message SID: %s\n", twilioResp.SID)
-	fmt.Printf("Twilio Status: %s\n", twilioResp.Status)
-	fmt.Printf("==================\n\n")
+	fmt.Printf("Message: %s\n", msg91Resp.Message)
+	fmt.Printf("Code: %s\n", msg91Resp.Code)
+	fmt.Printf("=================\n\n")
 
 	return nil
 }

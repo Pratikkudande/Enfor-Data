@@ -4,7 +4,7 @@ package dto
 type CreatePropertyRequest struct {
 	// Basic Property Information
 	Title       string `json:"title" validate:"required,min=5,max=255"`
-	Type        string `json:"type" validate:"required,oneof=apartment house commercial plot"`
+	Type        string `json:"type" validate:"required,oneof=apartment house commercial plot row_house shop pg bungalow"`
 	ListingType string `json:"listing_type" validate:"required,oneof=sale rent"`
 
 	// Pricing and Size
@@ -24,6 +24,7 @@ type CreatePropertyRequest struct {
 	// Description and Features
 	Description string   `json:"description" validate:"required,min=20"`
 	Amenities   []string `json:"amenities"`
+	Photos      []string `json:"photos,omitempty"`
 
 	// Optional linked client
 	ClientID *string `json:"client_id,omitempty" validate:"omitempty"`
@@ -33,7 +34,7 @@ type CreatePropertyRequest struct {
 type UpdatePropertyRequest struct {
 	// Basic Property Information
 	Title       *string `json:"title,omitempty" validate:"omitempty,min=5,max=255"`
-	Type        *string `json:"type,omitempty" validate:"omitempty,oneof=apartment house commercial plot"`
+	Type        *string `json:"type,omitempty" validate:"omitempty,oneof=apartment house commercial plot row_house shop pg bungalow"`
 	ListingType *string `json:"listing_type,omitempty" validate:"omitempty,oneof=sale rent"`
 
 	// Pricing and Size
@@ -53,6 +54,7 @@ type UpdatePropertyRequest struct {
 	// Description and Features
 	Description *string  `json:"description,omitempty" validate:"omitempty,min=20"`
 	Amenities   []string `json:"amenities,omitempty"`
+	Photos      []string `json:"photos,omitempty"`
 
 	// Optional linked client
 	ClientID *string `json:"client_id,omitempty" validate:"omitempty"`

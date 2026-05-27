@@ -6,6 +6,27 @@ import { getStatusColor, formatPrice } from './utils';
 import { networkApi } from '../../services/networkApi';
 import { ROUTES } from '../../routes/routePaths';
 
+import { API_CONFIG } from '../../config/api';
+
+export const getPropertyImageUrl = (property: Property) => {
+  const photo = property.photos?.[0] || property.images?.[0];
+  if (!photo) {
+    return 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
+  }
+  if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:')) {
+    return photo;
+  }
+  // If it already has base URL or upload path
+  if (photo.startsWith('/uploads/') || photo.startsWith('uploads/')) {
+    const filename = photo.split('/').pop();
+    return `${API_CONFIG.BASE_URL}/uploads/${filename}`;
+  }
+  if (photo.includes('/uploads/')) {
+    return photo;
+  }
+  return `${API_CONFIG.BASE_URL}/uploads/${photo}`;
+};
+
 interface PropertyCardProps {
   property: Property;
   currentUserId: string;
@@ -105,7 +126,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
       {/* Image */}
       <div className="relative">
         <img
-          src={property.images?.[0] || 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
+          src={getPropertyImageUrl(property)}
           alt={property.title}
           className="w-full h-48 object-cover"
         />

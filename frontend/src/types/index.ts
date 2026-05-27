@@ -23,7 +23,7 @@ export interface User {
 export interface Property {
   id: string;
   title: string;
-  type: 'apartment' | 'house' | 'commercial' | 'plot';
+  type: 'apartment' | 'house' | 'commercial' | 'plot' | 'row_house' | 'shop' | 'pg' | 'bungalow';
   listing_type: 'sale' | 'rent';
   price: number;
   area: number;
@@ -35,6 +35,7 @@ export interface Property {
   state: string;
   description: string;
   amenities: string[];
+  photos?: string[];
   images?: string[];
   status: 'available' | 'sold' | 'rented' | 'under_negotiation';
   owner_id?: string;
@@ -310,7 +311,7 @@ export interface AuthResponse {
 
 export interface CreatePropertyRequest {
   title: string;
-  type: 'apartment' | 'house' | 'commercial' | 'plot';
+  type: 'apartment' | 'house' | 'commercial' | 'plot' | 'row_house' | 'shop' | 'pg' | 'bungalow';
   listing_type: 'sale' | 'rent';
   price: number;
   area: number;
@@ -322,12 +323,13 @@ export interface CreatePropertyRequest {
   state: string;
   description: string;
   amenities: string[];
+  photos?: string[];
   client_id?: string;
 }
 
 export interface UpdatePropertyRequest {
   title?: string;
-  type?: 'apartment' | 'house' | 'commercial' | 'plot';
+  type?: 'apartment' | 'house' | 'commercial' | 'plot' | 'row_house' | 'shop' | 'pg' | 'bungalow';
   listing_type?: 'sale' | 'rent';
   price?: number;
   area?: number;
@@ -339,6 +341,7 @@ export interface UpdatePropertyRequest {
   state?: string;
   description?: string;
   amenities?: string[];
+  photos?: string[];
   client_id?: string;
   status?: 'available' | 'sold' | 'rented' | 'under_negotiation';
 }

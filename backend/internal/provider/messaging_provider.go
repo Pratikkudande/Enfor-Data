@@ -29,4 +29,5 @@ type AccountStatus struct {
 	MessageLimit  int
 	MessagesUsed  int
 	DisplayName   string
+	Balance       string
 }

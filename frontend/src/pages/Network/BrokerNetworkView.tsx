@@ -15,6 +15,8 @@ import { ENV } from '../../config/env';
 import { Property } from '../../types';
 import PropertyViewModal from '../Properties/PropertyViewModal';
 
+import { getPropertyImageUrl } from '../Properties/PropertyCard';
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 const avatar = (name: string, img?: string | null) =>
   img ? (
@@ -622,7 +624,7 @@ const BrokerNetworkView: React.FC = () => {
                                   {/* Property Image */}
                                   <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
                                     <img
-                                      src={propertyData.images?.[0] || 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
+                                      src={getPropertyImageUrl(propertyData)}
                                       alt={propertyData.title}
                                       className="w-full h-full object-cover"
                                     />
@@ -730,7 +732,7 @@ const BrokerNetworkView: React.FC = () => {
                           {/* Property Image */}
                           <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
                             <img
-                              src={propertyContext.images?.[0] || 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg'}
+                              src={getPropertyImageUrl(propertyContext)}
                               alt={propertyContext.title}
                               className="w-full h-full object-cover"
                             />

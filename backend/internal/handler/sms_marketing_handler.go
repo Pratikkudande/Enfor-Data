@@ -52,9 +52,8 @@ func (h *SMSMarketingHandler) ConnectAccount(c *gin.Context) {
 	userID := c.GetString("user_id")
 
 	var req struct {
-		AccountSID  string `json:"account_sid" binding:"required"`
-		AuthToken   string `json:"auth_token" binding:"required"`
-		PhoneNumber string `json:"phone_number" binding:"required"`
+		AuthKey  string `json:"auth_key" binding:"required"`
+		SenderID string `json:"sender_id" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,7 +64,7 @@ func (h *SMSMarketingHandler) ConnectAccount(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.ConnectAccount(userID, req.AccountSID, req.AuthToken, req.PhoneNumber); err != nil {
+	if err := h.service.ConnectAccount(userID, req.AuthKey, req.SenderID); err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal server error",
 			Message: "Failed to connect account: " + err.Error(),
@@ -74,7 +73,7 @@ func (h *SMSMarketingHandler) ConnectAccount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, SuccessResponse{
-		Message: "SMS account connected successfully",
+		Message: "MSG91 SMS account connected successfully",
 	})
 }
 

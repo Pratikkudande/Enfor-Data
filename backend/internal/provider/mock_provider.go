@@ -98,6 +98,7 @@ func (p *MockProvider) GetAccountStatus() (*AccountStatus, error) {
 		MessageLimit:  p.messageLimit,
 		MessagesUsed:  p.messagesUsed,
 		DisplayName:   p.displayName,
+		Balance:       "Mock Balance: 1000 credits",
 	}, nil
 }
 
