@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
-import logo from '../assets/enfordata-logo.svg';
+import logo from '../assets/enfordata-logo.jpeg';
 
 const AuthLayout: React.FC = () => {
   return (
@@ -38,8 +38,8 @@ const AuthLayout: React.FC = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">WhatsApp Integration</h3>
-                  <p className="text-blue-200 text-sm opacity-90">Direct client communication and marketing</p>
+                  <h3 className="font-semibold text-white">SMS Marketing</h3>
+                  <p className="text-blue-200 text-sm opacity-90">Direct client communication via SMS campaigns</p>
                 </div>
               </div>
 

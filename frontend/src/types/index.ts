@@ -64,6 +64,13 @@ export interface Client {
   budget_min?: number;
   budget_max?: number;
   expected_amount?: number;
+  min_price?: number;
+  max_price?: number;
+  property_address?: string;
+  buildup_area?: number;
+  carpet_area?: number;
+  measurement_unit?: string;
+  deposit_budget?: number;
   preferred_location: string;
   address?: string;
   city?: string;
@@ -356,14 +363,24 @@ export interface CreateClientRequest {
   phone: string;
   type: 'buyer' | 'seller' | 'tenant' | 'owner' | 'list_property_for_rent';
   preferred_location: string;
-  address: string;
+  address?: string;
   city: string;
-  state: string;
-  postal_code: string;
+  state?: string;
+  postal_code?: string;
   requirements: string;
   budget_min?: number;
   budget_max?: number;
   expected_amount?: number;
+  // Sell Property
+  min_price?: number;
+  max_price?: number;
+  property_address?: string;
+  // Area fields
+  buildup_area?: number;
+  carpet_area?: number;
+  measurement_unit?: string;
+  // Rent Client
+  deposit_budget?: number;
   notes?: string;
 }
 
@@ -383,6 +400,13 @@ export interface UpdateClientRequest {
   budget_min?: number;
   budget_max?: number;
   expected_amount?: number;
+  min_price?: number;
+  max_price?: number;
+  property_address?: string;
+  buildup_area?: number;
+  carpet_area?: number;
+  measurement_unit?: string;
+  deposit_budget?: number;
   notes?: string;
 }
 

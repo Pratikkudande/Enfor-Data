@@ -122,6 +122,19 @@ func main() {
 	// API routes
 	api := router.Group("/api")
 	{
+		// Public platform stats (used by landing page — no auth required)
+		api.GET("/stats", func(c *gin.Context) {
+			var brokerCount, propertyCount, clientCount int
+			db.QueryRow(`SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND is_active = TRUE`).Scan(&brokerCount)
+			db.QueryRow(`SELECT COUNT(*) FROM properties WHERE deleted_at IS NULL`).Scan(&propertyCount)
+			db.QueryRow(`SELECT COUNT(*) FROM clients`).Scan(&clientCount)
+			c.JSON(http.StatusOK, gin.H{
+				"brokers":    brokerCount,
+				"properties": propertyCount,
+				"clients":    clientCount,
+			})
+		})
+
 		// Authentication routes (public)
 		auth := api.Group("/auth")
 		{

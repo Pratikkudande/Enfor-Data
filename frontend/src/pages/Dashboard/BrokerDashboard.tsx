@@ -3,7 +3,6 @@ import {
   Building, 
   Users, 
   Calendar, 
-  MessageSquare, 
   TrendingUp,
   Clock,
   CheckCircle,
@@ -161,13 +160,6 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
     },
     {
       id: '3',
-      action: 'WhatsApp campaign sent',
-      details: '150 messages delivered',
-      time: '6 hours ago',
-      type: 'whatsapp'
-    },
-    {
-      id: '4',
       action: 'New client added',
       client: 'Lisa Anderson',
       time: '8 hours ago',
@@ -192,8 +184,6 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
         return <Building className="h-4 w-4 text-blue-500" />;
       case 'appointment':
         return <Calendar className="h-4 w-4 text-green-500" />;
-      case 'whatsapp':
-        return <MessageSquare className="h-4 w-4 text-teal-500" />;
       case 'client':
         return <Users className="h-4 w-4 text-purple-500" />;
       default:
@@ -230,7 +220,7 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <StatsCard
           title="Active Properties"
           value={stats?.activeProperties ?? stats?.totalProperties ?? 0}
@@ -253,13 +243,6 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
           icon={Calendar}
           color="orange"
           subtitle="Scheduled meetings"
-        />
-        <StatsCard
-          title="WhatsApp Messages"
-          value={`${stats?.whatsappMessagesCount ?? 0}/${stats?.remainingMessages ?? 0}`}
-          icon={MessageSquare}
-          color="teal"
-          subtitle="Sent/Remaining"
         />
       </div>
 

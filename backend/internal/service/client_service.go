@@ -29,8 +29,17 @@ func (s *ClientService) CreateClient(req *dto.CreateClientRequest, brokerID stri
 		return nil, err
 	}
 
+	// Check for duplicate phone number for this broker
+	exists, err := s.clientRepo.PhoneExistsForBroker(req.Phone, brokerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check for duplicate: %w", err)
+	}
+	if exists {
+		return nil, fmt.Errorf("client with phone number %s already exists", req.Phone)
+	}
+
 	// Fetch broker information from userRepo to validate broker exists
-	_, err := s.userRepo.GetUserByID(brokerID)
+	_, err = s.userRepo.GetUserByID(brokerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch broker information: %w", err)
 	}
@@ -42,10 +51,17 @@ func (s *ClientService) CreateClient(req *dto.CreateClientRequest, brokerID stri
 		Email:             req.Email,
 		Phone:             req.Phone,
 		Type:              req.Type,
-		Status:            "active", // Set default status to 'active'
+		Status:            "active",
 		BudgetMin:         req.BudgetMin,
 		BudgetMax:         req.BudgetMax,
 		ExpectedAmount:    req.ExpectedAmount,
+		MinPrice:          req.MinPrice,
+		MaxPrice:          req.MaxPrice,
+		PropertyAddress:   strPtr(req.PropertyAddress),
+		BuildupArea:       req.BuildupArea,
+		CarpetArea:        req.CarpetArea,
+		MeasurementUnit:   strPtr(req.MeasurementUnit),
+		DepositBudget:     req.DepositBudget,
 		PreferredLocation: req.PreferredLocation,
 		Address:           req.Address,
 		City:              req.City,
@@ -156,6 +172,27 @@ func (s *ClientService) UpdateClient(id string, req *dto.UpdateClientRequest, br
 	if req.ExpectedAmount != nil {
 		client.ExpectedAmount = req.ExpectedAmount
 	}
+	if req.MinPrice != nil {
+		client.MinPrice = req.MinPrice
+	}
+	if req.MaxPrice != nil {
+		client.MaxPrice = req.MaxPrice
+	}
+	if req.PropertyAddress != nil {
+		client.PropertyAddress = req.PropertyAddress
+	}
+	if req.BuildupArea != nil {
+		client.BuildupArea = req.BuildupArea
+	}
+	if req.CarpetArea != nil {
+		client.CarpetArea = req.CarpetArea
+	}
+	if req.MeasurementUnit != nil {
+		client.MeasurementUnit = req.MeasurementUnit
+	}
+	if req.DepositBudget != nil {
+		client.DepositBudget = req.DepositBudget
+	}
 
 	// Call repository Update method
 	if err := s.clientRepo.Update(client); err != nil {
@@ -180,6 +217,14 @@ func (s *ClientService) DeleteClient(id, brokerID string) error {
 	}
 
 	return nil
+}
+
+// strPtr returns a pointer to a string, or nil if the string is empty
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 // validateBudgetRange validates that budget_min <= budget_max when both are provided

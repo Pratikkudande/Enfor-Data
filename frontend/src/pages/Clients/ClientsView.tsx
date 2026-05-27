@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, User } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, User, Upload, Loader2, CheckCircle, XCircle, FileSpreadsheet } from 'lucide-react';
 import { apiClient, Client as ApiClient, CreateClientRequest } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
 import { useSearchParams } from 'react-router-dom';
@@ -22,14 +22,23 @@ const ClientsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState<string>('');
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isExpectedAmountType = (type: string) => type !== 'buyer' && type !== 'tenant';
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
-    window.setTimeout(() => setSuccessMessage(null), 3000);
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const showError = (msg: string) => {
+    setErrorMessage(msg);
+    window.setTimeout(() => setErrorMessage(null), 6000);
   };
 
   const fetchClients = async () => {
@@ -58,14 +67,20 @@ const ClientsView: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', location: '', contactNo: '', email: '',
     address: '', city: '', state: '', postalCode: '', enquiry: '',
-    budgetMin: '', budgetMax: '', expectedAmount: ''
+    budgetMin: '', budgetMax: '', expectedAmount: '',
+    minPrice: '', maxPrice: '', propertyAddress: '',
+    buildupArea: '', carpetArea: '', measurementUnit: '',
+    depositBudget: '',
   });
 
   const resetFormState = () => {
     setFormData({
       firstName: '', lastName: '', location: '', contactNo: '', email: '',
       address: '', city: '', state: '', postalCode: '', enquiry: '',
-      budgetMin: '', budgetMax: '', expectedAmount: ''
+      budgetMin: '', budgetMax: '', expectedAmount: '',
+      minPrice: '', maxPrice: '', propertyAddress: '',
+      buildupArea: '', carpetArea: '', measurementUnit: '',
+      depositBudget: '',
     });
     setSelectedClientType('buyer');
     setEditingClientId(null);
@@ -91,14 +106,19 @@ const ClientsView: React.FC = () => {
     setFormData({
       firstName: client.first_name, lastName: client.last_name,
       location: client.preferred_location, contactNo: client.phone,
-      email: client.email, address: client.address, city: client.city,
-      state: client.state, postalCode: client.postal_code,
+      email: client.email, address: client.address ?? '', city: client.city ?? '',
+      state: client.state ?? '', postalCode: client.postal_code ?? '',
       enquiry: client.requirements,
       budgetMin: client.budget_min ? client.budget_min.toString() : '',
       budgetMax: client.budget_max ? client.budget_max.toString() : '',
-      expectedAmount: client.expected_amount
-        ? client.expected_amount.toString()
-        : '',
+      expectedAmount: client.expected_amount ? client.expected_amount.toString() : '',
+      minPrice: (client as any).min_price ? (client as any).min_price.toString() : '',
+      maxPrice: (client as any).max_price ? (client as any).max_price.toString() : '',
+      propertyAddress: (client as any).property_address ?? '',
+      buildupArea: (client as any).buildup_area ? (client as any).buildup_area.toString() : '',
+      carpetArea: (client as any).carpet_area ? (client as any).carpet_area.toString() : '',
+      measurementUnit: (client as any).measurement_unit ?? '',
+      depositBudget: (client as any).deposit_budget ? (client as any).deposit_budget.toString() : '',
     });
     setShowAddModal(true);
   };
@@ -117,6 +137,17 @@ const ClientsView: React.FC = () => {
       const matchesType = filterType === 'all' || client.type === filterType;
       return matchesSearch && matchesType;
     });
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'buyer': return 'Buyer';
+      case 'seller': return 'Sell Property';
+      case 'tenant': return 'Rent a Property';
+      case 'list_property_for_rent': return 'Property for Rent';
+      case 'owner': return 'Owner';
+      default: return type.replace(/_/g, ' ');
+    }
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -160,7 +191,8 @@ const ClientsView: React.FC = () => {
         first_name: formData.firstName, last_name: formData.lastName,
         email: formData.email, phone: formData.contactNo,
         type: editingClientType === 'owner' ? 'owner' : selectedClientType,
-        preferred_location: formData.location, address: formData.address,
+        preferred_location: formData.location,
+        address: formData.address,
         city: formData.city, state: formData.state,
         postal_code: formData.postalCode, requirements: formData.enquiry,
       };
@@ -191,6 +223,23 @@ const ClientsView: React.FC = () => {
           setFormError('Min Budget cannot be greater than Max Budget');
           return;
         }
+      }
+
+      // Sell Property fields
+      if (selectedClientType === 'seller') {
+        if (formData.minPrice.trim()) clientData.min_price = parseFloat(formData.minPrice);
+        if (formData.maxPrice.trim()) clientData.max_price = parseFloat(formData.maxPrice);
+        if (formData.propertyAddress.trim()) clientData.property_address = formData.propertyAddress.trim();
+      }
+
+      // Area fields
+      if (formData.buildupArea.trim()) clientData.buildup_area = parseFloat(formData.buildupArea);
+      if (formData.carpetArea.trim()) clientData.carpet_area = parseFloat(formData.carpetArea);
+      if (formData.measurementUnit.trim()) clientData.measurement_unit = formData.measurementUnit;
+
+      // Deposit budget for tenant
+      if (selectedClientType === 'tenant' && formData.depositBudget.trim()) {
+        clientData.deposit_budget = parseFloat(formData.depositBudget);
       }
 
       const response = editingClientId
@@ -246,24 +295,48 @@ const ClientsView: React.FC = () => {
           <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/clients-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
             Download Sample Excel
           </button>
-          <input type="file" accept=".xlsx,.xls,.csv" id="clientsExcelInput" className="hidden" onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            try {
-              setSubmitting(true);
-              await apiClient.uploadClientsExcel(file);
-              showSuccess('Clients uploaded successfully');
-              fetchClients();
-            } catch (err) {
-              setError(err instanceof Error ? err.message : 'Upload failed');
-            } finally {
-              setSubmitting(false);
-              // clear input
-              (e.target as HTMLInputElement).value = '';
-            }
-          }} />
-          <button onClick={() => document.getElementById('clientsExcelInput')?.click()} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
-            Upload Excel
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            id="clientsExcelInput"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUploadFileName(file.name);
+              setUploading(true);
+              try {
+                const response = await apiClient.uploadClientsExcel(file);
+                const data = (response as any)?.data;
+                const created = data?.created ?? 0;
+                const duplicates = data?.duplicates ?? 0;
+                const errors = data?.errors ?? [];
+                let msg = `${created} client${created !== 1 ? 's' : ''} imported successfully`;
+                if (duplicates > 0) msg += ` · ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
+                if (errors.length > 0) msg += ` · ${errors.length} row${errors.length !== 1 ? 's' : ''} failed`;
+                showSuccess(msg);
+                fetchClients();
+              } catch (err) {
+                showError(err instanceof Error ? err.message : 'Upload failed. Please check your file and try again.');
+              } finally {
+                setUploading(false);
+                setUploadFileName('');
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-2" />
+            )}
+            {uploading ? 'Uploading…' : 'Upload Excel'}
           </button>
         </div>
       </div>
@@ -281,10 +354,10 @@ const ClientsView: React.FC = () => {
           <div className="flex gap-4">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all">All Types</option>
-              <option value="buyer">Buy Property</option>
+              <option value="buyer">Buyer</option>
               <option value="seller">Sell Property</option>
-              <option value="tenant">Rent Property</option>
-              <option value="list_property_for_rent">List Property for Rent</option>
+              <option value="tenant">Rent a Property</option>
+              <option value="list_property_for_rent">Property for Rent</option>
             </select>
           </div>
         </div>
@@ -300,6 +373,7 @@ const ClientsView: React.FC = () => {
               key={client.id}
               client={client}
               getTypeColor={getTypeColor}
+              getTypeLabel={getTypeLabel}
               getStatusColor={getStatusColor}
               formatBudget={formatBudget}
               onView={openViewModal}
@@ -338,11 +412,39 @@ const ClientsView: React.FC = () => {
       )}
 
       {successMessage && (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50">
-          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {successMessage}
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50 max-w-sm">
+          <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <span className="text-sm">{successMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center z-50 max-w-sm">
+          <XCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <span className="text-sm">{errorMessage}</span>
+        </div>
+      )}
+
+      {uploading && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 min-w-[280px]">
+            <div className="relative">
+              <FileSpreadsheet className="h-12 w-12 text-green-500" />
+              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-900 font-semibold text-base">Importing clients…</p>
+              {uploadFileName && (
+                <p className="text-gray-500 text-sm mt-1 truncate max-w-[220px]">{uploadFileName}</p>
+              )}
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full animate-pulse w-3/4" />
+            </div>
+            <p className="text-gray-400 text-xs">Please wait, do not close this page</p>
+          </div>
         </div>
       )}
     </div>

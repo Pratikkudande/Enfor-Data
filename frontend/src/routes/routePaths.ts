@@ -4,7 +4,6 @@ export const ROUTES = {
   REGISTER: '/register',
   DASHBOARD: '/dashboard',
   PROPERTIES: '/properties',
-  WHATSAPP: '/whatsapp',
   SMS_MARKETING: '/sms-marketing',
   CLIENTS: '/clients',
   APPOINTMENTS: '/appointments',

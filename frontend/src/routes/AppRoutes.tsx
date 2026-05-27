@@ -15,7 +15,6 @@ import RegisterForm from '../pages/Auth/RegisterForm';
 // Lazy loading for large feature pages
 const BrokerDashboard = lazy(() => import('../pages/Dashboard/BrokerDashboard'));
 const PropertiesView = lazy(() => import('../pages/Properties/PropertiesView'));
-const WhatsAppView = lazy(() => import('../pages/WhatsApp/WhatsAppView'));
 const SMSMarketingView = lazy(() => import('../pages/SMSMarketing/SMSMarketingView'));
 const ClientsView = lazy(() => import('../pages/Clients/ClientsView'));
 const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsView'));
@@ -75,11 +74,6 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.PROPERTIES} element={
           <Suspense fallback={<PageLoader />}>
             <PropertiesView />
-          </Suspense>
-        } />
-        <Route path={ROUTES.WHATSAPP} element={
-          <Suspense fallback={<PageLoader />}>
-            <WhatsAppView />
           </Suspense>
         } />
         <Route path={ROUTES.SMS_MARKETING} element={
