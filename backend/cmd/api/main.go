@@ -45,6 +45,9 @@ func main() {
 	if err := db.RunSubscriptionMigrations(); err != nil {
 		log.Fatal("Failed to run Subscription migrations:", err)
 	}
+	if err := db.RunBusinessPostsMigrations(); err != nil {
+		log.Fatal("Failed to run Business Posts migrations:", err)
+	}
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
@@ -59,6 +62,8 @@ func main() {
 	paymentRepo := repository.NewPaymentRepository(db)
 	agreementRepo := repository.NewAgreementRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
+	businessPostRepo := repository.NewBusinessPostRepository(db)
+	staffRepo := repository.NewStaffRepository(db)
 
 	// Initialize services
 	smsService := service.NewSMSService(cfg)
@@ -75,6 +80,8 @@ func main() {
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
 	agreementService := service.NewAgreementService(agreementRepo, propertyRepo, clientRepo)
 	projectService := service.NewProjectService(projectRepo)
+	businessPostService := service.NewBusinessPostService(businessPostRepo)
+	staffService := service.NewStaffService(staffRepo)
 	
 	// Initialize appointment reminder service
 	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
@@ -97,6 +104,8 @@ func main() {
 	paymentHandler := handler.NewPaymentHandler(paymentService, subscriptionService)
 	agreementHandler := handler.NewAgreementHandler(agreementService)
 	projectHandler := handler.NewProjectHandler(projectService)
+	businessPostHandler := handler.NewBusinessPostHandler(businessPostService)
+	staffHandler := handler.NewStaffHandler(staffService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -198,6 +207,22 @@ func main() {
 			protected.GET("/projects/:id", projectHandler.GetProject)
 			protected.PUT("/projects/:id", projectHandler.UpdateProject)
 			protected.DELETE("/projects/:id", projectHandler.DeleteProject)
+
+			// ── Business Posts ────────────────────────────────────────────────
+			protected.GET("/business-posts", businessPostHandler.GetPosts)
+			protected.GET("/business-posts/my", businessPostHandler.GetMyPosts)
+			protected.POST("/business-posts", businessPostHandler.CreatePost)
+			protected.GET("/business-posts/:id", businessPostHandler.GetPost)
+			protected.PUT("/business-posts/:id", businessPostHandler.UpdatePost)
+			protected.DELETE("/business-posts/:id", businessPostHandler.DeletePost)
+
+			// ── Staff Listings ────────────────────────────────────────────────
+			protected.GET("/staff", staffHandler.GetStaff)
+			protected.GET("/staff/my", staffHandler.GetMyStaff)
+			protected.POST("/staff", staffHandler.CreateStaff)
+			protected.GET("/staff/:id", staffHandler.GetStaffMember)
+			protected.PUT("/staff/:id", staffHandler.UpdateStaff)
+			protected.DELETE("/staff/:id", staffHandler.DeleteStaff)
 
 			// ── Broker Network ────────────────────────────────────────────────
 			network := protected.Group("/network")

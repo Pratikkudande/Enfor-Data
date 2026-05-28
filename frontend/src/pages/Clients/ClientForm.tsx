@@ -68,7 +68,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
   const showExpected      = isRentList;
   const showSellPrices    = isSeller;
   const showAreaFields    = isBuyer || isSeller || isRentList;
-  const showDeposit       = isTenant;
+  const showDeposit       = isTenant || isRentList;
   const showPropertyAddr  = isSeller;
 
   const inputCls = (disabled = false) =>
@@ -253,12 +253,16 @@ const ClientForm: React.FC<ClientFormProps> = ({
               </div>
             )}
 
-            {/* Deposit Budget — Tenant */}
+            {/* Deposit Budget — Tenant (what they can pay) / Property for Rent (what owner expects) */}
             {showDeposit && (
               <div>
-                {label('Deposit Budget')}
+                {label(isTenant ? 'Deposit Budget' : 'Expected Deposit Amount')}
                 <input type="number" name="depositBudget" value={formData.depositBudget} onChange={onInputChange}
-                  disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 100000" />
+                  disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)}
+                  placeholder={isTenant ? 'e.g. 100000' : 'e.g. 200000'} />
+                <p className="mt-1 text-xs text-gray-400">
+                  {isTenant ? 'Maximum deposit amount the tenant can pay' : 'Security deposit amount expected from tenant'}
+                </p>
               </div>
             )}
 

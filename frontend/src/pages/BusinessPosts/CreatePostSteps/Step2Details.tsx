@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   MapPin, IndianRupee, Upload, AlertCircle, Trash2,
-  Phone, Mail, MessageCircle, Home, Star,
+  Phone, Mail, MessageCircle, Home, Star, FileText, X,
 } from 'lucide-react';
 import { StepProps, VENDOR_SUBCATEGORIES } from './types';
 
@@ -30,12 +30,14 @@ const Step2Details: React.FC<Step2Props> = ({
   formData,
   errors,
   handleInputChange,
+  onResumeChange,
   categoryInfo,
   CategoryIcon,
   imagePreviews,
   handleImageUpload,
   removeImage,
 }) => {
+  const resumeInputRef = useRef<HTMLInputElement>(null);
   const isVendor = formData.category === 'vendor';
   const isStaff = formData.category === 'staff';
   const isFurniture = formData.category === 'furniture_office' || formData.category === 'furniture_house';
@@ -284,47 +286,104 @@ const Step2Details: React.FC<Step2Props> = ({
         </div>
       )}
 
-      {/* Images */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {isVendor ? 'Photos (Optional) — Max 5' : 'Images (Optional) — Max 5'}
-        </label>
-        <div className="space-y-4">
-          {imagePreviews.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={preview}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Resume upload — Staff only (single file) */}
+      {isStaff && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Resume / CV
+            <span className="ml-1 text-gray-400 font-normal text-xs">(Optional — PDF, DOC, DOCX)</span>
+          </label>
 
-          {imagePreviews.length < 5 && (
+          {formData.resumeFile ? (
+            /* File selected — show name + remove */
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+              <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <FileText className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{formData.resumeFile.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {(formData.resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onResumeChange?.(null);
+                  if (resumeInputRef.current) resumeInputRef.current.value = '';
+                }}
+                className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex-shrink-0"
+                title="Remove resume"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            /* No file — show upload zone */
             <label className="block cursor-pointer">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition-all">
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                <div className="text-sm font-medium text-gray-700 mb-1">Click to upload photos</div>
-                <div className="text-xs text-gray-500">
-                  PNG, JPG up to 5MB ({5 - imagePreviews.length} remaining)
-                </div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Click to upload resume</div>
+                <div className="text-xs text-gray-500">PDF, DOC, DOCX up to 10 MB</div>
               </div>
-              <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+              <input
+                ref={resumeInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  onResumeChange?.(file);
+                }}
+                className="hidden"
+              />
             </label>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Images — all categories except Staff */}
+      {!isStaff && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {isVendor ? 'Photos (Optional) — Max 5' : 'Images (Optional) — Max 5'}
+          </label>
+          <div className="space-y-4">
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {imagePreviews.length < 5 && (
+              <label className="block cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition-all">
+                  <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                  <div className="text-sm font-medium text-gray-700 mb-1">Click to upload photos</div>
+                  <div className="text-xs text-gray-500">
+                    PNG, JPG up to 5MB ({5 - imagePreviews.length} remaining)
+                  </div>
+                </div>
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+              </label>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

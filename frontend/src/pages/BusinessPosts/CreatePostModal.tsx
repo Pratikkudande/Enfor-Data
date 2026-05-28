@@ -30,6 +30,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     contactWhatsapp: '',
     serviceArea: '',
     images: [],
+    resumeFile: null,
   });
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Partial<Record<keyof PostFormData, string>>>({});
@@ -43,6 +44,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleResumeChange = (file: File | null) => {
+    setFormData((prev) => ({ ...prev, resumeFile: file }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,6 +163,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
       contactWhatsapp: '',
       serviceArea: '',
       images: [],
+      resumeFile: null,
     });
     setImagePreviews([]);
     setErrors({});
@@ -244,6 +250,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
               formData={formData}
               errors={errors}
               handleInputChange={handleInputChange}
+              onResumeChange={handleResumeChange}
               categoryInfo={categoryInfo}
               CategoryIcon={CategoryIcon}
               imagePreviews={imagePreviews}

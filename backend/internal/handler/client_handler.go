@@ -92,6 +92,15 @@ func (h *ClientHandler) CreateClient(c *gin.Context) {
 	// Call clientService.CreateClient
 	client, err := h.clientService.CreateClient(&req, brokerID.(string))
 	if err != nil {
+		// Duplicate phone
+		if strings.Contains(err.Error(), "already exists") {
+			c.JSON(http.StatusConflict, ErrorResponse{
+				Error:   "Duplicate client",
+				Message: err.Error(),
+			})
+			return
+		}
+
 		// Return 400 for business logic errors (budget validation)
 		if strings.Contains(err.Error(), "budget_min") ||
 			strings.Contains(err.Error(), "budget_max") {
@@ -102,10 +111,10 @@ func (h *ClientHandler) CreateClient(c *gin.Context) {
 			return
 		}
 
-		// Return 500 for server errors
+		// Return 500 for server errors — include actual error for debugging
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal server error",
-			Message: "Failed to create client",
+			Message: err.Error(),
 		})
 		return
 	}

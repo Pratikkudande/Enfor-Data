@@ -26,10 +26,13 @@ export interface PostFormData {
   contactWhatsapp: string;
   serviceArea: string;
   images: File[];
+  // Staff-specific
+  resumeFile: File | null;
 }
 
 export interface StepProps {
   formData: PostFormData;
   errors: Partial<Record<keyof PostFormData, string>>;
   handleInputChange: (field: keyof PostFormData, value: string) => void;
+  onResumeChange?: (file: File | null) => void;
 }

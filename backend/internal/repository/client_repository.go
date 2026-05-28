@@ -54,8 +54,13 @@ func (r *ClientRepository) Create(client *models.Client) error {
 			$7,$8,$9,
 			$10,$11,$12,
 			$13,$14,$15,$16,
-			$17,$18,$19,$20,$21,
-			$22,$23,$24
+			COALESCE(NULLIF($17,''),''),
+			COALESCE(NULLIF($18,''),''),
+			COALESCE(NULLIF($19,''),''),
+			COALESCE(NULLIF($20,''),''),
+			COALESCE(NULLIF($21,''),''),
+			COALESCE(NULLIF($22,''),''),
+			$23,$24
 		)
 		RETURNING id, broker_name, broker_city, created_at, updated_at
 	`

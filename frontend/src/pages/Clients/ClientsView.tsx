@@ -237,8 +237,8 @@ const ClientsView: React.FC = () => {
       if (formData.carpetArea.trim()) clientData.carpet_area = parseFloat(formData.carpetArea);
       if (formData.measurementUnit.trim()) clientData.measurement_unit = formData.measurementUnit;
 
-      // Deposit budget for tenant
-      if (selectedClientType === 'tenant' && formData.depositBudget.trim()) {
+      // Deposit budget for tenant OR property-for-rent owner
+      if ((selectedClientType === 'tenant' || selectedClientType === 'list_property_for_rent') && formData.depositBudget.trim()) {
         clientData.deposit_budget = parseFloat(formData.depositBudget);
       }
 
