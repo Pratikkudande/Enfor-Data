@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               city: response.data.city,
               state: response.data.state,
               company_name: response.data.firm_name,
+              profile_image: response.data.profile_image || undefined,
               is_verified: response.data.is_verified,
               created_at: response.data.created_at,
               updated_at: response.data.created_at,

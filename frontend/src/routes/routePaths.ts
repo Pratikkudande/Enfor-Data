@@ -12,6 +12,7 @@ export const ROUTES = {
   MARKETING: '/marketing',
   AGREEMENTS: '/agreements',
   PROJECTS: '/projects',
+  BUILDING_DATA: '/building-data',
   
   // Profile & Settings Routes
   PROFILE: '/profile',

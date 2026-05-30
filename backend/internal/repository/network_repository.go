@@ -210,11 +210,13 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 		       COALESCE(u.deals_completed, 0) AS deals_completed,
 		       COALESCE(array_to_string(u.specializations, ','), '') AS specializations,
 		       COALESCE((SELECT COUNT(*) FROM properties WHERE broker_id=u.id AND status='available'), 0) AS properties_count,
-		       COALESCE(cr.status, 
+		       COALESCE(cr.status,
 		           CASE WHEN conn.id IS NOT NULL THEN 'connected' ELSE 'none' END
 		       ) AS connection_status,
 		       cr.id AS request_id,
-		       cr.sender_id
+		       cr.sender_id,
+		       COALESCE(u.whatsapp_number, '') AS whatsapp_number,
+		       COALESCE(u.location, '') AS location
 		FROM users u
 		LEFT JOIN connection_requests cr ON (
 		    (cr.sender_id=$1 AND cr.receiver_id=u.id) OR
@@ -239,10 +241,12 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 			yearsExp, dealsCompleted, propertiesCount int
 			specializationsStr          string
 			status, requestID, senderID *string
+			whatsappNumber, location    string
 		)
-		if err := rows.Scan(&id, &name, &city, &state, &firm, &image, 
+		if err := rows.Scan(&id, &name, &city, &state, &firm, &image,
 			&yearsExp, &dealsCompleted, &specializationsStr, &propertiesCount,
-			&status, &requestID, &senderID); err != nil {
+			&status, &requestID, &senderID,
+			&whatsappNumber, &location); err != nil {
 			return nil, err
 		}
 		
@@ -266,6 +270,7 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 			"years_experience": yearsExp, "deals_completed": dealsCompleted,
 			"specializations": specializations, "properties_count": propertiesCount,
 			"connection_status": status, "request_id": requestID, "sender_id": senderID,
+			"whatsapp_number": whatsappNumber, "location": location,
 		}
 		list = append(list, m)
 	}
@@ -276,6 +281,39 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 }
 
 // ── Conversations ─────────────────────────────────────────────────────────────
+
+// EnsureConversationWithPeer gets or creates a conversation and returns it fully populated with peer info.
+func (r *NetworkRepository) EnsureConversationWithPeer(userID, peerID string) (*models.Conversation, error) {
+	pa, pb := orderedPair(userID, peerID)
+	var conv models.Conversation
+	err := r.db.QueryRow(`
+		INSERT INTO conversations (broker_a, broker_b)
+		VALUES ($1, $2)
+		ON CONFLICT (broker_a, broker_b) DO UPDATE SET broker_a = EXCLUDED.broker_a
+		RETURNING id, broker_a, broker_b, last_message_at, created_at`,
+		pa, pb,
+	).Scan(&conv.ID, &conv.BrokerA, &conv.BrokerB, &conv.LastMessageAt, &conv.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("ensure conversation: %w", err)
+	}
+	// Populate peer info
+	if err = r.db.QueryRow(
+		`SELECT id, first_name||' '||last_name, profile_image FROM users WHERE id = $1`,
+		peerID,
+	).Scan(&conv.PeerID, &conv.PeerName, &conv.PeerImage); err != nil {
+		return nil, fmt.Errorf("get peer info: %w", err)
+	}
+	// Last message and unread count (both 0/nil for a brand-new conversation)
+	r.db.QueryRow(
+		`SELECT body FROM messages WHERE conversation_id=$1 ORDER BY created_at DESC LIMIT 1`,
+		conv.ID,
+	).Scan(&conv.LastMessageBody)
+	r.db.QueryRow(
+		`SELECT COUNT(*) FROM messages WHERE conversation_id=$1 AND is_read=false AND sender_id<>$2`,
+		conv.ID, userID,
+	).Scan(&conv.UnreadCount)
+	return &conv, nil
+}
 
 // GetOrCreateConversation returns existing conversation or creates one.
 func (r *NetworkRepository) GetOrCreateConversation(a, b string) (*models.Conversation, error) {
