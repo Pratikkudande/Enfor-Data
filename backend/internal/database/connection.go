@@ -1266,8 +1266,6 @@ CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at D
 }
 
 
-
-<<<<<<< HEAD
 // RunBuildingMigrations creates the building_contacts table.
 func (db *DB) RunBuildingMigrations() error {
 	sql := `
