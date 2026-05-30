@@ -458,6 +458,15 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS buildup_area DECIMAL(10, 2);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS carpet_area DECIMAL(10, 2);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS measurement_unit VARCHAR(20);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS deposit_budget DECIMAL(15, 2);
+
+-- Ensure all optional text columns have DEFAULT '' so NOT NULL is never violated by empty strings
+ALTER TABLE clients ALTER COLUMN address           SET DEFAULT '';
+ALTER TABLE clients ALTER COLUMN city              SET DEFAULT '';
+ALTER TABLE clients ALTER COLUMN state             SET DEFAULT '';
+ALTER TABLE clients ALTER COLUMN postal_code       SET DEFAULT '';
+ALTER TABLE clients ALTER COLUMN preferred_location SET DEFAULT '';
+ALTER TABLE clients ALTER COLUMN requirements      SET DEFAULT '';
+ALTER TABLE clients ALTER COLUMN email             SET DEFAULT '';
 `
 	_, err = db.Exec(clientsAlterMigration)
 	if err != nil {
@@ -1258,6 +1267,7 @@ CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at D
 
 
 
+<<<<<<< HEAD
 // RunBuildingMigrations creates the building_contacts table.
 func (db *DB) RunBuildingMigrations() error {
 	sql := `
@@ -1382,6 +1392,131 @@ CREATE TRIGGER trg_convert_external_broker
 		return fmt.Errorf("failed to run external broker migrations: %w", err)
 	}
 	log.Println("External broker migrations completed successfully")
+	return nil
+}
+
+// RunBusinessPostsMigrations creates the business_posts and staff_listings tables.
+func (db *DB) RunBusinessPostsMigrations() error {
+	sql := `
+-- Business posts table
+CREATE TABLE IF NOT EXISTS business_posts (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    title       VARCHAR(255) NOT NULL,
+    category    VARCHAR(50)  NOT NULL
+                    CHECK (category IN ('furniture_office','furniture_house','vendor','staff')),
+    subcategory VARCHAR(50)  NOT NULL,
+    description TEXT         NOT NULL,
+    price       DECIMAL(15,2),
+    location    VARCHAR(255) NOT NULL,
+    status      VARCHAR(20)  NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active','sold','closed')),
+
+    -- Contact info
+    contact_name     VARCHAR(200) NOT NULL DEFAULT '',
+    contact_phone    VARCHAR(20)  NOT NULL DEFAULT '',
+    contact_email    VARCHAR(255),
+    contact_whatsapp VARCHAR(20),
+    contact_address  TEXT,
+
+    -- Vendor-specific
+    service_area VARCHAR(500),
+    rating       DECIMAL(2,1) CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
+
+    -- Media
+    images     TEXT[]  DEFAULT '{}',
+    resume_url VARCHAR(500),
+
+    -- Denormalized
+    poster_name VARCHAR(200),
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_posts_user     ON business_posts(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_business_posts_category ON business_posts(category, status);
+CREATE INDEX IF NOT EXISTS idx_business_posts_location ON business_posts(location);
+CREATE INDEX IF NOT EXISTS idx_business_posts_status   ON business_posts(status, created_at DESC);
+
+DROP TRIGGER IF EXISTS update_business_posts_updated_at ON business_posts;
+CREATE TRIGGER update_business_posts_updated_at
+    BEFORE UPDATE ON business_posts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION populate_business_post_poster()
+RETURNS TRIGGER AS $bp_poster$
+BEGIN
+    SELECT first_name || ' ' || last_name
+    INTO NEW.poster_name
+    FROM users WHERE id = NEW.user_id;
+    RETURN NEW;
+END;
+$bp_poster$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_business_post_poster ON business_posts;
+CREATE TRIGGER trg_business_post_poster
+    BEFORE INSERT ON business_posts
+    FOR EACH ROW EXECUTE FUNCTION populate_business_post_poster();
+
+-- Staff listings table
+CREATE TABLE IF NOT EXISTS staff_listings (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    type             VARCHAR(20) NOT NULL CHECK (type IN ('available','required')),
+    first_name       VARCHAR(100) NOT NULL,
+    last_name        VARCHAR(100) NOT NULL DEFAULT '',
+    phone            VARCHAR(20)  NOT NULL DEFAULT '',
+    email            VARCHAR(255) NOT NULL DEFAULT '',
+    role             VARCHAR(100) NOT NULL,
+    experience_years INTEGER      NOT NULL DEFAULT 0 CHECK (experience_years >= 0),
+    status           VARCHAR(20)  NOT NULL DEFAULT 'available'
+                         CHECK (status IN ('available','employed','inactive')),
+    location         VARCHAR(255) NOT NULL,
+    address          TEXT         NOT NULL DEFAULT '',
+    description      TEXT         NOT NULL DEFAULT '',
+    resume_url       VARCHAR(500),
+    photo_url        VARCHAR(500),
+
+    -- Denormalized
+    poster_name VARCHAR(200),
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_user     ON staff_listings(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_staff_type     ON staff_listings(type);
+CREATE INDEX IF NOT EXISTS idx_staff_location ON staff_listings(location);
+CREATE INDEX IF NOT EXISTS idx_staff_role     ON staff_listings(role);
+
+DROP TRIGGER IF EXISTS update_staff_listings_updated_at ON staff_listings;
+CREATE TRIGGER update_staff_listings_updated_at
+    BEFORE UPDATE ON staff_listings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION populate_staff_poster()
+RETURNS TRIGGER AS $staff_poster$
+BEGIN
+    SELECT first_name || ' ' || last_name
+    INTO NEW.poster_name
+    FROM users WHERE id = NEW.user_id;
+    RETURN NEW;
+END;
+$staff_poster$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_staff_poster ON staff_listings;
+CREATE TRIGGER trg_staff_poster
+    BEFORE INSERT ON staff_listings
+    FOR EACH ROW EXECUTE FUNCTION populate_staff_poster();
+`
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run business posts migrations: %w", err)
+	}
+	log.Println("Business posts & staff migrations completed successfully")
 	return nil
 }
 

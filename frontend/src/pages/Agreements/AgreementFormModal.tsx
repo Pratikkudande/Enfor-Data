@@ -136,8 +136,6 @@ const AgreementFormModal: React.FC<Props> = ({ onClose, onCreate }) => {
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
-
   const durationDays =
     formData.start_date && formData.end_date && formData.end_date > formData.start_date
       ? Math.ceil(
@@ -329,7 +327,6 @@ const AgreementFormModal: React.FC<Props> = ({ onClose, onCreate }) => {
                   name="start_date"
                   value={formData.start_date}
                   onChange={handleChange}
-                  min={today}
                   className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.start_date ? 'border-red-400' : 'border-gray-300'
                   }`}
@@ -351,7 +348,7 @@ const AgreementFormModal: React.FC<Props> = ({ onClose, onCreate }) => {
                   name="end_date"
                   value={formData.end_date}
                   onChange={handleChange}
-                  min={formData.start_date || today}
+                  min={formData.start_date || undefined}
                   className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.end_date ? 'border-red-400' : 'border-gray-300'
                   }`}

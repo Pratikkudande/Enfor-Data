@@ -225,8 +225,8 @@ export interface UpdateProjectRequest {
 export interface BusinessPost {
   id: string;
   title: string;
-  category: 'property' | 'furniture' | 'staff';
-  subcategory: 'sale' | 'rent' | 'requirement';
+  category: 'furniture_office' | 'furniture_house' | 'vendor' | 'staff';
+  subcategory: string; // 'sale' | 'rent' | 'requirement' | vendor subcategories
   description: string;
   price?: number;
   images: string[];
@@ -235,7 +235,10 @@ export interface BusinessPost {
     name: string;
     phone: string;
     email?: string;
+    whatsapp?: string;
+    address?: string;
   };
+  rating?: number;
   user_id: string;
   status: 'active' | 'sold' | 'closed';
   created_at: string;

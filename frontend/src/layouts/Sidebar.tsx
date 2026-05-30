@@ -16,7 +16,8 @@ import {
   Briefcase,
   CreditCard,
   Crown,
-  Bell
+  Bell,
+  HardHat,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'projects', label: 'New Projects', icon: Briefcase },
     { id: 'agreements', label: 'Agreements', icon: FileText },
     { id: 'business-posts', label: 'Business Posts', icon: PlusCircle },
+    { id: 'staff', label: 'Staff', icon: HardHat },
     { id: 'marketing', label: 'Marketing', icon: Megaphone },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'subscription', label: 'My Subscription', icon: CreditCard },
