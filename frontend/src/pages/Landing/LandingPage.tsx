@@ -1,388 +1,562 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Building2,
-  Users,
-  Calendar,
-  FileText,
-  MessageSquare,
-  Star,
-  ArrowRight,
-  CheckCircle,
-  Menu,
-  X,
-  Phone,
-  Mail,
-  MapPin,
-  BarChart3,
-  Shield,
-  Zap,
-  Globe,
-  ChevronRight,
+  Users, Calendar, Star, ArrowRight, CheckCircle,
+  Menu, X, Phone, Mail, MapPin, TrendingUp,
+  Bell, Clock, DollarSign, ChevronRight,
+  Home, Handshake, FolderOpen, Play, Network,
 } from 'lucide-react';
 
-/* ─── Data ────────────────────────────────────────────────── */
-const NAV_LINKS = [
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Testimonials', href: '#testimonials' },
-  { label: 'Pricing', href: '/pricing' },
+/* ── Animated Counter ─────────────────────────────────────── */
+const useCounter = (target: number, duration = 2000, start = false) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let startTime: number | null = null;
+    const step = (ts: number) => {
+      if (!startTime) startTime = ts;
+      const p = Math.min((ts - startTime) / duration, 1);
+      setCount(Math.floor(p * target));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, duration, start]);
+  return count;
+};
+
+/* ── InView Hook ─────────────────────────────────────────── */
+const useInView = (threshold = 0.2) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setInView(true); },
+      { threshold }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, inView };
+};
+
+/* ── Data ─────────────────────────────────────────────────── */
+const NAV_LINKS = ['Features', 'Pricing', 'Resources', 'About Us', 'Contact'];
+
+const STATS = [
+  { icon: '🏢', value: 10000, suffix: '+', label: 'Properties Managed' },
+  { icon: '👥', value: 5000,  suffix: '+', label: 'Leads Tracked' },
+  { icon: '🤝', value: 500,   suffix: '+', label: 'Broker Connections' },
+  { icon: '📈', value: 30,    suffix: '%', label: 'Faster Deal Closure' },
 ];
 
 const FEATURES = [
   {
-    icon: Building2,
-    title: 'Property Management',
-    desc: 'List, track, and manage all your properties in one place. Filter by status, location, and price with ease.',
-    tag: 'Core',
+    icon: Home, title: 'Property Management',
+    img: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=400&q=80',
+    items: ['Add & manage properties', 'Upload photos & documents', 'Track availability', 'Prevent duplicate entries'],
   },
   {
-    icon: Users,
-    title: 'Client CRM',
-    desc: 'Maintain rich client profiles, track requirements, and never miss a follow-up with smart reminders.',
-    tag: 'CRM',
+    icon: Users, title: 'Lead Management',
+    img: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80',
+    items: ['Capture leads', 'Assign team members', 'Lead pipeline tracking', 'Follow-up management'],
   },
   {
-    icon: Calendar,
-    title: 'Appointment Scheduling',
-    desc: 'Book site visits, sync calendars, and send automated reminders to clients and your team.',
-    tag: 'Scheduling',
+    icon: Calendar, title: 'Site Visit Management',
+    img: 'https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=400&q=80',
+    items: ['Schedule visits', 'Visit reminders', 'Feedback tracking', 'Visit history'],
   },
   {
-    icon: FileText,
-    title: 'Agreement Builder',
-    desc: 'Generate professional agreements in seconds. Store, share, and e-sign documents digitally.',
-    tag: 'Legal',
+    icon: Handshake, title: 'Broker Network',
+    img: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&q=80',
+    items: ['Channel partner management', 'Property sharing', 'Referral tracking', 'Commission management'],
   },
   {
-    icon: MessageSquare,
-    title: 'WhatsApp & SMS Marketing',
-    desc: 'Reach clients instantly with bulk WhatsApp messages and targeted SMS campaigns.',
-    tag: 'Marketing',
-  },
-  {
-    icon: BarChart3,
-    title: 'Analytics & Reports',
-    desc: 'Get real-time insights on leads, conversions, revenue, and team performance.',
-    tag: 'Insights',
+    icon: FolderOpen, title: 'Agreements & Documents',
+    img: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&q=80',
+    items: ['Store agreements', 'Property documents', 'Client KYC', 'Secure cloud storage'],
   },
 ];
 
-const STEPS = [
-  { step: '01', title: 'Sign Up Free', desc: 'Create your account in under 2 minutes — no credit card required.' },
-  { step: '02', title: 'Add Your Listings', desc: 'Import or add properties, clients, and team members effortlessly.' },
-  { step: '03', title: 'Automate & Grow', desc: 'Let BrokerPro handle follow-ups, reminders, and marketing while you close deals.' },
+const BENEFITS = [
+  { icon: Clock,      title: 'Save Time',              desc: 'Reduce manual work by 70%' },
+  { icon: Bell,       title: 'Never Miss Follow-Ups',  desc: 'Automated reminders & alerts' },
+  { icon: TrendingUp, title: 'Increase Conversions',   desc: 'Track every lead & opportunity' },
+  { icon: Network,    title: 'Grow Your Network',      desc: 'Collaborate with more brokers' },
+  { icon: DollarSign, title: 'Earn More',              desc: 'Track every deal & commission' },
 ];
 
 const TESTIMONIALS = [
   {
-    name: 'Rahul Sharma',
-    role: 'Senior Broker, Mumbai',
-    avatar: 'RS',
-    rating: 5,
-    text: 'BrokerPro transformed how I manage my 200+ clients. The WhatsApp marketing alone doubled my response rate.',
+    name: 'Rajesh Patel', city: 'Broker, Ahmedabad', initials: 'RP',
+    text: '"Earlier we used Excel and WhatsApp for everything. EnforData has completely changed the way we run our brokerage business."',
   },
   {
-    name: 'Priya Mehta',
-    role: 'Agency Owner, Pune',
-    rating: 5,
-    avatar: 'PM',
-    text: 'The agreement builder saves me hours every week. My clients love the professional documents it generates.',
+    name: 'Amit Shah', city: 'Broker, Mumbai', initials: 'AS',
+    text: '"We increased our lead conversion by 25% in just 3 months. The follow-up system is fantastic!"',
   },
   {
-    name: 'Arjun Patel',
-    role: 'Property Consultant, Ahmedabad',
-    rating: 5,
-    avatar: 'AP',
-    text: 'Finally a CRM built for Indian real estate. The SMS campaigns and appointment reminders are game-changers.',
+    name: 'Neha Mehta', city: 'Broker, Pune', initials: 'NM',
+    text: '"Finally a platform made for brokers like us. Everything in one place — properties, leads, visits, commissions."',
   },
 ];
 
-const STATS = [
-  { value: '10,000+', label: 'Active Brokers' },
-  { value: '5 Lakh+', label: 'Properties Listed' },
-  { value: '98%', label: 'Satisfaction Rate' },
-  { value: '3x', label: 'Revenue Growth' },
-];
+/* ── Stat Counter ─────────────────────────────────────────── */
+const StatCounter: React.FC<{ value: number; suffix: string; started: boolean }> = ({ value, suffix, started }) => {
+  const count = useCounter(value, 2000, started);
+  return <span>{count.toLocaleString('en-IN')}{suffix}</span>;
+};
 
-const TRUST_LOGOS = ['HDFC Realty', 'NoBroker', 'MagicBricks', 'PropTiger', '99acres', 'Square Yards'];
+/* ── Glassmorphism card style ─────────────────────────────── */
+const glass = {
+  background: 'rgba(5,15,46,0.88)',
+  backdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255,255,255,0.10)',
+} as React.CSSProperties;
 
-/* ─── Component ───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════ */
 const LandingPage: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { ref: statsRef, inView: statsInView } = useInView(0.3);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
+  /* ── Navbar ─────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen font-sans antialiased" style={{ backgroundColor: '#f0faf4' }}>
+    <div className="min-h-screen font-sans antialiased" style={{ backgroundColor: '#030B24', color: '#fff' }}>
 
-      {/* ── Navbar ── */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? 'bg-white/90 backdrop-blur-lg shadow-sm border-b border-gray-100' : 'bg-transparent'
-        }`}
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{
+          background: scrolled ? 'rgba(3,11,36,0.88)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(20px)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+        }}
       >
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-gray-900 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-bold text-gray-900 tracking-tight">BrokerPro</span>
-            </div>
-
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-7">
-              {NAV_LINKS.map((l) =>
-                l.href.startsWith('#') ? (
-                  <a key={l.label} href={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                    {l.label}
-                  </a>
-                ) : (
-                  <Link key={l.label} to={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                    {l.label}
-                  </Link>
-                )
-              )}
-            </nav>
-
-            {/* CTA */}
-            <div className="hidden md:flex items-center gap-3">
-              <Link to="/login" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                Sign in
-              </Link>
-              <Link
-                to="/register"
-                className="text-sm font-semibold bg-gray-900 text-white px-5 py-2 rounded-full hover:bg-gray-800 transition-colors"
-              >
-                Get started
-              </Link>
-            </div>
-
-            <button className="md:hidden p-2 text-gray-600" onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center gap-1">
+            <span className="text-xl font-extrabold text-white tracking-tight">Enfor</span>
+            <span className="text-xl font-extrabold px-1.5 py-0.5 rounded tracking-tight"
+              style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Data</span>
           </div>
+
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex items-center gap-7">
+            {NAV_LINKS.map(l => (
+              <a key={l} href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</a>
+            ))}
+          </nav>
+
+          {/* Desktop CTA */}
+          <div className="hidden lg:flex items-center gap-3">
+            <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors px-3 py-2">Login</Link>
+            <Link to="/register"
+              className="text-sm font-semibold text-white px-5 py-2 rounded-lg transition-all hover:opacity-90 hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
+              Start Free Trial
+            </Link>
+          </div>
+
+          {/* Mobile toggle */}
+          <button className="lg:hidden p-2 text-gray-300" onClick={() => setMenuOpen(v => !v)}>
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-6 py-5 space-y-4 shadow-lg">
-            {NAV_LINKS.map((l) =>
-              l.href.startsWith('#') ? (
-                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-1">
-                  {l.label}
-                </a>
-              ) : (
-                <Link key={l.label} to={l.href} onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-1">
-                  {l.label}
-                </Link>
-              )
-            )}
+          <div className="lg:hidden border-t border-white/10 px-4 py-4 space-y-3"
+            style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)' }}>
+            {NAV_LINKS.map(l => (
+              <a key={l} href="#" onClick={() => setMenuOpen(false)}
+                className="block text-sm font-medium text-gray-300 py-2">{l}</a>
+            ))}
             <div className="pt-2 flex flex-col gap-2">
-              <Link to="/login" className="text-center text-sm font-medium border border-gray-200 rounded-full py-2 text-gray-700">Sign in</Link>
-              <Link to="/register" className="text-center text-sm font-semibold bg-gray-900 text-white rounded-full py-2">Get started</Link>
+              <Link to="/login" className="text-center text-sm font-medium border border-white/20 rounded-lg py-2 text-gray-300">Login</Link>
+              <Link to="/register" className="text-center text-sm font-semibold text-white rounded-lg py-2"
+                style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Start Free Trial</Link>
             </div>
           </div>
         )}
       </header>
 
-      {/* ── Hero ── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center overflow-hidden px-6 pt-20 pb-16"
-        style={{ background: 'linear-gradient(160deg, #e8f8ef 0%, #f0faf4 40%, #e6f7f0 100%)' }}
-      >
-        {/* Subtle radial glow */}
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 30%, rgba(52,211,153,0.15) 0%, transparent 70%)' }}
-        />
-
-        <div className="relative max-w-4xl mx-auto">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/80 border border-gray-200 text-gray-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            India's #1 Real Estate CRM Platform
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4">
-            We build what makes
-            <br />
-            <span className="relative inline-block">
-              your brokerage win.
-              {/* Green underline — the Wibify signature */}
-              <svg className="absolute -bottom-2 left-0 w-full" height="6" viewBox="0 0 400 6" preserveAspectRatio="none">
-                <path d="M0 3 Q200 0 400 3" stroke="#10b981" strokeWidth="4" fill="none" strokeLinecap="round" />
-              </svg>
-            </span>
-          </h1>
-
-          {/* Sub */}
-          <p className="text-lg text-gray-500 max-w-xl mx-auto mt-6 mb-10 leading-relaxed">
-            Properties, clients, appointments, agreements, and marketing — all from one beautiful dashboard. Built for Indian real estate brokers.
-          </p>
-
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
-            >
-              <Zap className="w-4 h-4" /> Get free access
-            </Link>
-            <a
-              href="#features"
-              className="inline-flex items-center gap-2 bg-white/80 text-gray-700 font-semibold px-7 py-3.5 rounded-full border border-gray-200 hover:bg-white hover:border-gray-300 transition-all"
-            >
-              See features <ChevronRight className="w-4 h-4" />
-            </a>
-          </div>
-
-          <p className="mt-5 text-xs text-gray-400">No credit card required · 14-day free trial · Cancel anytime</p>
+      {/* ══ HERO ══════════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex items-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1600&q=80"
+            alt="City skyline" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(135deg,rgba(3,11,36,0.93) 0%,rgba(3,11,36,0.72) 50%,rgba(3,11,36,0.90) 100%)' }} />
+          <div className="absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse 60% 60% at 20% 50%,rgba(59,130,246,0.15) 0%,transparent 60%)' }} />
         </div>
 
-        {/* Trust logos strip */}
-        <div className="relative mt-20 w-full max-w-3xl mx-auto">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Trusted by brokers at</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-            {TRUST_LOGOS.map((logo) => (
-              <span key={logo} className="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors cursor-default">
-                {logo}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
 
-      {/* ── Stats ── */}
-      <section className="bg-white border-y border-gray-100">
-        <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {STATS.map((s) => (
-              <div key={s.label}>
-                <p className="text-4xl font-extrabold text-gray-900 tracking-tight">{s.value}</p>
-                <p className="text-sm text-gray-400 mt-1 font-medium">{s.label}</p>
+            {/* Left content */}
+            <div className="animate-fade-in-up">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 border border-blue-500/30"
+                style={{ background: 'rgba(59,130,246,0.12)', color: '#93C5FD' }}>
+                ✨ Built for Indian Real Estate Brokers
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ── */}
-      <section id="features" className="py-28 px-6" style={{ backgroundColor: '#f0faf4' }}>
-        <div className="max-w-6xl mx-auto">
-          {/* Section header */}
-          <div className="mb-16">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Features.</p>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight max-w-lg">
-                Everything a modern broker needs.
-              </h2>
-              <p className="text-gray-500 max-w-xs text-sm leading-relaxed">
-                From lead capture to deal closure — BrokerPro covers every step of your workflow.
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.08] tracking-tight mb-5">
+                <span className="text-white">Manage Your Entire<br />Real Estate Business</span>
+                <br />
+                <span className="bg-clip-text text-transparent"
+                  style={{ backgroundImage: 'linear-gradient(135deg,#60A5FA,#A78BFA,#818CF8)' }}>
+                  From One Place
+                </span>
+              </h1>
+              <p className="text-base text-gray-400 mb-8 max-w-lg leading-relaxed">
+                Track Properties, Leads, Site Visits, Broker Networks, Follow-Ups and Commissions without Excel or WhatsApp chaos.
               </p>
-            </div>
-          </div>
-
-          {/* Feature grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="group relative rounded-2xl p-6 border border-gray-100 bg-white transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-50 cursor-default"
-              >
-                <div className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full mb-4 bg-emerald-50 text-emerald-700">
-                  {f.tag}
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center mb-4">
-                  <f.icon className="w-5 h-5 text-gray-700" />
-                </div>
-                <h3 className="text-base font-bold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+              <div className="flex flex-wrap gap-3 mb-10">
+                <Link to="/register"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-lg hover:opacity-90 hover:-translate-y-0.5 transition-all"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 24px rgba(99,102,241,0.45)' }}>
+                  Start Free Trial <ArrowRight className="w-4 h-4" />
+                </Link>
+                <a href="#features"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
+                  <Play className="w-4 h-4" /> Book a Demo
+                </a>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ── How It Works ── */}
-      <section id="how-it-works" className="py-28 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-16">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Process.</p>
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
-              Up and running in minutes.
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {STEPS.map((s, i) => (
-              <div key={s.step} className="relative rounded-2xl border border-gray-100 bg-gray-50 p-8 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all duration-200">
-                <span className="text-6xl font-extrabold text-gray-100 leading-none block mb-4">{s.step}</span>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
-                {i < STEPS.length - 1 && (
-                  <div className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 items-center justify-center shadow-sm">
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+              {/* Stats row */}
+              <div ref={statsRef} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {STATS.map(s => (
+                  <div key={s.label}>
+                    <div className="text-lg font-extrabold text-white">
+                      {s.icon} <StatCounter value={s.value} suffix={s.suffix} started={statsInView} />
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">{s.label}</div>
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="mt-10 text-center">
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
-            >
-              Start free trial <ArrowRight className="w-4 h-4" />
-            </Link>
+            {/* Right — Dashboard mockup */}
+            <div className="relative hidden lg:block animate-float">
+              <div className="absolute -inset-4 rounded-3xl opacity-30 blur-2xl"
+                style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }} />
+              <div className="relative rounded-2xl border border-white/10 overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(24px)' }}>
+
+                {/* Dashboard top bar */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10"
+                  style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">Enfor</span>
+                    <span className="text-xs font-bold px-1 rounded"
+                      style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Data</span>
+                    <span className="ml-2 text-xs text-gray-400">Dashboard</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                  </div>
+                </div>
+
+                <div className="flex">
+                  {/* Sidebar */}
+                  <div className="w-32 border-r border-white/10 p-3 space-y-1"
+                    style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    {['Dashboard','Properties','Leads','Site Visits','Follow-Ups','Broker Network','Agreements','Commissions','Reports','Settings'].map((item, i) => (
+                      <div key={item}
+                        className="text-xs px-2 py-1.5 rounded cursor-default"
+                        style={i === 0
+                          ? { background: 'linear-gradient(135deg,rgba(59,130,246,0.3),rgba(139,92,246,0.3))', color: '#fff', fontWeight: 600 }
+                          : { color: '#6B7280' }}>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Main panel */}
+                  <div className="flex-1 p-4">
+                    <p className="text-sm font-bold text-white mb-3">Dashboard</p>
+
+                    {/* KPI cards */}
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {[
+                        { label: 'Total Leads',       value: '124', change: '+18 this week', urgent: false },
+                        { label: 'Total Properties',  value: '450', change: '+12 this month', urgent: false },
+                        { label: 'Site Visits',       value: '32',  change: '+5 this week',  urgent: false },
+                        { label: 'Follow-Ups Due',    value: '16',  change: 'Due today',     urgent: true  },
+                      ].map(c => (
+                        <div key={c.label} className="rounded-xl p-3 border border-white/10"
+                          style={{ background: 'rgba(255,255,255,0.05)' }}>
+                          <p className="text-xs text-gray-400 mb-1">{c.label}</p>
+                          <p className="text-xl font-extrabold text-white">{c.value}</p>
+                          <p className="text-xs mt-1" style={{ color: c.urgent ? '#F87171' : '#6EE7B7' }}>{c.change}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart + Hot Leads */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl p-3 border border-white/10"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-semibold text-white">Leads Overview</p>
+                          <span className="text-xs text-gray-500">This Month ▾</span>
+                        </div>
+                        <svg viewBox="0 0 200 60" className="w-full h-12">
+                          <defs>
+                            <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.6" />
+                              <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <path d="M0 50 C20 45 40 30 60 35 S100 20 120 25 S160 10 200 15 L200 60 L0 60Z"
+                            fill="url(#cg)" />
+                          <path d="M0 50 C20 45 40 30 60 35 S100 20 120 25 S160 10 200 15"
+                            fill="none" stroke="#8B5CF6" strokeWidth="2" />
+                        </svg>
+                      </div>
+
+                      <div className="rounded-xl p-3 border border-white/10"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-semibold text-white">Hot Leads</p>
+                          <span className="text-xs text-blue-400 cursor-pointer">View All</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {[
+                            { name: 'Rahul Sharma', tag: 'Hot',  color: '#EF4444' },
+                            { name: 'Priya Patel',  tag: 'Warm', color: '#F59E0B' },
+                            { name: 'Amit Verma',   tag: 'Hot',  color: '#EF4444' },
+                            { name: 'Neha Agarwal', tag: 'New',  color: '#10B981' },
+                          ].map(lead => (
+                            <div key={lead.name} className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-white"
+                                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', fontSize: '8px', fontWeight: 700 }}>
+                                  {lead.name[0]}
+                                </div>
+                                <span className="text-xs text-gray-300">{lead.name}</span>
+                              </div>
+                              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                                style={{ background: `${lead.color}22`, color: lead.color }}>
+                                {lead.tag}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section id="testimonials" className="py-28 px-6" style={{ backgroundColor: '#f0faf4' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-16">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Reviews.</p>
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
-              Loved by brokers across India.
+      {/* ══ FEATURES ══════════════════════════════════════════ */}
+      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8"
+        style={{ background: 'linear-gradient(180deg,#030B24 0%,#050F2E 100%)' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-blue-500/30"
+              style={{ background: 'rgba(59,130,246,0.1)', color: '#93C5FD' }}>
+              PLATFORM FEATURES
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Everything a Real Estate Broker Needs
             </h2>
           </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+            {FEATURES.map(f => (
+              <div key={f.title}
+                className="group rounded-2xl overflow-hidden border border-white/10 hover:border-blue-500/40 hover:-translate-y-2 transition-all duration-300 cursor-default"
+                style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)' }}>
+                <div className="relative h-36 overflow-hidden">
+                  <img src={f.img} alt={f.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0"
+                    style={{ background: 'linear-gradient(180deg,transparent 40%,rgba(3,11,36,0.9) 100%)' }} />
+                  <div className="absolute bottom-3 left-3 w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 16px rgba(99,102,241,0.5)' }}>
+                    <f.icon className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">{f.title}</h3>
+                  <ul className="space-y-1.5">
+                    {f.items.map(item => (
+                      <li key={item} className="flex items-start gap-2 text-xs text-gray-400">
+                        <CheckCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t, i) => (
-              <div
-                key={t.name}
-                className={`rounded-2xl p-7 border transition-all duration-200 hover:-translate-y-0.5 ${
-                  i === 1
-                    ? 'bg-gray-900 border-gray-900'
-                    : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-md'
-                }`}
-              >
-                <div className="flex gap-1 mb-5">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className={`w-4 h-4 fill-current ${i === 1 ? 'text-emerald-400' : 'text-amber-400'}`} />
+      {/* ══ BENEFITS ══════════════════════════════════════════ */}
+      <section className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+
+            {/* Left */}
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-5 border border-purple-500/30"
+                style={{ background: 'rgba(139,92,246,0.1)', color: '#C4B5FD' }}>
+                WHY CHOOSE US
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
+                Why Brokers Love{' '}
+                <span className="bg-clip-text text-transparent"
+                  style={{ backgroundImage: 'linear-gradient(135deg,#60A5FA,#A78BFA)' }}>
+                  EnforData
+                </span>
+              </h2>
+              <p className="text-sm text-gray-400 mb-10 leading-relaxed">
+                Built from the ground up for Indian real estate professionals — not a generic CRM.
+              </p>
+              <div className="space-y-4">
+                {BENEFITS.map((b, i) => (
+                  <div key={b.title}
+                    className="flex items-center gap-5 p-5 rounded-2xl border border-white/8 hover:border-blue-500/40 hover:-translate-y-0.5 transition-all duration-200 group cursor-default"
+                    style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <span className="text-2xl font-extrabold flex-shrink-0 w-8 text-right select-none"
+                      style={{ color: 'rgba(99,102,241,0.25)' }}>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
+                      style={{ background: 'linear-gradient(135deg,rgba(59,130,246,0.25),rgba(139,92,246,0.25))', border: '1px solid rgba(99,102,241,0.35)' }}>
+                      <b.icon className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white">{b.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{b.desc}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-blue-400 flex-shrink-0 transition-colors" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right — city image + floating cards, fully centered */}
+            <div className="flex items-center justify-center">
+              <div className="relative w-full">
+                {/* Glow */}
+                <div className="absolute -inset-3 rounded-3xl opacity-20 blur-2xl pointer-events-none"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }} />
+
+                {/* Image */}
+                <div className="relative rounded-2xl overflow-hidden w-full" style={{ height: '520px' }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=900&q=85"
+                    alt="City skyline at dusk"
+                    className="w-full h-full object-cover object-center"
+                  />
+                  <div className="absolute inset-0"
+                    style={{ background: 'linear-gradient(180deg,rgba(3,11,36,0.28) 0%,rgba(3,11,36,0.08) 45%,rgba(3,11,36,0.48) 100%)' }} />
+                </div>
+
+                {/* Card 1 — New Lead (top-left) */}
+                <div className="absolute top-6 left-6 rounded-2xl px-5 py-4 animate-float"
+                  style={{ ...glass, minWidth: '175px', boxShadow: '0 8px 32px rgba(59,130,246,0.25)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg,#3B82F6,#6366F1)' }}>
+                      <Users className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="text-xs font-bold text-white">New Lead</span>
+                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse ml-auto" />
+                  </div>
+                  <p className="text-sm font-semibold text-white">2 BHK Inquiry</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Just now · Andheri West</p>
+                </div>
+
+                {/* Card 2 — Site Visit (bottom-left) */}
+                <div className="absolute bottom-8 left-6 rounded-2xl px-5 py-4"
+                  style={{ ...glass, minWidth: '200px', boxShadow: '0 8px 32px rgba(245,158,11,0.2)',
+                    animation: 'float 4s ease-in-out 0.8s infinite' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg,#F59E0B,#EF4444)' }}>
+                      <Calendar className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Site Visit Scheduled</span>
+                  </div>
+                  <p className="text-sm font-semibold text-white">Rajesh Sharma</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Tomorrow · 11:00 AM</p>
+                </div>
+
+                {/* Card 3 — Commission (right, vertically centered) */}
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 rounded-2xl px-5 py-4"
+                  style={{ ...glass, minWidth: '185px', boxShadow: '0 8px 32px rgba(52,211,153,0.25)',
+                    animation: 'float 4s ease-in-out 1.2s infinite' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                      <DollarSign className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Commission Earned</span>
+                  </div>
+                  <p className="text-xl font-extrabold" style={{ color: '#34D399' }}>₹49,500</p>
+                  <p className="text-xs text-gray-400 mt-0.5">From Rajesh Sharma</p>
+                  <div className="mt-2 h-1 rounded-full overflow-hidden"
+                    style={{ background: 'rgba(52,211,153,0.15)' }}>
+                    <div className="h-full rounded-full"
+                      style={{ width: '72%', background: 'linear-gradient(90deg,#10B981,#34D399)' }} />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ══ TESTIMONIALS ══════════════════════════════════════ */}
+      <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8"
+        style={{ background: 'linear-gradient(180deg,#050F2E 0%,#030B24 100%)' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-blue-500/30"
+              style={{ background: 'rgba(59,130,246,0.1)', color: '#93C5FD' }}>
+              TESTIMONIALS
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Trusted by Real Estate Professionals
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map(t => (
+              <div key={t.name}
+                className="rounded-2xl p-6 border border-white/10 hover:border-blue-500/30 hover:-translate-y-1 transition-all duration-300"
+                style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(16px)' }}>
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <p className={`text-sm leading-relaxed mb-6 ${i === 1 ? 'text-gray-300' : 'text-gray-600'}`}>
-                  "{t.text}"
-                </p>
+                <p className="text-sm text-gray-300 leading-relaxed mb-6">{t.text}</p>
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
-                    i === 1 ? 'bg-white/10 text-white' : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    {t.avatar}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>
+                    {t.initials}
                   </div>
                   <div>
-                    <p className={`text-sm font-bold ${i === 1 ? 'text-white' : 'text-gray-900'}`}>{t.name}</p>
-                    <p className={`text-xs ${i === 1 ? 'text-gray-400' : 'text-gray-400'}`}>{t.role}</p>
+                    <p className="text-sm font-bold text-white">{t.name}</p>
+                    <p className="text-xs text-gray-400">{t.city}</p>
                   </div>
                 </div>
               </div>
@@ -391,123 +565,111 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Trust / Why ── */}
-      <section className="py-20 px-6 bg-white border-y border-gray-100">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid sm:grid-cols-3 gap-6">
-            {[
-              { icon: Shield, title: 'Bank-Grade Security', desc: 'All data encrypted at rest and in transit. 99.9% uptime SLA.', },
-              { icon: Zap, title: 'Blazing Fast', desc: 'Optimised for speed on any device — desktop, tablet, or mobile.', },
-              { icon: Globe, title: 'Works Everywhere', desc: 'Access your dashboard from anywhere, anytime, on any screen.', },
-            ].map((b) => (
-              <div key={b.title} className="flex gap-4 items-start p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
-                <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <b.icon className="w-5 h-5 text-gray-700" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-sm mb-1">{b.title}</h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">{b.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ══ FINAL CTA ══════════════════════════════════════════ */}
+      <section className="relative py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1600&q=80"
+            alt="Luxury apartment" className="w-full h-full object-cover" />
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(135deg,rgba(3,11,36,0.93) 0%,rgba(3,11,36,0.80) 100%)' }} />
+          <div className="absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 50%,rgba(99,102,241,0.15) 0%,transparent 70%)' }} />
         </div>
-      </section>
-
-      {/* ── CTA ── */}
-      <section className="py-28 px-6" style={{ background: 'linear-gradient(160deg, #e8f8ef 0%, #f0faf4 60%, #e6f7f0 100%)' }}>
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-4">Get started.</p>
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight mb-5">
-            Ready to grow your
-            <br />
-            <span className="relative inline-block">
-              brokerage?
-              <svg className="absolute -bottom-1 left-0 w-full" height="5" viewBox="0 0 200 5" preserveAspectRatio="none">
-                <path d="M0 2.5 Q100 0 200 2.5" stroke="#10b981" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-              </svg>
-            </span>
-          </h2>
-          <p className="text-gray-500 text-base mb-10 max-w-md mx-auto leading-relaxed">
-            Join 10,000+ brokers already using BrokerPro. Start your 14-day free trial — no credit card needed.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-8 py-3.5 rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
-            >
-              <Zap className="w-4 h-4" /> Start free trial
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 bg-white text-gray-700 font-semibold px-8 py-3.5 rounded-full border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
-            >
-              Sign in to dashboard
-            </Link>
+        <div className="relative max-w-3xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 border border-blue-500/30"
+            style={{ background: 'rgba(59,130,246,0.12)', color: '#93C5FD' }}>
+            GET STARTED TODAY
           </div>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-5 text-xs text-gray-400">
-            {['No credit card', '14-day free trial', 'Cancel anytime'].map((t) => (
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
+            Ready to Close More Deals?
+          </h2>
+          <p className="text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed">
+            Join thousands of brokers growing their business with EnforData.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/register"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg hover:opacity-90 hover:-translate-y-0.5 transition-all"
+              style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 28px rgba(99,102,241,0.5)' }}>
+              Start Free Trial <ArrowRight className="w-4 h-4" />
+            </Link>
+            <a href="#"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
+              <Play className="w-4 h-4" /> Book a Demo
+            </a>
+            <a href="#"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
+              <Phone className="w-4 h-4" /> Talk to Sales
+            </a>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-gray-500">
+            {['No credit card required', '14-day free trial', 'Cancel anytime'].map(t => (
               <span key={t} className="flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> {t}
+                <CheckCircle className="w-3.5 h-3.5 text-blue-400" /> {t}
               </span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="bg-gray-900 text-gray-400 py-14 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-md bg-white/10 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-base font-bold text-white tracking-tight">BrokerPro</span>
+      {/* ══ FOOTER ════════════════════════════════════════════ */}
+      <footer className="border-t border-white/8 py-14 px-4 sm:px-6 lg:px-8"
+        style={{ backgroundColor: '#020918' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
+            <div className="lg:col-span-2">
+              <div className="flex items-center gap-1 mb-4">
+                <span className="text-xl font-extrabold text-white">Enfor</span>
+                <span className="text-xl font-extrabold px-1.5 py-0.5 rounded"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Data</span>
               </div>
-              <p className="text-sm leading-relaxed text-gray-500">
-                The all-in-one CRM platform built for real estate professionals in India.
+              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
+                The all-in-one CRM platform built specifically for Indian real estate brokers, property consultants, and channel partners.
               </p>
-            </div>
-            <div>
-              <p className="text-white font-semibold mb-4 text-sm">Product</p>
-              <ul className="space-y-2.5 text-sm">
-                {['Features', 'Pricing', 'Changelog', 'Roadmap'].map((l) => (
-                  <li key={l}><a href="#" className="text-gray-500 hover:text-white transition-colors">{l}</a></li>
+              <div className="flex gap-3 mt-5">
+                {['T', 'L', 'I'].map(s => (
+                  <a key={s} href="#"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/30 transition-all">
+                    {s}
+                  </a>
                 ))}
-              </ul>
+              </div>
             </div>
-            <div>
-              <p className="text-white font-semibold mb-4 text-sm">Company</p>
-              <ul className="space-y-2.5 text-sm">
-                {['About Us', 'Blog', 'Careers', 'Privacy Policy'].map((l) => (
-                  <li key={l}><a href="#" className="text-gray-500 hover:text-white transition-colors">{l}</a></li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-white font-semibold mb-4 text-sm">Contact</p>
-              <ul className="space-y-2.5 text-sm">
-                <li className="flex items-center gap-2 text-gray-500"><Mail className="w-4 h-4 text-emerald-500" /> support@brokerpro.in</li>
-                <li className="flex items-center gap-2 text-gray-500"><Phone className="w-4 h-4 text-emerald-500" /> +91 98765 43210</li>
-                <li className="flex items-center gap-2 text-gray-500"><MapPin className="w-4 h-4 text-emerald-500" /> Mumbai, India</li>
-              </ul>
-            </div>
+            {[
+              { title: 'Product', links: ['Features', 'Pricing', 'Changelog', 'Roadmap'] },
+              { title: 'Company', links: ['About Us', 'Blog', 'Careers', 'Press'] },
+              { title: 'Support', links: ['Help Center', 'Contact', 'Privacy Policy', 'Terms'] },
+            ].map(col => (
+              <div key={col.title}>
+                <p className="text-white font-semibold mb-4 text-sm">{col.title}</p>
+                <ul className="space-y-2.5">
+                  {col.links.map(l => (
+                    <li key={l}>
+                      <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-            <p>© {new Date().getFullYear()} BrokerPro. All rights reserved.</p>
-            <div className="flex gap-5">
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Cookies</a>
+          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-gray-600">© {new Date().getFullYear()} EnforData. All rights reserved.</p>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+              <span className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-blue-500" /> support@enfordata.in
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-blue-500" /> +91 98765 43210
+              </span>
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-blue-500" /> Mumbai, India
+              </span>
             </div>
           </div>
         </div>
       </footer>
+
     </div>
   );
 };
 
 export default LandingPage;
-
