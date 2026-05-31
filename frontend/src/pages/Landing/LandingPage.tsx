@@ -14,14 +14,14 @@ import {
   Phone,
   Mail,
   MapPin,
-  ChevronDown,
   BarChart3,
   Shield,
   Zap,
   Globe,
+  ChevronRight,
 } from 'lucide-react';
 
-/* ─── Helpers ─────────────────────────────────────────────── */
+/* ─── Data ────────────────────────────────────────────────── */
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
@@ -34,43 +34,37 @@ const FEATURES = [
     icon: Building2,
     title: 'Property Management',
     desc: 'List, track, and manage all your properties in one place. Filter by status, location, and price with ease.',
-    color: 'bg-rose-100 text-rose-500',
-    hover: 'hover:border-rose-200 hover:shadow-rose-50',
+    tag: 'Core',
   },
   {
     icon: Users,
     title: 'Client CRM',
     desc: 'Maintain rich client profiles, track requirements, and never miss a follow-up with smart reminders.',
-    color: 'bg-teal-100 text-teal-600',
-    hover: 'hover:border-teal-200 hover:shadow-teal-50',
+    tag: 'CRM',
   },
   {
     icon: Calendar,
     title: 'Appointment Scheduling',
     desc: 'Book site visits, sync calendars, and send automated reminders to clients and your team.',
-    color: 'bg-orange-100 text-orange-500',
-    hover: 'hover:border-orange-200 hover:shadow-orange-50',
+    tag: 'Scheduling',
   },
   {
     icon: FileText,
     title: 'Agreement Builder',
     desc: 'Generate professional agreements in seconds. Store, share, and e-sign documents digitally.',
-    color: 'bg-amber-100 text-amber-600',
-    hover: 'hover:border-amber-200 hover:shadow-amber-50',
+    tag: 'Legal',
   },
   {
     icon: MessageSquare,
     title: 'WhatsApp & SMS Marketing',
     desc: 'Reach clients instantly with bulk WhatsApp messages and targeted SMS campaigns.',
-    color: 'bg-pink-100 text-pink-500',
-    hover: 'hover:border-pink-200 hover:shadow-pink-50',
+    tag: 'Marketing',
   },
   {
     icon: BarChart3,
     title: 'Analytics & Reports',
     desc: 'Get real-time insights on leads, conversions, revenue, and team performance.',
-    color: 'bg-teal-100 text-teal-600',
-    hover: 'hover:border-teal-200 hover:shadow-teal-50',
+    tag: 'Insights',
   },
 ];
 
@@ -87,15 +81,13 @@ const TESTIMONIALS = [
     avatar: 'RS',
     rating: 5,
     text: 'BrokerPro transformed how I manage my 200+ clients. The WhatsApp marketing alone doubled my response rate.',
-    avatarBg: 'from-rose-400 to-pink-500',
   },
   {
     name: 'Priya Mehta',
-    role: 'Real Estate Agency Owner, Pune',
+    role: 'Agency Owner, Pune',
     rating: 5,
     avatar: 'PM',
     text: 'The agreement builder saves me hours every week. My clients love the professional documents it generates.',
-    avatarBg: 'from-teal-400 to-teal-600',
   },
   {
     name: 'Arjun Patel',
@@ -103,16 +95,17 @@ const TESTIMONIALS = [
     rating: 5,
     avatar: 'AP',
     text: 'Finally a CRM built for Indian real estate. The SMS campaigns and appointment reminders are game-changers.',
-    avatarBg: 'from-orange-400 to-amber-500',
   },
 ];
 
 const STATS = [
   { value: '10,000+', label: 'Active Brokers' },
   { value: '5 Lakh+', label: 'Properties Listed' },
-  { value: '98%', label: 'Customer Satisfaction' },
-  { value: '3x', label: 'Average Revenue Growth' },
+  { value: '98%', label: 'Satisfaction Rate' },
+  { value: '3x', label: 'Revenue Growth' },
 ];
+
+const TRUST_LOGOS = ['HDFC Realty', 'NoBroker', 'MagicBricks', 'PropTiger', '99acres', 'Square Yards'];
 
 /* ─── Component ───────────────────────────────────────────── */
 const LandingPage: React.FC = () => {
@@ -120,60 +113,59 @@ const LandingPage: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
-    <div className="min-h-screen font-sans antialiased">
+    <div className="min-h-screen font-sans antialiased" style={{ backgroundColor: '#f0faf4' }}>
 
       {/* ── Navbar ── */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent'
+          scrolled ? 'bg-white/90 backdrop-blur-lg shadow-sm border-b border-gray-100' : 'bg-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center shadow-md shadow-rose-200">
+              <div className="w-7 h-7 rounded-md bg-gray-900 flex items-center justify-center">
                 <Building2 className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-800">Broker<span className="text-rose-500">Pro</span></span>
+              <span className="text-lg font-bold text-gray-900 tracking-tight">BrokerPro</span>
             </div>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-8">
+            <nav className="hidden md:flex items-center gap-7">
               {NAV_LINKS.map((l) =>
                 l.href.startsWith('#') ? (
-                  <a key={l.label} href={l.href} className="text-sm font-medium text-slate-600 hover:text-rose-500 transition-colors">
+                  <a key={l.label} href={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
                     {l.label}
                   </a>
                 ) : (
-                  <Link key={l.label} to={l.href} className="text-sm font-medium text-slate-600 hover:text-rose-500 transition-colors">
+                  <Link key={l.label} to={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
                     {l.label}
                   </Link>
                 )
               )}
             </nav>
 
-            {/* CTA Buttons */}
+            {/* CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-rose-500 transition-colors px-4 py-2">
-                Sign In
+              <Link to="/login" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+                Sign in
               </Link>
               <Link
                 to="/register"
-                className="text-sm font-semibold bg-gradient-to-r from-rose-500 to-pink-500 text-white px-5 py-2 rounded-full shadow-md shadow-rose-200 hover:shadow-lg hover:shadow-rose-300 hover:-translate-y-0.5 transition-all duration-200"
+                className="text-sm font-semibold bg-gray-900 text-white px-5 py-2 rounded-full hover:bg-gray-800 transition-colors"
               >
-                Start Free Trial
+                Get started
               </Link>
             </div>
 
-            {/* Mobile Menu Toggle */}
-            <button className="md:hidden p-2 text-slate-600" onClick={() => setMenuOpen(!menuOpen)}>
+            <button className="md:hidden p-2 text-gray-600" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
@@ -181,121 +173,100 @@ const LandingPage: React.FC = () => {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="md:hidden bg-white border-t border-rose-50 px-4 py-4 space-y-3 shadow-lg">
+          <div className="md:hidden bg-white border-t border-gray-100 px-6 py-5 space-y-4 shadow-lg">
             {NAV_LINKS.map((l) =>
               l.href.startsWith('#') ? (
-                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-slate-600 py-2 hover:text-rose-500">
+                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-1">
                   {l.label}
                 </a>
               ) : (
-                <Link key={l.label} to={l.href} onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-slate-600 py-2 hover:text-rose-500">
+                <Link key={l.label} to={l.href} onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-1">
                   {l.label}
                 </Link>
               )
             )}
             <div className="pt-2 flex flex-col gap-2">
-              <Link to="/login" className="text-center text-sm font-medium border border-slate-200 rounded-full py-2 text-slate-700">Sign In</Link>
-              <Link to="/register" className="text-center text-sm font-semibold bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full py-2">Start Free Trial</Link>
+              <Link to="/login" className="text-center text-sm font-medium border border-gray-200 rounded-full py-2 text-gray-700">Sign in</Link>
+              <Link to="/register" className="text-center text-sm font-semibold bg-gray-900 text-white rounded-full py-2">Get started</Link>
             </div>
           </div>
         )}
       </header>
 
       {/* ── Hero ── */}
-      <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-rose-50 via-pink-50 to-orange-50">
-        {/* Decorative blobs */}
-        <div className="absolute top-20 right-0 w-96 h-96 bg-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse" />
-        <div className="absolute bottom-20 left-0 w-80 h-80 bg-teal-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
+      <section className="relative min-h-screen flex flex-col items-center justify-center text-center overflow-hidden px-6 pt-20 pb-16"
+        style={{ background: 'linear-gradient(160deg, #e8f8ef 0%, #f0faf4 40%, #e6f7f0 100%)' }}
+      >
+        {/* Subtle radial glow */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 30%, rgba(52,211,153,0.15) 0%, transparent 70%)' }}
+        />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left */}
-            <div className="text-center lg:text-left animate-fade-in-up">
-              <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 border border-rose-200">
-                <Zap className="w-3.5 h-3.5" />
-                India's #1 Real Estate CRM
-              </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
-                Close More Deals,{' '}
-                <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-400 bg-clip-text text-transparent">
-                  Stress Less
-                </span>
-              </h1>
-              <p className="text-lg text-slate-500 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                BrokerPro is the all-in-one CRM built for real estate brokers. Manage properties, clients, appointments, agreements, and marketing — all from one beautiful dashboard.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold px-8 py-3.5 rounded-full shadow-lg shadow-rose-200 hover:shadow-xl hover:shadow-rose-300 hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  Get Started Free <ArrowRight className="w-4 h-4" />
-                </Link>
-                <a
-                  href="#features"
-                  className="inline-flex items-center justify-center gap-2 bg-white text-slate-700 font-semibold px-8 py-3.5 rounded-full border border-slate-200 hover:border-rose-300 hover:text-rose-500 transition-all duration-200"
-                >
-                  See Features <ChevronDown className="w-4 h-4" />
-                </a>
-              </div>
-              <p className="mt-4 text-xs text-slate-400">No credit card required · 14-day free trial · Cancel anytime</p>
-            </div>
+        <div className="relative max-w-4xl mx-auto">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-white/80 border border-gray-200 text-gray-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            India's #1 Real Estate CRM Platform
+          </div>
 
-            {/* Right — Dashboard Preview Card */}
-            <div className="relative hidden lg:block animate-fade-in">
-              <div className="relative bg-white rounded-2xl shadow-2xl shadow-rose-100 p-6 border border-rose-50 animate-float">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="text-xs text-slate-400 font-medium">Good morning,</p>
-                    <p className="text-base font-bold text-slate-800">Rahul Sharma 👋</p>
-                  </div>
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-rose-200">RS</div>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-5">
-                  {[
-                    { label: 'Properties', value: '48', color: 'bg-rose-50 text-rose-500' },
-                    { label: 'Clients', value: '124', color: 'bg-teal-50 text-teal-600' },
-                    { label: 'Deals', value: '12', color: 'bg-amber-50 text-amber-600' },
-                  ].map((s) => (
-                    <div key={s.label} className={`${s.color} rounded-xl p-3 text-center`}>
-                      <p className="text-xl font-bold">{s.value}</p>
-                      <p className="text-xs font-medium opacity-70">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Recent Activity</p>
-                <div className="space-y-2.5">
-                  {[
-                    { icon: '🏠', text: 'New property listed in Bandra', time: '2m ago' },
-                    { icon: '👤', text: 'Client Priya added to pipeline', time: '15m ago' },
-                    { icon: '📅', text: 'Site visit scheduled for tomorrow', time: '1h ago' },
-                    { icon: '✅', text: 'Agreement signed by Arjun Patel', time: '3h ago' },
-                  ].map((a, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rose-50 transition-colors">
-                      <span className="text-base">{a.icon}</span>
-                      <p className="text-xs text-slate-600 flex-1">{a.text}</p>
-                      <span className="text-xs text-slate-400 whitespace-nowrap">{a.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="absolute -top-4 -right-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg shadow-teal-200">
-                +32% this month 🚀
-              </div>
-            </div>
+          {/* Headline */}
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4">
+            We build what makes
+            <br />
+            <span className="relative inline-block">
+              your brokerage win.
+              {/* Green underline — the Wibify signature */}
+              <svg className="absolute -bottom-2 left-0 w-full" height="6" viewBox="0 0 400 6" preserveAspectRatio="none">
+                <path d="M0 3 Q200 0 400 3" stroke="#10b981" strokeWidth="4" fill="none" strokeLinecap="round" />
+              </svg>
+            </span>
+          </h1>
+
+          {/* Sub */}
+          <p className="text-lg text-gray-500 max-w-xl mx-auto mt-6 mb-10 leading-relaxed">
+            Properties, clients, appointments, agreements, and marketing — all from one beautiful dashboard. Built for Indian real estate brokers.
+          </p>
+
+          {/* CTA */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
+            >
+              <Zap className="w-4 h-4" /> Get free access
+            </Link>
+            <a
+              href="#features"
+              className="inline-flex items-center gap-2 bg-white/80 text-gray-700 font-semibold px-7 py-3.5 rounded-full border border-gray-200 hover:bg-white hover:border-gray-300 transition-all"
+            >
+              See features <ChevronRight className="w-4 h-4" />
+            </a>
+          </div>
+
+          <p className="mt-5 text-xs text-gray-400">No credit card required · 14-day free trial · Cancel anytime</p>
+        </div>
+
+        {/* Trust logos strip */}
+        <div className="relative mt-20 w-full max-w-3xl mx-auto">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Trusted by brokers at</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            {TRUST_LOGOS.map((logo) => (
+              <span key={logo} className="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors cursor-default">
+                {logo}
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── Stats Bar ── */}
-      <section className="bg-white border-y border-rose-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* ── Stats ── */}
+      <section className="bg-white border-y border-gray-100">
+        <div className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {STATS.map((s) => (
-              <div key={s.label} className="animate-scale-in">
-                <p className="text-3xl font-extrabold bg-gradient-to-r from-rose-500 to-orange-400 bg-clip-text text-transparent">{s.value}</p>
-                <p className="text-sm text-slate-500 mt-1 font-medium">{s.label}</p>
+              <div key={s.label}>
+                <p className="text-4xl font-extrabold text-gray-900 tracking-tight">{s.value}</p>
+                <p className="text-sm text-gray-400 mt-1 font-medium">{s.label}</p>
               </div>
             ))}
           </div>
@@ -303,28 +274,36 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="py-24 bg-gradient-to-b from-white to-rose-50/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="inline-block bg-rose-100 text-rose-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-rose-200">Everything You Need</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">
-              Powerful Features for Modern Brokers
-            </h2>
-            <p className="text-slate-500 max-w-xl mx-auto text-lg">
-              From lead capture to deal closure — BrokerPro covers every step of your real estate workflow.
-            </p>
+      <section id="features" className="py-28 px-6" style={{ backgroundColor: '#f0faf4' }}>
+        <div className="max-w-6xl mx-auto">
+          {/* Section header */}
+          <div className="mb-16">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Features.</p>
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+              <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight max-w-lg">
+                Everything a modern broker needs.
+              </h2>
+              <p className="text-gray-500 max-w-xs text-sm leading-relaxed">
+                From lead capture to deal closure — BrokerPro covers every step of your workflow.
+              </p>
+            </div>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {/* Feature grid */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className={`bg-white rounded-2xl p-6 border border-slate-100 ${f.hover} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group`}
+                className="group relative rounded-2xl p-6 border border-gray-100 bg-white transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-50 cursor-default"
               >
-                <div className={`w-12 h-12 rounded-xl ${f.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
-                  <f.icon className="w-6 h-6" />
+                <div className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full mb-4 bg-emerald-50 text-emerald-700">
+                  {f.tag}
                 </div>
-                <h3 className="text-base font-bold text-slate-800 mb-2">{f.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
+                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center mb-4">
+                  <f.icon className="w-5 h-5 text-gray-700" />
+                </div>
+                <h3 className="text-base font-bold text-gray-900 mb-2">{f.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -332,66 +311,78 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ── How It Works ── */}
-      <section id="how-it-works" className="py-24 relative overflow-hidden bg-gradient-to-br from-teal-500 to-teal-700">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-48 h-48 bg-white rounded-full blur-3xl" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="inline-block bg-white/20 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-white/30">Simple Onboarding</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Get Up & Running in Minutes</h2>
-            <p className="text-teal-100 max-w-xl mx-auto text-lg">Three simple steps to transform your brokerage business.</p>
+      <section id="how-it-works" className="py-28 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-16">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Process.</p>
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
+              Up and running in minutes.
+            </h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+
+          <div className="grid md:grid-cols-3 gap-6">
             {STEPS.map((s, i) => (
-              <div key={s.step} className="relative text-center">
+              <div key={s.step} className="relative rounded-2xl border border-gray-100 bg-gray-50 p-8 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all duration-200">
+                <span className="text-6xl font-extrabold text-gray-100 leading-none block mb-4">{s.step}</span>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
                 {i < STEPS.length - 1 && (
-                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px border-t-2 border-dashed border-white/30" />
+                  <div className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 items-center justify-center shadow-sm">
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                  </div>
                 )}
-                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center mx-auto mb-5 shadow-lg">
-                  <span className="text-2xl font-extrabold text-white">{s.step}</span>
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">{s.title}</h3>
-                <p className="text-teal-100 text-sm leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
-          <div className="text-center mt-12">
+
+          <div className="mt-10 text-center">
             <Link
               to="/register"
-              className="inline-flex items-center gap-2 bg-white text-teal-700 font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
             >
-              Start Your Free Trial <ArrowRight className="w-4 h-4" />
+              Start free trial <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* ── Testimonials ── */}
-      <section id="testimonials" className="py-24 bg-gradient-to-b from-orange-50/50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="inline-block bg-amber-100 text-amber-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-amber-200">Loved by Brokers</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">What Our Users Say</h2>
-            <p className="text-slate-500 max-w-xl mx-auto text-lg">Join thousands of brokers who've grown their business with BrokerPro.</p>
+      <section id="testimonials" className="py-28 px-6" style={{ backgroundColor: '#f0faf4' }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-16">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">Reviews.</p>
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
+              Loved by brokers across India.
+            </h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl p-6 border border-orange-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+
+          <div className="grid md:grid-cols-3 gap-5">
+            {TESTIMONIALS.map((t, i) => (
+              <div
+                key={t.name}
+                className={`rounded-2xl p-7 border transition-all duration-200 hover:-translate-y-0.5 ${
+                  i === 1
+                    ? 'bg-gray-900 border-gray-900'
+                    : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-md'
+                }`}
+              >
+                <div className="flex gap-1 mb-5">
+                  {Array.from({ length: t.rating }).map((_, j) => (
+                    <Star key={j} className={`w-4 h-4 fill-current ${i === 1 ? 'text-emerald-400' : 'text-amber-400'}`} />
                   ))}
                 </div>
-                <p className="text-slate-600 text-sm leading-relaxed mb-5">"{t.text}"</p>
+                <p className={`text-sm leading-relaxed mb-6 ${i === 1 ? 'text-gray-300' : 'text-gray-600'}`}>
+                  "{t.text}"
+                </p>
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.avatarBg} flex items-center justify-center text-white text-xs font-bold shadow-md`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
+                    i === 1 ? 'bg-white/10 text-white' : 'bg-emerald-100 text-emerald-700'
+                  }`}>
                     {t.avatar}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-800">{t.name}</p>
-                    <p className="text-xs text-slate-400">{t.role}</p>
+                    <p className={`text-sm font-bold ${i === 1 ? 'text-white' : 'text-gray-900'}`}>{t.name}</p>
+                    <p className={`text-xs ${i === 1 ? 'text-gray-400' : 'text-gray-400'}`}>{t.role}</p>
                   </div>
                 </div>
               </div>
@@ -400,57 +391,64 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Trust Badges ── */}
-      <section className="py-16 bg-white border-y border-rose-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-3 gap-8 text-center">
+      {/* ── Trust / Why ── */}
+      <section className="py-20 px-6 bg-white border-y border-gray-100">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid sm:grid-cols-3 gap-6">
             {[
-              { icon: Shield, title: 'Bank-Grade Security', desc: 'Your data is encrypted and stored securely with 99.9% uptime guarantee.', color: 'text-teal-600 bg-teal-100' },
-              { icon: Zap, title: 'Lightning Fast', desc: 'Optimized for speed so you can work without interruptions on any device.', color: 'text-amber-600 bg-amber-100' },
-              { icon: Globe, title: 'Works Everywhere', desc: 'Access BrokerPro from desktop, tablet, or mobile — anytime, anywhere.', color: 'text-rose-500 bg-rose-100' },
+              { icon: Shield, title: 'Bank-Grade Security', desc: 'All data encrypted at rest and in transit. 99.9% uptime SLA.', },
+              { icon: Zap, title: 'Blazing Fast', desc: 'Optimised for speed on any device — desktop, tablet, or mobile.', },
+              { icon: Globe, title: 'Works Everywhere', desc: 'Access your dashboard from anywhere, anytime, on any screen.', },
             ].map((b) => (
-              <div key={b.title} className="flex flex-col items-center p-6 rounded-2xl hover:bg-rose-50/50 transition-colors">
-                <div className={`w-12 h-12 rounded-xl ${b.color} flex items-center justify-center mb-4`}>
-                  <b.icon className="w-6 h-6" />
+              <div key={b.title} className="flex gap-4 items-start p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <b.icon className="w-5 h-5 text-gray-700" />
                 </div>
-                <h3 className="font-bold text-slate-800 mb-1">{b.title}</h3>
-                <p className="text-sm text-slate-500">{b.desc}</p>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">{b.title}</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">{b.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA Banner ── */}
-      <section className="py-24 bg-gradient-to-br from-rose-50 via-pink-50 to-orange-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-white text-rose-500 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 border border-rose-200 shadow-sm">
-            <Zap className="w-3.5 h-3.5" /> Limited Time — Free 14-Day Trial
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">
-            Ready to Grow Your Brokerage?
+      {/* ── CTA ── */}
+      <section className="py-28 px-6" style={{ background: 'linear-gradient(160deg, #e8f8ef 0%, #f0faf4 60%, #e6f7f0 100%)' }}>
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-4">Get started.</p>
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight mb-5">
+            Ready to grow your
+            <br />
+            <span className="relative inline-block">
+              brokerage?
+              <svg className="absolute -bottom-1 left-0 w-full" height="5" viewBox="0 0 200 5" preserveAspectRatio="none">
+                <path d="M0 2.5 Q100 0 200 2.5" stroke="#10b981" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+              </svg>
+            </span>
           </h2>
-          <p className="text-slate-500 text-lg mb-8">
-            Join 10,000+ brokers already using BrokerPro. Start your 14-day free trial today — no credit card needed.
+          <p className="text-gray-500 text-base mb-10 max-w-md mx-auto leading-relaxed">
+            Join 10,000+ brokers already using BrokerPro. Start your 14-day free trial — no credit card needed.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               to="/register"
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold px-8 py-3.5 rounded-full shadow-lg shadow-rose-200 hover:shadow-xl hover:shadow-rose-300 hover:-translate-y-0.5 transition-all duration-200"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-8 py-3.5 rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
             >
-              Start Free Trial <ArrowRight className="w-4 h-4" />
+              <Zap className="w-4 h-4" /> Start free trial
             </Link>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 bg-white text-slate-700 font-semibold px-8 py-3.5 rounded-full border border-slate-200 hover:border-rose-300 hover:text-rose-500 transition-all duration-200"
+              className="inline-flex items-center gap-2 bg-white text-gray-700 font-semibold px-8 py-3.5 rounded-full border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
             >
-              Sign In to Dashboard
+              Sign in to dashboard
             </Link>
           </div>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm text-slate-400">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-5 text-xs text-gray-400">
             {['No credit card', '14-day free trial', 'Cancel anytime'].map((t) => (
               <span key={t} className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-teal-500" /> {t}
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> {t}
               </span>
             ))}
           </div>
@@ -458,49 +456,51 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-slate-900 text-slate-400 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+      <footer className="bg-gray-900 text-gray-400 py-14 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-md bg-white/10 flex items-center justify-center">
                   <Building2 className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-lg font-bold text-white">Broker<span className="text-rose-400">Pro</span></span>
+                <span className="text-base font-bold text-white tracking-tight">BrokerPro</span>
               </div>
-              <p className="text-sm leading-relaxed">The all-in-one CRM platform built for real estate professionals in India.</p>
+              <p className="text-sm leading-relaxed text-gray-500">
+                The all-in-one CRM platform built for real estate professionals in India.
+              </p>
             </div>
             <div>
               <p className="text-white font-semibold mb-4 text-sm">Product</p>
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-2.5 text-sm">
                 {['Features', 'Pricing', 'Changelog', 'Roadmap'].map((l) => (
-                  <li key={l}><a href="#" className="hover:text-rose-400 transition-colors">{l}</a></li>
+                  <li key={l}><a href="#" className="text-gray-500 hover:text-white transition-colors">{l}</a></li>
                 ))}
               </ul>
             </div>
             <div>
               <p className="text-white font-semibold mb-4 text-sm">Company</p>
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-2.5 text-sm">
                 {['About Us', 'Blog', 'Careers', 'Privacy Policy'].map((l) => (
-                  <li key={l}><a href="#" className="hover:text-rose-400 transition-colors">{l}</a></li>
+                  <li key={l}><a href="#" className="text-gray-500 hover:text-white transition-colors">{l}</a></li>
                 ))}
               </ul>
             </div>
             <div>
               <p className="text-white font-semibold mb-4 text-sm">Contact</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2"><Mail className="w-4 h-4 text-rose-400" /> support@brokerpro.in</li>
-                <li className="flex items-center gap-2"><Phone className="w-4 h-4 text-rose-400" /> +91 98765 43210</li>
-                <li className="flex items-center gap-2"><MapPin className="w-4 h-4 text-rose-400" /> Mumbai, India</li>
+              <ul className="space-y-2.5 text-sm">
+                <li className="flex items-center gap-2 text-gray-500"><Mail className="w-4 h-4 text-emerald-500" /> support@brokerpro.in</li>
+                <li className="flex items-center gap-2 text-gray-500"><Phone className="w-4 h-4 text-emerald-500" /> +91 98765 43210</li>
+                <li className="flex items-center gap-2 text-gray-500"><MapPin className="w-4 h-4 text-emerald-500" /> Mumbai, India</li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
             <p>© {new Date().getFullYear()} BrokerPro. All rights reserved.</p>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-rose-400 transition-colors">Terms</a>
-              <a href="#" className="hover:text-rose-400 transition-colors">Privacy</a>
-              <a href="#" className="hover:text-rose-400 transition-colors">Cookies</a>
+            <div className="flex gap-5">
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <a href="#" className="hover:text-white transition-colors">Privacy</a>
+              <a href="#" className="hover:text-white transition-colors">Cookies</a>
             </div>
           </div>
         </div>
@@ -510,3 +510,4 @@ const LandingPage: React.FC = () => {
 };
 
 export default LandingPage;
+
