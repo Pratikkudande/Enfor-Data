@@ -298,7 +298,9 @@ const PropertiesView: React.FC = () => {
       (filterOwner === 'mine' && property.broker_id === currentUserId) ||
       (filterOwner === 'others' && property.broker_id !== currentUserId);
     const matchesListingType = filterListingType === 'all' || property.listing_type === filterListingType;
-    return matchesSearch && matchesStatus && matchesType && matchesOwner && matchesListingType;
+    // Hide sold properties in 'All' and 'Others'' views; brokers can still see their own sold properties in 'Mine'
+    const matchesSoldRule = filterOwner === 'mine' || property.status !== 'sold';
+    return matchesSearch && matchesStatus && matchesType && matchesOwner && matchesListingType && matchesSoldRule;
   });
 
   const myCount = properties.filter((p) => p.broker_id === currentUserId).length;

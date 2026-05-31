@@ -35,6 +35,12 @@ export const networkApi = {
     apiClient.request<ApiResponse<ConnectionRequest[]>>(`${BASE}/requests/sent`),
 
   // Messaging
+  ensureConversation: (peerId: string) =>
+    apiClient.request<ApiResponse<Conversation>>(`${BASE}/conversations/ensure`, {
+      method: 'POST',
+      body: JSON.stringify({ peer_id: peerId }),
+    }),
+
   getConversations: () =>
     apiClient.request<ApiResponse<Conversation[]>>(`${BASE}/conversations`),
 

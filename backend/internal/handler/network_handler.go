@@ -118,6 +118,24 @@ func (h *NetworkHandler) GetAllBrokers(c *gin.Context) {
 
 // ── Messaging endpoints ───────────────────────────────────────────────────────
 
+// POST /api/network/conversations/ensure  — get or create the conversation with a connected peer
+func (h *NetworkHandler) EnsureConversation(c *gin.Context) {
+	userID := c.GetString("user_id")
+	var body struct {
+		PeerID string `json:"peer_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "peer_id required"})
+		return
+	}
+	conv, err := h.svc.EnsureConversation(userID, body.PeerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "ok", Data: conv})
+}
+
 // GET /api/network/conversations
 func (h *NetworkHandler) GetConversations(c *gin.Context) {
 	userID := c.GetString("user_id")
@@ -216,13 +234,13 @@ func (h *NetworkHandler) WebSocketHandler(c *gin.Context) {
 			})
 
 		case "typing":
-			// Broadcast typing indicator to the other participant
-			h.hub.BroadcastToConversation(msg.ConversationID, ws.OutboundMsg{
+			// Broadcast typing indicator to the other participant (never back to sender)
+			h.hub.BroadcastToConversationExcept(msg.ConversationID, ws.OutboundMsg{
 				Type:           "typing",
 				ConversationID: msg.ConversationID,
 				Payload:        map[string]string{"user_id": userID},
 				Timestamp:      time.Now(),
-			})
+			}, userID)
 
 		case "read":
 			_ = h.svc.MarkRead(msg.ConversationID, userID)

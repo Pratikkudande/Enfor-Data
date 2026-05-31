@@ -78,10 +78,10 @@ func (c *Client) ReadPump(onMessage func(c *Client, msg InboundMsg)) {
 		c.hub.unregister(c)
 		c.conn.Close()
 	}()
-	c.conn.SetReadLimit(4096)
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetReadLimit(65536)
+	c.conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 		return nil
 	})
 
@@ -104,7 +104,7 @@ func (c *Client) ReadPump(onMessage func(c *Client, msg InboundMsg)) {
 
 // WritePump pumps messages from the hub to the WebSocket.
 func (c *Client) WritePump() {
-	ticker := time.NewTicker(54 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
@@ -205,6 +205,22 @@ func (h *Hub) BroadcastToConversation(convID string, msg OutboundMsg) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.rooms[convID] {
+		select {
+		case c.send <- b:
+		default:
+		}
+	}
+}
+
+// BroadcastToConversationExcept sends to all room members except one user (e.g. exclude sender for typing events).
+func (h *Hub) BroadcastToConversationExcept(convID string, msg OutboundMsg, excludeUserID string) {
+	b, _ := json.Marshal(msg)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.rooms[convID] {
+		if c.UserID == excludeUserID {
+			continue
+		}
 		select {
 		case c.send <- b:
 		default:

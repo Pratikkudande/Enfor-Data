@@ -87,7 +87,7 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     key={type.value}
                     type="button"
                     onClick={() => handleTypeChange(type.value as PropertyFormData['type'])}
-                    className={`p-3 border-2 rounded-lg text-center transition-all ${
+                    className={`p-2 border-2 rounded-lg text-center text-xs font-medium leading-tight transition-all ${
                       formData.type === type.value
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
                         : 'border-gray-200 hover:border-gray-300'

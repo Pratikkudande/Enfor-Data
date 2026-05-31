@@ -978,31 +978,32 @@ CREATE TABLE IF NOT EXISTS connections (
 CREATE INDEX IF NOT EXISTS idx_connections_broker_a ON connections(broker_a);
 CREATE INDEX IF NOT EXISTS idx_connections_broker_b ON connections(broker_b);
 
--- Drop and recreate conversations/messages to fix any corrupt schema from previous runs
+-- Drop and recreate conversations/messages to ensure correct schema
 DROP TABLE IF EXISTS messages CASCADE;
 DROP TABLE IF EXISTS conversations CASCADE;
 
 -- Conversations between connected brokers
+-- Column names match repository queries: broker_a / broker_b
 CREATE TABLE conversations (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    participant_a UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    participant_b UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    broker_a        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    broker_b        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     last_message_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT uq_conversation UNIQUE (participant_a, participant_b),
-    CONSTRAINT chk_conversation_order CHECK (participant_a < participant_b)
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_conversation UNIQUE (broker_a, broker_b),
+    CONSTRAINT chk_conversation_order CHECK (broker_a < broker_b)
 );
-CREATE INDEX IF NOT EXISTS idx_conversations_participant_a ON conversations(participant_a);
-CREATE INDEX IF NOT EXISTS idx_conversations_participant_b ON conversations(participant_b);
+CREATE INDEX IF NOT EXISTS idx_conversations_broker_a ON conversations(broker_a);
+CREATE INDEX IF NOT EXISTS idx_conversations_broker_b ON conversations(broker_b);
 CREATE INDEX IF NOT EXISTS idx_conversations_last_message ON conversations(last_message_at DESC);
 
 -- Messages within conversations
+-- Column name matches repository queries: body (not content)
 CREATE TABLE messages (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content         TEXT NOT NULL,
-    message_type    VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file')),
+    body            TEXT NOT NULL,
     is_read         BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -1265,6 +1266,132 @@ CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at D
 }
 
 
+// RunBuildingMigrations creates the building_contacts table.
+func (db *DB) RunBuildingMigrations() error {
+	sql := `
+CREATE TABLE IF NOT EXISTS building_contacts (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_name    VARCHAR(200),
+    mobile_number VARCHAR(20) NOT NULL,
+    building_name VARCHAR(255),
+    area          VARCHAR(255),
+    notes         TEXT,
+    broker_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    broker_name   VARCHAR(200),
+    broker_city   VARCHAR(100),
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_building_contact_mobile_broker UNIQUE (mobile_number, broker_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_building_contacts_broker_created
+    ON building_contacts(broker_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_building_contacts_broker_area
+    ON building_contacts(broker_id, area);
+
+CREATE INDEX IF NOT EXISTS idx_building_contacts_broker_building
+    ON building_contacts(broker_id, building_name);
+
+CREATE INDEX IF NOT EXISTS idx_building_contacts_mobile
+    ON building_contacts(mobile_number);
+
+DROP TRIGGER IF EXISTS update_building_contacts_updated_at ON building_contacts;
+CREATE TRIGGER update_building_contacts_updated_at
+    BEFORE UPDATE ON building_contacts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION populate_building_contact_broker_info()
+RETURNS TRIGGER AS $populate_building$
+BEGIN
+    SELECT first_name || ' ' || last_name, city
+    INTO NEW.broker_name, NEW.broker_city
+    FROM users
+    WHERE id = NEW.broker_id;
+    RETURN NEW;
+END;
+$populate_building$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS populate_building_contact_broker_info_on_insert ON building_contacts;
+CREATE TRIGGER populate_building_contact_broker_info_on_insert
+    BEFORE INSERT ON building_contacts
+    FOR EACH ROW EXECUTE FUNCTION populate_building_contact_broker_info();
+`
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run building migrations: %w", err)
+	}
+	log.Println("Building migrations completed successfully")
+	return nil
+}
+
+// RunExternalBrokerMigrations creates the external_brokers table.
+// A DB trigger automatically removes the row when the broker signs up on EnforData
+// (matched by whatsapp_number == mobile_number).
+func (db *DB) RunExternalBrokerMigrations() error {
+	sql := `
+CREATE TABLE IF NOT EXISTS external_brokers (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name          VARCHAR(200)  NOT NULL,
+    mobile_number VARCHAR(20)   NOT NULL,
+    area          VARCHAR(255),
+    location      VARCHAR(255),
+    notes         TEXT,
+    added_by      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    added_by_name VARCHAR(200),
+    added_by_city VARCHAR(100),
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_external_broker_mobile UNIQUE (mobile_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ext_brokers_mobile   ON external_brokers(mobile_number);
+CREATE INDEX IF NOT EXISTS idx_ext_brokers_area     ON external_brokers(area);
+CREATE INDEX IF NOT EXISTS idx_ext_brokers_location ON external_brokers(location);
+CREATE INDEX IF NOT EXISTS idx_ext_brokers_added_by ON external_brokers(added_by, created_at DESC);
+
+DROP TRIGGER IF EXISTS update_external_brokers_updated_at ON external_brokers;
+CREATE TRIGGER update_external_brokers_updated_at
+    BEFORE UPDATE ON external_brokers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Populate added_by_name / added_by_city from the inserting user
+CREATE OR REPLACE FUNCTION populate_ext_broker_adder_info()
+RETURNS TRIGGER AS $populate_ext$
+BEGIN
+    SELECT first_name || ' ' || last_name, city
+    INTO NEW.added_by_name, NEW.added_by_city
+    FROM users WHERE id = NEW.added_by;
+    RETURN NEW;
+END;
+$populate_ext$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ext_broker_adder_info ON external_brokers;
+CREATE TRIGGER trg_ext_broker_adder_info
+    BEFORE INSERT ON external_brokers
+    FOR EACH ROW EXECUTE FUNCTION populate_ext_broker_adder_info();
+
+-- Auto-convert: when a new EnforData user is created, remove any matching external broker record
+CREATE OR REPLACE FUNCTION convert_external_broker_on_signup()
+RETURNS TRIGGER AS $convert_ext$
+BEGIN
+    DELETE FROM external_brokers WHERE mobile_number = NEW.whatsapp_number;
+    RETURN NEW;
+END;
+$convert_ext$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_convert_external_broker ON users;
+CREATE TRIGGER trg_convert_external_broker
+    AFTER INSERT ON users
+    FOR EACH ROW EXECUTE FUNCTION convert_external_broker_on_signup();
+`
+	_, err := db.Exec(sql)
+	if err != nil {
+		return fmt.Errorf("failed to run external broker migrations: %w", err)
+	}
+	log.Println("External broker migrations completed successfully")
+	return nil
+}
 
 // RunBusinessPostsMigrations creates the business_posts and staff_listings tables.
 func (db *DB) RunBusinessPostsMigrations() error {

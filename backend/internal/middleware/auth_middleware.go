@@ -25,29 +25,38 @@ type ErrorResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
-// RequireAuth middleware validates JWT token and sets user information in context
+// RequireAuth middleware validates JWT token and sets user information in context.
+// It accepts the token from the Authorization: Bearer header OR from the ?token=
+// query parameter. The query-param fallback is required for WebSocket upgrades
+// because browsers cannot set custom headers on WebSocket connections.
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token from Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Error:   "Authorization header missing",
-				Message: "Please provide a valid authorization token",
-			})
-			c.Abort()
-			return
-		}
+		var tokenString string
 
-		// Check if token has Bearer prefix
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Error:   "Invalid token format",
-				Message: "Authorization header must be in format: Bearer <token>",
-			})
-			c.Abort()
-			return
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" {
+			// Standard Bearer header path (REST API)
+			trimmed := strings.TrimPrefix(authHeader, "Bearer ")
+			if trimmed == authHeader {
+				c.JSON(http.StatusUnauthorized, ErrorResponse{
+					Error:   "Invalid token format",
+					Message: "Authorization header must be in format: Bearer <token>",
+				})
+				c.Abort()
+				return
+			}
+			tokenString = trimmed
+		} else {
+			// Fallback: query-param path (WebSocket upgrade)
+			tokenString = c.Query("token")
+			if tokenString == "" {
+				c.JSON(http.StatusUnauthorized, ErrorResponse{
+					Error:   "Authorization header missing",
+					Message: "Please provide a valid authorization token",
+				})
+				c.Abort()
+				return
+			}
 		}
 
 		// Validate token

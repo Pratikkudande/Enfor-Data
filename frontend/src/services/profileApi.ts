@@ -65,7 +65,7 @@ class ProfileApiService {
   }
 
   async uploadProfilePhoto(file: File): Promise<ApiResponse<{ profile_image: string }>> {
-    return apiClient.upload('/profile/upload-photo', file, 'profile_photo');
+    return apiClient.upload('/upload/profile-photo', file, 'profile_photo');
   }
 
   // Settings endpoints

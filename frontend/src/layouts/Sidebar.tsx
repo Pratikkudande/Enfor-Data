@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Home,
   Building,
+  Building2,
   Users,
   Calendar,
   MessageSquare,
@@ -33,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'properties', label: 'Properties', icon: Building },
     { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'building-data', label: 'Building Data', icon: Building2 },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'sms-marketing', label: 'SMS Marketing', icon: MessageSquare },

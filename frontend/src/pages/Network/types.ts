@@ -12,6 +12,8 @@ export interface BrokerProfile {
   deals_completed?: number;
   specializations?: string[];
   properties_count?: number;
+  whatsapp_number?: string;
+  location?: string;
 }
 
 export interface ConnectionRequest {

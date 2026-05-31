@@ -108,6 +108,18 @@ func (s *NetworkService) GetAllBrokers(userID string) ([]map[string]interface{},
 
 // ── Messaging ─────────────────────────────────────────────────────────────────
 
+// EnsureConversation gets or creates a conversation with a peer (must be connected).
+func (s *NetworkService) EnsureConversation(userID, peerID string) (*models.Conversation, error) {
+	connected, err := s.repo.AreConnected(userID, peerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify connection: %w", err)
+	}
+	if !connected {
+		return nil, fmt.Errorf("you must be connected to start a conversation")
+	}
+	return s.repo.EnsureConversationWithPeer(userID, peerID)
+}
+
 // GetConversations returns all conversations for a user.
 func (s *NetworkService) GetConversations(userID string) ([]models.Conversation, error) {
 	return s.repo.GetUserConversations(userID)

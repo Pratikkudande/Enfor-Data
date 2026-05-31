@@ -24,6 +24,7 @@ const StaffView = lazy(() => import('../pages/Staff/StaffView'));
 const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
 const AgreementsView = lazy(() => import('../pages/Agreements/AgreementsView'));
 const ProjectsView = lazy(() => import('../pages/Projects/ProjectsView'));
+const BuildingDataView = lazy(() => import('../pages/BuildingData/BuildingDataView'));
 
 // Profile & Settings Pages
 const ProfileView = lazy(() => import('../pages/Profile/ProfileView'));
@@ -120,6 +121,11 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.PROJECTS} element={
           <Suspense fallback={<PageLoader />}>
             <ProjectsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.BUILDING_DATA} element={
+          <Suspense fallback={<PageLoader />}>
+            <BuildingDataView />
           </Suspense>
         } />
         

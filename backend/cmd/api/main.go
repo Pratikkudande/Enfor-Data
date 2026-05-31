@@ -45,6 +45,12 @@ func main() {
 	if err := db.RunSubscriptionMigrations(); err != nil {
 		log.Fatal("Failed to run Subscription migrations:", err)
 	}
+	if err := db.RunBuildingMigrations(); err != nil {
+		log.Fatal("Failed to run Building migrations:", err)
+	}
+	if err := db.RunExternalBrokerMigrations(); err != nil {
+		log.Fatal("Failed to run External Broker migrations:", err)
+	}
 	if err := db.RunBusinessPostsMigrations(); err != nil {
 		log.Fatal("Failed to run Business Posts migrations:", err)
 	}
@@ -62,6 +68,8 @@ func main() {
 	paymentRepo := repository.NewPaymentRepository(db)
 	agreementRepo := repository.NewAgreementRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
+	buildingRepo := repository.NewBuildingRepository(db)
+	externalBrokerRepo := repository.NewExternalBrokerRepository(db)
 	businessPostRepo := repository.NewBusinessPostRepository(db)
 	staffRepo := repository.NewStaffRepository(db)
 
@@ -80,6 +88,8 @@ func main() {
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
 	agreementService := service.NewAgreementService(agreementRepo, propertyRepo, clientRepo)
 	projectService := service.NewProjectService(projectRepo)
+	buildingService := service.NewBuildingService(buildingRepo, userRepo)
+	externalBrokerService := service.NewExternalBrokerService(externalBrokerRepo, userRepo)
 	businessPostService := service.NewBusinessPostService(businessPostRepo)
 	staffService := service.NewStaffService(staffRepo)
 	
@@ -104,6 +114,8 @@ func main() {
 	paymentHandler := handler.NewPaymentHandler(paymentService, subscriptionService)
 	agreementHandler := handler.NewAgreementHandler(agreementService)
 	projectHandler := handler.NewProjectHandler(projectService)
+	buildingHandler := handler.NewBuildingHandler(buildingService)
+	externalBrokerHandler := handler.NewExternalBrokerHandler(externalBrokerService)
 	businessPostHandler := handler.NewBusinessPostHandler(businessPostService)
 	staffHandler := handler.NewStaffHandler(staffService)
 
@@ -200,6 +212,20 @@ func main() {
 			protected.PUT("/agreements/:id", agreementHandler.UpdateAgreement)
 			protected.DELETE("/agreements/:id", agreementHandler.DeleteAgreement)
 
+			// External Broker routes (non-EnforData brokers)
+			protected.GET("/external-brokers", externalBrokerHandler.GetAll)
+			protected.POST("/external-brokers", externalBrokerHandler.Create)
+			protected.GET("/external-brokers/:id", externalBrokerHandler.GetOne)
+			protected.PUT("/external-brokers/:id", externalBrokerHandler.Update)
+			protected.DELETE("/external-brokers/:id", externalBrokerHandler.Delete)
+
+			// Building Contact routes
+			protected.GET("/building-contacts", buildingHandler.GetBuildingContacts)
+			protected.POST("/building-contacts", buildingHandler.CreateBuildingContact)
+			protected.GET("/building-contacts/:id", buildingHandler.GetBuildingContact)
+			protected.PUT("/building-contacts/:id", buildingHandler.UpdateBuildingContact)
+			protected.DELETE("/building-contacts/:id", buildingHandler.DeleteBuildingContact)
+
 			// Project routes
 			protected.GET("/projects/all", projectHandler.GetAllProjects)
 			protected.GET("/projects", projectHandler.GetMyProjects)
@@ -238,6 +264,7 @@ func main() {
 				network.GET("/requests/sent", networkHandler.GetSentRequests)
 
 				// Messaging (REST fallback)
+				network.POST("/conversations/ensure", networkHandler.EnsureConversation)
 				network.GET("/conversations", networkHandler.GetConversations)
 				network.GET("/conversations/:id/messages", networkHandler.GetMessages)
 				network.POST("/conversations/:id/messages", networkHandler.SendMessage)
