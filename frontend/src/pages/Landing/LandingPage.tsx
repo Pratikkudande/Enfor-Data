@@ -133,27 +133,27 @@ const LandingPage: React.FC = () => {
       <header
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         style={{
-          background: scrolled ? 'rgba(3,11,36,0.88)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(20px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+          background: scrolled ? 'rgba(220,230,245,0.98)' : 'rgba(220,230,245,0.95)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(13,43,78,0.15)',
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img src={logoImg} alt="EnforData" className="h-20 w-auto object-contain" />
+            <img src={logoImg} alt="EnforData" className="h-14 w-auto object-contain" />
           </Link>
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-7">
             {NAV_LINKS.map(l => (
-              <a key={l} href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</a>
+              <a key={l} href="#" className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors">{l}</a>
             ))}
           </nav>
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-3">
-            <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors px-3 py-2">Login</Link>
+            <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors px-3 py-2">Login</Link>
             <Link to="/register"
               className="text-sm font-semibold text-white px-5 py-2 rounded-lg transition-all hover:opacity-90 hover:-translate-y-0.5"
               style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
@@ -169,14 +169,14 @@ const LandingPage: React.FC = () => {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="lg:hidden border-t border-white/10 px-4 py-4 space-y-3"
-            style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)' }}>
+          <div className="lg:hidden border-t border-slate-200 px-4 py-4 space-y-3"
+            style={{ background: 'rgba(220,230,245,0.98)', backdropFilter: 'blur(20px)' }}>
             {NAV_LINKS.map(l => (
               <a key={l} href="#" onClick={() => setMenuOpen(false)}
-                className="block text-sm font-medium text-gray-300 py-2">{l}</a>
+                className="block text-sm font-medium text-slate-700 py-2">{l}</a>
             ))}
             <div className="pt-2 flex flex-col gap-2">
-              <Link to="/login" className="text-center text-sm font-medium border border-white/20 rounded-lg py-2 text-gray-300">Login</Link>
+              <Link to="/login" className="text-center text-sm font-medium border border-slate-300 rounded-lg py-2 text-slate-700">Login</Link>
               <Link to="/register" className="text-center text-sm font-semibold text-white rounded-lg py-2"
                 style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Start Free Trial</Link>
             </div>
