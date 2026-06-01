@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../routes/routePaths';
 
@@ -18,10 +18,8 @@ const LoginForm: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
       await login(email, password);
-      // AuthContext will handle redirect after login state updates
     } catch (err) {
       setError('Invalid email or password');
     } finally {
@@ -33,18 +31,18 @@ const LoginForm: React.FC = () => {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
-        <p className="text-gray-600 mt-2">Sign in to your ENFOR DATA account</p>
+        <p className="text-gray-500 mt-2 text-sm">Sign in to your ENFOR DATA account</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
             Email Address
           </label>
           <input
@@ -52,14 +50,17 @@ const LoginForm: React.FC = () => {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 transition-all outline-none focus:border-indigo-400"
+            style={{ boxShadow: 'none' }}
+            onFocus={e => (e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)')}
+            onBlur={e => (e.target.style.boxShadow = 'none')}
             placeholder="Enter your email"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
             Password
           </label>
           <div className="relative">
@@ -68,14 +69,17 @@ const LoginForm: React.FC = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+              className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 transition-all outline-none focus:border-indigo-400"
+              style={{ boxShadow: 'none' }}
+              onFocus={e => (e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)')}
+              onBlur={e => (e.target.style.boxShadow = 'none')}
               placeholder="Enter your password"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -83,11 +87,21 @@ const LoginForm: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <label className="flex items-center">
-            <input type="checkbox" className="rounded border-gray-300 text-blue-600" />
-            <span className="ml-2 text-sm text-gray-700">Remember me</span>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 w-4 h-4"
+              style={{ accentColor: '#6366F1' }}
+            />
+            <span className="text-sm text-gray-600">Remember me</span>
           </label>
-          <a href="#" className="text-sm text-blue-600 hover:text-blue-700">
+          <a
+            href="#"
+            className="text-sm font-medium transition-colors"
+            style={{ color: '#6366F1' }}
+            onMouseEnter={e => ((e.target as HTMLElement).style.color = '#4F46E5')}
+            onMouseLeave={e => ((e.target as HTMLElement).style.color = '#6366F1')}
+          >
             Forgot password?
           </a>
         </div>
@@ -95,13 +109,19 @@ const LoginForm: React.FC = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full text-white py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center transition-all hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
+          style={{
+            background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+            boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
+          }}
         >
           {isLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
           ) : (
             <>
-              <LogIn className="h-5 w-5 mr-2" />
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h7a2 2 0 012 2v1" />
+              </svg>
               Sign In
             </>
           )}
@@ -109,11 +129,14 @@ const LoginForm: React.FC = () => {
       </form>
 
       <div className="mt-8 text-center">
-        <p className="text-gray-600">
+        <p className="text-sm text-gray-500">
           Don't have an account?{' '}
           <Link
             to={ROUTES.REGISTER}
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="font-semibold transition-colors"
+            style={{ color: '#6366F1' }}
+            onMouseEnter={e => ((e.target as HTMLElement).style.color = '#4F46E5')}
+            onMouseLeave={e => ((e.target as HTMLElement).style.color = '#6366F1')}
           >
             Sign up here
           </Link>

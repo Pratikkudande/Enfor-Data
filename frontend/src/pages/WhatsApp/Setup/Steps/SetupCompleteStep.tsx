@@ -82,7 +82,7 @@ const SetupCompleteStep: React.FC<SetupCompleteStepProps> = ({ onComplete }) => 
       {/* Start Button */}
       <button
         onClick={onComplete}
-        className="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        className="btn-primary px-8 py-4 text-lg font-semibold"
       >
         Start Sending Messages
       </button>

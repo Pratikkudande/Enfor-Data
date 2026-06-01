@@ -30,7 +30,7 @@ const MarketingView: React.FC = () => {
 
           <button
             onClick={() => setShowCreateCampaign(true)}
-            className="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+            className="mt-4 md:mt-0 px-6 py-3 btn-primary flex items-center space-x-2 shadow-md hover:shadow-lg"
           >
             <Plus className="h-5 w-5" />
             <span className="font-medium">Create Campaign</span>

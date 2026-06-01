@@ -320,7 +320,7 @@ const AppointmentsView: React.FC = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
           <p className="text-gray-600 mb-4">Try adjusting your search or filters</p>
-          <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">Add Appointment</button>
+          <button onClick={openCreateModal} className="btn-primary px-6 py-2">Add Appointment</button>
         </div>
       )}
     </div>
@@ -341,7 +341,7 @@ const AppointmentsView: React.FC = () => {
         </div>
         <button
           onClick={openCreateModal}
-          className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          className="mt-4 sm:mt-0 btn-primary px-4 py-2 flex items-center"
         >
           <Plus className="h-5 w-5 mr-2" />
           Add Appointment

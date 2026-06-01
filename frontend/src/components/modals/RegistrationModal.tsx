@@ -470,7 +470,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             <button
               onClick={handleNext}
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="px-6 py-2 btn-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? 'Processing...' : step === 2 ? 'Complete Registration' : 'Next'}
             </button>

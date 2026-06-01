@@ -76,7 +76,7 @@ const BrokerCard: React.FC<BrokerCardProps> = ({ broker }) => {
         </div>
 
         <div className="flex gap-2 pt-4 border-t border-gray-100">
-          <button className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm hover:shadow-md">
+          <button className="flex-1 px-4 py-2.5 btn-primary flex items-center justify-center space-x-2 shadow-sm hover:shadow-md">
             <UserPlus className="h-4 w-4" />
             <span className="font-medium text-sm">Connect</span>
           </button>

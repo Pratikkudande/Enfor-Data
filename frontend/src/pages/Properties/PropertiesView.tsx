@@ -321,7 +321,7 @@ const PropertiesView: React.FC = () => {
         <div className="mt-4 sm:mt-0 flex items-center gap-3">
           <button
             onClick={handleOpenCreateModal}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            className="btn-primary px-4 py-2 flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
             Add Property
@@ -467,7 +467,7 @@ const PropertiesView: React.FC = () => {
               ? 'Try adjusting your filters.'
               : 'Get started by adding your first property.'}
           </p>
-          <button onClick={handleOpenCreateModal} className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+          <button onClick={handleOpenCreateModal} className="inline-flex items-center btn-primary px-4 py-2">
             <Plus className="h-5 w-5 mr-2" />Add Property
           </button>
         </div>

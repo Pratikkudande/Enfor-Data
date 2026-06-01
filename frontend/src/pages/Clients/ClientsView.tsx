@@ -289,7 +289,7 @@ const ClientsView: React.FC = () => {
           <p className="text-gray-600 mt-1">Manage your client relationships</p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center gap-3">
-          <button onClick={openAddModal} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+          <button onClick={openAddModal} className="btn-primary px-4 py-2 flex items-center">
             <Plus className="h-5 w-5 mr-2" /> Add Client
           </button>
           <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/clients-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
@@ -390,7 +390,7 @@ const ClientsView: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No clients found</h3>
               <p className="text-gray-600 mb-4">{searchTerm || filterType !== 'all' ? 'Try adjusting your search or filters' : 'Get started by adding your first client'}</p>
-              <button onClick={openAddModal} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">Add Client</button>
+              <button onClick={openAddModal} className="btn-primary px-6 py-2">Add Client</button>
             </div>
           )}
         </div>

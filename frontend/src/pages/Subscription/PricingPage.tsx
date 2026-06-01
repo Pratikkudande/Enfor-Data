@@ -127,7 +127,7 @@ const PricingPage: React.FC = () => {
               setLoading(true);
               fetchPlans();
             }}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="btn-primary px-6 py-2"
           >
             Try Again
           </button>

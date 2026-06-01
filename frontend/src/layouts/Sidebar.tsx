@@ -103,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
 
       {/* Sidebar */}
       <aside className={`
-        fixed left-0 top-16 bottom-0 bg-[#00004d] z-50 transition-transform duration-300 ease-in-out
+        fixed left-0 top-20 bottom-0 bg-[#00004d] z-50 transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
         w-60

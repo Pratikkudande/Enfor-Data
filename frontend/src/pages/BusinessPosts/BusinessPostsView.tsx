@@ -80,7 +80,7 @@ const BusinessPostsView: React.FC = () => {
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+            className="mt-4 md:mt-0 px-6 py-3 btn-primary flex items-center space-x-2 shadow-md hover:shadow-lg"
           >
             <Plus className="h-5 w-5" />
             <span className="font-medium">Create Post</span>
@@ -259,7 +259,7 @@ const BusinessPostsView: React.FC = () => {
           <p className="text-gray-600 mb-6">Try adjusting your search or filters to find posts</p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 inline-flex items-center space-x-2"
+            className="px-6 py-3 btn-primary inline-flex items-center space-x-2"
           >
             <Plus className="h-5 w-5" />
             <span className="font-medium">Create Your First Post</span>

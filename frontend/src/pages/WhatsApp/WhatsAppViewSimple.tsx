@@ -35,7 +35,7 @@ const WhatsAppViewSimple: React.FC = () => {
             <div className="mt-6">
               <button
                 onClick={() => window.location.reload()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 btn-primary"
               >
                 Reload Page
               </button>

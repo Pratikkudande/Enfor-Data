@@ -23,7 +23,7 @@ const MainLayout: React.FC = () => {
         isSidebarOpen={isSidebarOpen}
       />
       
-      <div className="flex pt-16 bg-gray-100 flex-1">
+      <div className="flex pt-20 bg-gray-100 flex-1">
         <Sidebar
           isOpen={isSidebarOpen}
           currentSection={currentPath}

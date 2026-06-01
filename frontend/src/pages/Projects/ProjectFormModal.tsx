@@ -406,7 +406,7 @@ const ProjectFormModal: React.FC<Props> = ({ mode, project, onClose, onCreate, o
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 btn-primary text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <><Loader2 className="h-4 w-4 animate-spin" />{mode === 'create' ? 'Creating…' : 'Saving…'}</>

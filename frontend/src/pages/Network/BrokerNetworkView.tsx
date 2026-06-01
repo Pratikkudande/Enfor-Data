@@ -1092,7 +1092,7 @@ const BrokerNetworkView: React.FC = () => {
                     {extSearch ? 'Try adjusting your search' : 'Add brokers who are not yet on EnforData'}
                   </p>
                   {!extSearch && (
-                    <button onClick={openExtAdd} className="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                    <button onClick={openExtAdd} className="btn-primary px-5 py-2">
                       Add External Broker
                     </button>
                   )}

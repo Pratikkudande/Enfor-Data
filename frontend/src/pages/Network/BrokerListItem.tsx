@@ -101,7 +101,7 @@ const BrokerListItem: React.FC<BrokerListItemProps> = ({ broker }) => {
             </div>
 
             <div className="flex gap-3">
-              <button className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center space-x-2 shadow-sm hover:shadow-md">
+              <button className="px-6 py-2.5 btn-primary flex items-center space-x-2 shadow-sm hover:shadow-md">
                 <UserPlus className="h-4 w-4" />
                 <span className="font-medium text-sm">Connect</span>
               </button>
