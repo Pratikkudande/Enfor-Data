@@ -6,6 +6,7 @@ import {
   Bell, Clock, DollarSign, ChevronRight,
   Home, Handshake, FolderOpen, Play, Network,
 } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 /* ── Animated Counter ─────────────────────────────────────── */
 const useCounter = (target: number, duration = 2000, start = false) => {
@@ -43,10 +44,10 @@ const useInView = (threshold = 0.2) => {
 const NAV_LINKS = ['Features', 'Pricing', 'Resources', 'About Us', 'Contact'];
 
 const STATS = [
-  { icon: '🏢', value: 10000, suffix: '+', label: 'Properties Managed' },
-  { icon: '👥', value: 5000,  suffix: '+', label: 'Leads Tracked' },
-  { icon: '🤝', value: 500,   suffix: '+', label: 'Broker Connections' },
-  { icon: '📈', value: 30,    suffix: '%', label: 'Faster Deal Closure' },
+  { icon: '🏢', value: 1500, suffix: '+', label: 'Properties Managed' },
+  { icon: '👥', value: 2000, suffix: '+', label: 'Leads Tracked' },
+  { icon: '🤝', value: 300,  suffix: '+', label: 'Broker Connections' },
+  { icon: '📈', value: 35,   suffix: '%', label: 'Faster Deal Closure' },
 ];
 
 const FEATURES = [
@@ -132,18 +133,18 @@ const LandingPage: React.FC = () => {
       <header
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         style={{
-          background: scrolled ? 'rgba(3,11,36,0.88)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(20px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+          background: scrolled
+            ? 'rgba(3,11,36,0.97)'
+            : 'rgba(3,11,36,0.85)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
           {/* Logo */}
-          <div className="flex items-center gap-1">
-            <span className="text-xl font-extrabold text-white tracking-tight">Enfor</span>
-            <span className="text-xl font-extrabold px-1.5 py-0.5 rounded tracking-tight"
-              style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Data</span>
-          </div>
+          <Link to="/" className="flex items-center">
+            <img src={logoImg} alt="EnforData" className="h-28 w-auto object-contain" />
+          </Link>
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-7">
@@ -170,14 +171,15 @@ const LandingPage: React.FC = () => {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="lg:hidden border-t border-white/10 px-4 py-4 space-y-3"
-            style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)' }}>
+          <div className="lg:hidden border-t px-4 py-4 space-y-3"
+            style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255,255,255,0.07)' }}>
             {NAV_LINKS.map(l => (
               <a key={l} href="#" onClick={() => setMenuOpen(false)}
-                className="block text-sm font-medium text-gray-300 py-2">{l}</a>
+                className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</a>
             ))}
             <div className="pt-2 flex flex-col gap-2">
-              <Link to="/login" className="text-center text-sm font-medium border border-white/20 rounded-lg py-2 text-gray-300">Login</Link>
+              <Link to="/login" className="text-center text-sm font-medium border rounded-lg py-2 text-gray-300"
+                style={{ borderColor: 'rgba(255,255,255,0.15)' }}>Login</Link>
               <Link to="/register" className="text-center text-sm font-semibold text-white rounded-lg py-2"
                 style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Get Started</Link>
             </div>
@@ -252,10 +254,8 @@ const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between px-5 py-3 border-b border-white/10"
                   style={{ background: 'rgba(255,255,255,0.04)' }}>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">Enfor</span>
-                    <span className="text-xs font-bold px-1 rounded"
-                      style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Data</span>
-                    <span className="ml-2 text-xs text-gray-400">Dashboard</span>
+                    <img src={logoImg} alt="EnforData" className="h-4 w-auto object-contain" />
+                    <span className="ml-1 text-xs text-gray-400">Dashboard</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
@@ -406,14 +406,20 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ══ BENEFITS ══════════════════════════════════════════ */}
+
+      {/* ══ BENEFITS ══════════════════════════════════════════
+          The right column image must match the EXACT height of
+          the left column — from the heading to the last row.
+          Strategy: grid items-stretch + right col h-full + image absolute inset-0
+      ══════════════════════════════════════════════════════ */}
       <section className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* items-stretch makes both columns the same height */}
+          <div className="grid lg:grid-cols-2 gap-16 items-stretch">
 
-            {/* Left */}
-            <div>
-              <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-5 border border-purple-500/30"
+            {/* ── Left: benefits list ── */}
+            <div className="flex flex-col">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-5 border border-purple-500/30 self-start"
                 style={{ background: 'rgba(139,92,246,0.1)', color: '#C4B5FD' }}>
                 WHY CHOOSE US
               </div>
@@ -424,10 +430,10 @@ const LandingPage: React.FC = () => {
                   EnforData
                 </span>
               </h2>
-              <p className="text-sm text-gray-400 mb-10 leading-relaxed">
+              <p className="text-sm text-gray-400 mb-8 leading-relaxed">
                 Built from the ground up for Indian real estate professionals — not a generic CRM.
               </p>
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 {BENEFITS.map((b, i) => (
                   <div key={b.title}
                     className="flex items-center gap-5 p-5 rounded-2xl border border-white/8 hover:border-blue-500/40 hover:-translate-y-0.5 transition-all duration-200 group cursor-default"
@@ -450,76 +456,74 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right — city image + floating cards, fully centered */}
-            <div className="flex items-center justify-center">
-              <div className="relative w-full">
-                {/* Glow */}
-                <div className="absolute -inset-3 rounded-3xl opacity-20 blur-2xl pointer-events-none"
-                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }} />
+            {/* ── Right: image fills 100% of left column height ── */}
+            <div className="relative h-full">
+              {/* Glow ring */}
+              <div className="absolute -inset-3 rounded-3xl opacity-20 blur-2xl pointer-events-none"
+                style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }} />
 
-                {/* Image */}
-                <div className="relative rounded-2xl overflow-hidden w-full" style={{ height: '520px' }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=900&q=85"
-                    alt="City skyline at dusk"
-                    className="w-full h-full object-cover object-center"
-                  />
-                  <div className="absolute inset-0"
-                    style={{ background: 'linear-gradient(180deg,rgba(3,11,36,0.28) 0%,rgba(3,11,36,0.08) 45%,rgba(3,11,36,0.48) 100%)' }} />
-                </div>
-
-                {/* Card 1 — New Lead (top-left) */}
-                <div className="absolute top-6 left-6 rounded-2xl px-5 py-4 animate-float"
-                  style={{ ...glass, minWidth: '175px', boxShadow: '0 8px 32px rgba(59,130,246,0.25)' }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg,#3B82F6,#6366F1)' }}>
-                      <Users className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-white">New Lead</span>
-                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse ml-auto" />
-                  </div>
-                  <p className="text-sm font-semibold text-white">2 BHK Inquiry</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Just now · Andheri West</p>
-                </div>
-
-                {/* Card 2 — Site Visit (bottom-left) */}
-                <div className="absolute bottom-8 left-6 rounded-2xl px-5 py-4"
-                  style={{ ...glass, minWidth: '200px', boxShadow: '0 8px 32px rgba(245,158,11,0.2)',
-                    animation: 'float 4s ease-in-out 0.8s infinite' }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg,#F59E0B,#EF4444)' }}>
-                      <Calendar className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-white">Site Visit Scheduled</span>
-                  </div>
-                  <p className="text-sm font-semibold text-white">Rajesh Sharma</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Tomorrow · 11:00 AM</p>
-                </div>
-
-                {/* Card 3 — Commission (right, vertically centered) */}
-                <div className="absolute right-6 top-1/2 -translate-y-1/2 rounded-2xl px-5 py-4"
-                  style={{ ...glass, minWidth: '185px', boxShadow: '0 8px 32px rgba(52,211,153,0.25)',
-                    animation: 'float 4s ease-in-out 1.2s infinite' }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
-                      <DollarSign className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-white">Commission Earned</span>
-                  </div>
-                  <p className="text-xl font-extrabold" style={{ color: '#34D399' }}>₹49,500</p>
-                  <p className="text-xs text-gray-400 mt-0.5">From Rajesh Sharma</p>
-                  <div className="mt-2 h-1 rounded-full overflow-hidden"
-                    style={{ background: 'rgba(52,211,153,0.15)' }}>
-                    <div className="h-full rounded-full"
-                      style={{ width: '72%', background: 'linear-gradient(90deg,#10B981,#34D399)' }} />
-                  </div>
-                </div>
-
+              {/* Image — absolute fill so it matches left column exactly */}
+              <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=900&q=85"
+                  alt="City skyline at dusk"
+                  className="w-full h-full object-cover object-center"
+                />
+                <div className="absolute inset-0"
+                  style={{ background: 'linear-gradient(180deg,rgba(3,11,36,0.30) 0%,rgba(3,11,36,0.08) 45%,rgba(3,11,36,0.50) 100%)' }} />
               </div>
-            </div>
+
+              {/* Floating card 1 — New Lead (top-left) */}
+              <div className="absolute top-6 left-6 rounded-2xl px-5 py-4 animate-float z-10"
+                style={{ ...glass, minWidth: '175px', boxShadow: '0 8px 32px rgba(59,130,246,0.25)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#3B82F6,#6366F1)' }}>
+                    <Users className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-white">New Lead</span>
+                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse ml-auto" />
+                </div>
+                <p className="text-sm font-semibold text-white">2 BHK Inquiry</p>
+                <p className="text-xs text-gray-400 mt-0.5">Just now · Andheri West</p>
+              </div>
+
+              {/* Floating card 2 — Site Visit (bottom-left) */}
+              <div className="absolute bottom-8 left-6 rounded-2xl px-5 py-4 z-10"
+                style={{ ...glass, minWidth: '200px', boxShadow: '0 8px 32px rgba(245,158,11,0.2)',
+                  animation: 'float 4s ease-in-out 0.8s infinite' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#F59E0B,#EF4444)' }}>
+                    <Calendar className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-white">Site Visit Scheduled</span>
+                </div>
+                <p className="text-sm font-semibold text-white">Rajesh Sharma</p>
+                <p className="text-xs text-gray-400 mt-0.5">Tomorrow · 11:00 AM</p>
+              </div>
+
+              {/* Floating card 3 — Commission (right, vertically centered) */}
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 rounded-2xl px-5 py-4 z-10"
+                style={{ ...glass, minWidth: '185px', boxShadow: '0 8px 32px rgba(52,211,153,0.25)',
+                  animation: 'float 4s ease-in-out 1.2s infinite' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                    <DollarSign className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-white">Commission Earned</span>
+                </div>
+                <p className="text-xl font-extrabold" style={{ color: '#34D399' }}>₹49,500</p>
+                <p className="text-xs text-gray-400 mt-0.5">From Rajesh Sharma</p>
+                <div className="mt-2 h-1 rounded-full overflow-hidden"
+                  style={{ background: 'rgba(52,211,153,0.15)' }}>
+                  <div className="h-full rounded-full"
+                    style={{ width: '72%', background: 'linear-gradient(90deg,#10B981,#34D399)' }} />
+                </div>
+              </div>
+
+            </div>{/* end right col */}
 
           </div>
         </div>
@@ -617,10 +621,8 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
             <div className="lg:col-span-2">
-              <div className="flex items-center gap-1 mb-4">
-                <span className="text-xl font-extrabold text-white">Enfor</span>
-                <span className="text-xl font-extrabold px-1.5 py-0.5 rounded"
-                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Data</span>
+              <div className="mb-5">
+                <img src={logoImg} alt="EnforData" className="h-24 w-auto object-contain" />
               </div>
               <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
                 The all-in-one CRM platform built specifically for Indian real estate brokers, property consultants, and channel partners.
@@ -655,13 +657,13 @@ const LandingPage: React.FC = () => {
             <p className="text-xs text-gray-600">© {new Date().getFullYear()} EnforData. All rights reserved.</p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-blue-500" /> support@enfordata.in
+                <Mail className="w-3.5 h-3.5 text-blue-500" /> info@enfordata.com
               </span>
               <span className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-blue-500" /> +91 98765 43210
+                <Phone className="w-3.5 h-3.5 text-blue-500" /> +91 88060 04191
               </span>
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-blue-500" /> Mumbai, India
+                <MapPin className="w-3.5 h-3.5 text-blue-500" /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
               </span>
             </div>
           </div>

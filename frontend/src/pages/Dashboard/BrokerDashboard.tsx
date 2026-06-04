@@ -194,23 +194,28 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg sm:rounded-xl text-white p-4 sm:p-6">
+      <div
+        className="rounded-lg sm:rounded-xl text-white p-4 sm:p-6"
+        style={{ background: 'linear-gradient(135deg, #0f1f5c 0%, #1a2f7a 50%, #2d1b8a 100%)', border: '1px solid rgba(99,102,241,0.35)', boxShadow: '0 0 32px rgba(59,130,246,0.18)' }}
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, Broker!</h1>
-            <p className="text-sm sm:text-base text-blue-100">Manage your properties, clients, and grow your real estate business</p>
+            <p className="text-sm sm:text-base" style={{ color: '#93C5FD' }}>Manage your properties, clients, and grow your real estate business</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate(`${ROUTES.CLIENTS}?openAdd=1`)}
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-white text-blue-700 hover:bg-blue-50 transition-colors text-sm font-medium"
+              className="inline-flex items-center px-4 py-2 rounded-lg bg-white transition-colors text-sm font-medium hover:opacity-90"
+              style={{ color: '#4F46E5' }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Client
             </button>
             <button
               onClick={() => navigate(`${ROUTES.PROPERTIES}?openAdd=1`)}
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-400 transition-colors text-sm font-medium border border-blue-300"
+              className="inline-flex items-center px-4 py-2 rounded-lg text-white transition-colors text-sm font-medium"
+              style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 16px rgba(99,102,241,0.35)' }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Property
@@ -253,7 +258,7 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-3 flex-shrink-0"></div>
+                <div className="w-3 h-3 rounded-full mr-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}></div>
                 <span className="text-sm sm:text-base text-gray-700">Buyers</span>
               </div>
               <span className="text-sm sm:text-base font-semibold text-gray-900">{stats?.clientsByType?.buyers ?? 0}</span>
@@ -301,7 +306,7 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-indigo-500 rounded-full mr-3"></div>
+                <div className="w-3 h-3 rounded-full mr-3" style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}></div>
                 <span className="text-gray-700">Rented</span>
               </div>
               <span className="font-semibold text-gray-900">{stats?.propertiesByStatus?.rented ?? 0}</span>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { createPaymentOrder, verifyPayment } from '../../services/subscriptionApi';
+import { useAuth } from '../../context/AuthContext';
 
 declare global {
   interface Window {
@@ -13,6 +14,7 @@ const CheckoutPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { plan, billingCycle } = location.state || {};
+  const { logout } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,8 +44,13 @@ const CheckoutPage: React.FC = () => {
               signature: response.razorpay_signature
             });
 
-            // Success
-            navigate('/subscription/success');
+            // Payment done — end the temporary signup session and go straight
+            // to login so the user signs in fresh with their now-paid account.
+            await logout();
+            navigate('/login', {
+              replace: true,
+              state: { message: 'Payment successful! Please log in to access your account.' },
+            });
           } catch (err: any) {
             setError('Payment verification failed');
           }

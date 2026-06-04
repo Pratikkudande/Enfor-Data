@@ -210,7 +210,7 @@ const StaffView: React.FC = () => {
         </div>
         <button
           onClick={openAddForm}
-          className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="mt-4 sm:mt-0 btn-primary px-4 py-2 flex items-center gap-2"
         >
           <Plus className="h-5 w-5" />
           Add Staff
@@ -287,7 +287,7 @@ const StaffView: React.FC = () => {
           </p>
           <button
             onClick={openAddForm}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="btn-primary px-6 py-2"
           >
             Add Staff
           </button>

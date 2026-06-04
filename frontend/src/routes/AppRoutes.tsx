@@ -11,6 +11,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import LandingPage from '../pages/Landing/LandingPage';
 import LoginForm from '../pages/Auth/LoginForm';
 import RegisterForm from '../pages/Auth/RegisterForm';
+import ForgotPasswordForm from '../pages/Auth/ForgotPasswordForm';
 
 // Lazy loading for large feature pages
 const BrokerDashboard = lazy(() => import('../pages/Dashboard/BrokerDashboard'));
@@ -64,6 +65,7 @@ export const AppRoutes: React.FC = () => {
       <Route element={<AuthLayout />}>
         <Route path={ROUTES.LOGIN} element={<PublicRoute><LoginForm /></PublicRoute>} />
         <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterForm /></PublicRoute>} />
+        <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordForm />} />
       </Route>
 
       {/* Checkout — authenticated but NOT behind the payment gate,

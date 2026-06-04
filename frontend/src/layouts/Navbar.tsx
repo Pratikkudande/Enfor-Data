@@ -5,7 +5,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
 import NotificationDropdown from '../components/notifications/NotificationDropdown';
-import logo from '../assets/enfordata-logo.jpeg';
+import logo from '../assets/logo.png';
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -64,28 +64,35 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 fixed w-full top-0 z-50 h-16">
+    <nav
+      className="fixed w-full top-0 z-50 h-20"
+      style={{
+        background: 'rgba(3,11,36,0.97)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+      }}
+    >
       <div className="flex items-center justify-between h-full px-3 sm:px-4 lg:px-6">
         <div className="flex items-center min-w-0">
           <button
             onClick={onMenuToggle}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden mr-2"
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors lg:hidden mr-2"
           >
-            <Menu className="h-5 w-5 text-gray-600" />
+            <Menu className="h-5 w-5 text-gray-300" />
           </button>
           <div className="min-w-0">
-            <img src={logo} alt="Enfor Data" className="h-8" />
+            <img src={logo} alt="Enfor Data" className="h-28 w-auto object-contain" />
           </div>
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Notifications */}
           <div className="relative" ref={notificationRef}>
-            <button 
+            <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
             >
-              <Bell className="h-5 w-5 text-gray-600" />
+              <Bell className="h-5 w-5 text-gray-300" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {unreadCount > 99 ? '99+' : unreadCount}
@@ -97,7 +104,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
               isOpen={showNotifications}
               onClose={() => setShowNotifications(false)}
               notificationCount={unreadCount}
-              onNotificationCountChange={() => {}} // This is now handled by the context
+              onNotificationCountChange={() => {}}
             />
           </div>
 
@@ -105,47 +112,53 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
           <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-lg hover:bg-white/10 transition-colors"
             >
-              <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}
+              >
                 <span className="text-white font-medium text-sm">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{getRoleDisplayName(user?.role || '')}</p>
+                <p className="text-sm font-medium text-white">{user?.name}</p>
+                <p className="text-xs text-gray-400">{getRoleDisplayName(user?.role || '')}</p>
               </div>
             </button>
 
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                  <p className="text-xs text-blue-600">{getRoleDisplayName(user?.role || '')}</p>
+              <div
+                className="absolute right-0 mt-2 w-56 sm:w-64 rounded-xl shadow-2xl border py-1"
+                style={{ background: '#050F2E', borderColor: 'rgba(255,255,255,0.10)' }}
+              >
+                <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                  <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#93C5FD' }}>{getRoleDisplayName(user?.role || '')}</p>
                 </div>
 
                 <button
                   onClick={handleProfileClick}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/8 hover:text-white flex items-center transition-colors"
                 >
-                  <User className="h-4 w-4 mr-3" />
+                  <User className="h-4 w-4 mr-3 text-gray-400" />
                   View Profile
                 </button>
 
                 <button
                   onClick={handleSettingsClick}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/8 hover:text-white flex items-center transition-colors"
                 >
-                  <Settings className="h-4 w-4 mr-3" />
+                  <Settings className="h-4 w-4 mr-3 text-gray-400" />
                   Settings
                 </button>
 
-                <div className="border-t border-gray-100 mt-1">
+                <div className="border-t mt-1" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center transition-colors"
                   >
                     <LogOut className="h-4 w-4 mr-3" />
                     Sign Out

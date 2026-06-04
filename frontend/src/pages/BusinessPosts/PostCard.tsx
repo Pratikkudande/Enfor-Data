@@ -171,7 +171,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
               )}
               <button
                 onClick={() => setShowContact(true)}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-sm hover:shadow-md"
+                className="px-4 py-2 btn-primary text-sm font-medium flex items-center space-x-2 shadow-sm hover:shadow-md"
               >
                 <Phone className="h-4 w-4" />
                 <span>Contact</span>
@@ -270,7 +270,7 @@ export const ContactModal: React.FC<{ post: BusinessPost; onClose: () => void }>
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleCall}
-            className="flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
+            className="flex items-center justify-center gap-2 py-3 btn-primary font-medium text-sm"
           >
             <Phone className="h-4 w-4" />
             Call Now

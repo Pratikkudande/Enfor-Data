@@ -291,14 +291,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
               {currentStep < 3 ? (
                 <button
                   onClick={handleNext}
-                  className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg"
+                  className="px-8 py-2.5 btn-primary font-medium shadow-md hover:shadow-lg"
                 >
                   Continue
                 </button>
               ) : (
                 <button
                   onClick={handleSubmit}
-                  className="px-8 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg flex items-center space-x-2"
+                  className="btn-primary px-8 py-2.5 font-medium shadow-md hover:shadow-lg flex items-center space-x-2"
                 >
                   <CheckCircle className="h-5 w-5" />
                   <span>Publish Post</span>

@@ -44,7 +44,7 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ photoPreview, o
           />
           <label
             htmlFor="profilePhoto"
-            className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer inline-flex items-center"
+            className="btn-secondary px-4 py-2 cursor-pointer inline-flex items-center"
           >
             <Upload className="h-4 w-4 mr-2" />
             Upload Photo

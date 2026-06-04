@@ -278,8 +278,8 @@ func (r *SubscriptionRepository) CreateUserSubscription(sub *models.UserSubscrip
 			user_id, plan_id, status, billing_cycle,
 			is_trial, trial_starts_at, trial_ends_at,
 			current_period_start, current_period_end,
-			cancel_at_period_end
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			cancel_at_period_end, razorpay_subscription_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -295,6 +295,7 @@ func (r *SubscriptionRepository) CreateUserSubscription(sub *models.UserSubscrip
 		sub.CurrentPeriodStart,
 		sub.CurrentPeriodEnd,
 		sub.CancelAtPeriodEnd,
+		sub.RazorpaySubscriptionID,
 	).Scan(&sub.ID, &sub.CreatedAt, &sub.UpdatedAt)
 
 	if err != nil {

@@ -163,7 +163,7 @@ const SendMessageTab: React.FC<SendMessageTabProps> = ({ onRefresh }) => {
               <button
                 onClick={handleSend}
                 disabled={sending || !message.trim() || selectedClients.length === 0}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 btn-primary"
               >
                 {sending ? (
                   <>

@@ -145,7 +145,7 @@ const ProjectsView: React.FC = () => {
         {isChannelPartner && (
           <button
             onClick={handleOpenCreate}
-            className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+            className="mt-4 sm:mt-0 btn-primary px-4 py-2 flex items-center gap-2 text-sm font-medium"
           >
             <Plus className="h-4 w-4" />
             Add Project
@@ -225,7 +225,7 @@ const ProjectsView: React.FC = () => {
           {isChannelPartner && !(searchTerm || filterStatus !== 'all' || filterType !== 'all') && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 btn-primary px-5 py-2.5 text-sm font-medium"
             >
               <Plus className="h-4 w-4" />
               Add Project

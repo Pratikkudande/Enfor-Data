@@ -108,7 +108,7 @@ const TemplatesTab: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900">Message Templates</h3>
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            className="btn-primary px-4 py-2 flex items-center"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Template
@@ -229,7 +229,7 @@ const TemplatesTab: React.FC = () => {
               </button>
               <button
                 onClick={handleCreateTemplate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 btn-primary"
               >
                 Create Template
               </button>

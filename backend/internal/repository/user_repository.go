@@ -163,6 +163,16 @@ func (r *UserRepository) UpdateUser(user *models.User) error {
 	return nil
 }
 
+// UpdatePassword updates a user's password hash
+func (r *UserRepository) UpdatePassword(userID, passwordHash string) error {
+	query := `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`
+	_, err := r.db.Exec(query, passwordHash, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
 // GetUserByMobile retrieves a user by mobile number (whatsapp_number)
 func (r *UserRepository) GetUserByMobile(mobileNumber string) (*models.User, error) {
 	user := &models.User{}

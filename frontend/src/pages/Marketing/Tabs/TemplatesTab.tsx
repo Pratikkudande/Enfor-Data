@@ -54,7 +54,7 @@ const TemplatesTab: React.FC = () => {
                   {template.engagement}%
                 </div>
               </div>
-              <button className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+              <button className="px-3 py-1.5 btn-secondary text-sm font-medium">
                 Use
               </button>
             </div>

@@ -409,7 +409,7 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                       <button
                         type="button"
                         onClick={onOpenPhotoUpload}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center mx-auto"
+                        className="btn-primary px-4 py-2 flex items-center mx-auto"
                       >
                         <Camera className="w-4 h-4 mr-2" />
                         Manage Photos
@@ -423,7 +423,7 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     <button
                       type="button"
                       onClick={onOpenPhotoUpload}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center mx-auto"
+                      className="btn-primary px-4 py-2 flex items-center mx-auto"
                     >
                       <Camera className="w-4 h-4 mr-2" />
                       Upload Photos

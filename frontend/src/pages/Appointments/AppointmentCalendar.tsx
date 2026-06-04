@@ -91,7 +91,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ currentDate, 
           </button>
           <button
             onClick={() => setCurrentDate(new Date())}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            className="px-4 py-2 btn-primary text-sm"
           >
             Today
           </button>

@@ -224,7 +224,7 @@ const PropertyPhotoUpload: React.FC<PropertyPhotoUploadProps> = ({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="btn-primary px-4 py-2"
                       >
                         Select Photos
                       </button>
@@ -266,7 +266,7 @@ const PropertyPhotoUpload: React.FC<PropertyPhotoUploadProps> = ({
                       <button
                         onClick={handleUpload}
                         disabled={uploading}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center"
+                        className="btn-primary px-6 py-2 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center"
                       >
                         {uploading ? (
                           <>

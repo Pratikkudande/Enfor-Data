@@ -605,7 +605,7 @@ const SettingsView: React.FC = () => {
 
           <button
             onClick={handleChangePassword}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 btn-primary"
           >
             <Key className="w-4 h-4" />
             Change Password
@@ -637,7 +637,7 @@ const SettingsView: React.FC = () => {
         {activeTab !== 'password' && (
           <button
             onClick={handleSaveSettings}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 btn-primary"
           >
             <Save className="w-4 h-4" />
             Save Changes
