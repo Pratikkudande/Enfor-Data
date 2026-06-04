@@ -16,6 +16,12 @@ type Config struct {
 	Upload   UploadConfig
 	MSG91    MSG91Config
 	Razorpay RazorpayConfig
+	Resend   ResendConfig
+}
+
+type ResendConfig struct {
+	APIKey string
+	From   string
 }
 
 type DatabaseConfig struct {
@@ -122,6 +128,10 @@ func Load() *Config {
 			KeySecret:     getEnv("RAZORPAY_KEY_SECRET", ""),
 			WebhookSecret: getEnv("RAZORPAY_WEBHOOK_SECRET", ""),
 			Enabled:       getEnv("RAZORPAY_ENABLED", "false") == "true",
+		},
+		Resend: ResendConfig{
+			APIKey: getEnv("RESEND_API_KEY", ""),
+			From:   getEnv("RESEND_FROM", "info@enfordata.com"),
 		},
 	}
 }

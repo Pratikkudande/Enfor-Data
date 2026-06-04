@@ -95,15 +95,13 @@ const LoginForm: React.FC = () => {
             />
             <span className="text-sm text-gray-600">Remember me</span>
           </label>
-          <a
-            href="#"
+          <Link
+            to={ROUTES.FORGOT_PASSWORD}
             className="text-sm font-medium transition-colors"
             style={{ color: '#6366F1' }}
-            onMouseEnter={e => ((e.target as HTMLElement).style.color = '#4F46E5')}
-            onMouseLeave={e => ((e.target as HTMLElement).style.color = '#6366F1')}
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
 
         <button

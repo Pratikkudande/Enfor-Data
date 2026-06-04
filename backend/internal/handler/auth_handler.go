@@ -12,14 +12,16 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
-	validator   *validator.Validate
+	authService          *service.AuthService
+	passwordResetService *service.PasswordResetService
+	validator            *validator.Validate
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, passwordResetService *service.PasswordResetService) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
-		validator:   validator.New(),
+		authService:          authService,
+		passwordResetService: passwordResetService,
+		validator:            validator.New(),
 	}
 }
 
@@ -110,6 +112,47 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			"user":          response.User,
 		},
 	})
+}
+
+// ForgotPassword sends a 6-digit OTP to the user's registered email
+// POST /api/auth/forgot-password
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request", Message: err.Error()})
+		return
+	}
+	_ = h.passwordResetService.SendOTP(req.Email)
+	// Always succeed to prevent email enumeration
+	c.JSON(http.StatusOK, SuccessResponse{Message: "If this email is registered, an OTP has been sent."})
+}
+
+// ResetPassword verifies the email OTP and updates the password
+// POST /api/auth/reset-password
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req struct {
+		Email       string `json:"email" binding:"required,email"`
+		OTP         string `json:"otp" binding:"required,len=6"`
+		NewPassword string `json:"new_password" binding:"required,min=6"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request", Message: err.Error()})
+		return
+	}
+
+	if err := h.passwordResetService.ConsumeOTP(req.Email, req.OTP); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid OTP", Message: err.Error()})
+		return
+	}
+
+	if err := h.authService.ResetPassword(req.Email, req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Reset failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{Message: "Password reset successfully"})
 }
 
 // GetMe returns the current authenticated user's information

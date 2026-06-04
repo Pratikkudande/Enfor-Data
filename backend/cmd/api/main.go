@@ -75,6 +75,8 @@ func main() {
 
 	// Initialize services
 	smsService := service.NewSMSService(cfg)
+	emailService := service.NewEmailService(cfg)
+	passwordResetService := service.NewPasswordResetService(userRepo, emailService)
 	authService := service.NewAuthService(userRepo, cfg)
 	propertyService := service.NewPropertyService(propertyRepo, clientRepo, userRepo)
 	clientService := service.NewClientService(clientRepo, userRepo)
@@ -101,7 +103,7 @@ func main() {
 	hub := ws.NewHub()
 
 	// Initialize handlers
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, passwordResetService)
 	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService)
 	propertyHandler := handler.NewPropertyHandler(propertyService)
 	clientHandler := handler.NewClientHandler(clientService)
@@ -166,6 +168,8 @@ func main() {
 			auth.POST("/send-otp", otpHandler.SendOTP)
 			auth.POST("/verify-otp", otpHandler.VerifyOTP)
 			auth.POST("/resend-otp", otpHandler.ResendOTP)
+			auth.POST("/forgot-password", authHandler.ForgotPassword)
+			auth.POST("/reset-password", authHandler.ResetPassword)
 			// Protected auth routes
 			auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
 			auth.POST("/refresh", authHandler.RefreshToken)

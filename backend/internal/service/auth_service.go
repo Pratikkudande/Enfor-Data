@@ -128,6 +128,21 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 	}, nil
 }
 
+// ResetPassword resets user password by email
+func (s *AuthService) ResetPassword(email, newPassword string) error {
+	user, err := s.userRepo.GetUserByEmail(email)
+	if err != nil {
+		return fmt.Errorf("no account found with this email")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to process password")
+	}
+
+	return s.userRepo.UpdatePassword(user.ID, string(hashedPassword))
+}
+
 // GetUserByID retrieves a user by ID
 func (s *AuthService) GetUserByID(userID string) (*models.User, error) {
 	user, err := s.userRepo.GetUserByID(userID)
