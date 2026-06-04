@@ -34,8 +34,8 @@ const ForgotPasswordForm: React.FC = () => {
       await apiClient.post('/auth/forgot-password', { email });
       setOtpSent(true);
       startTimer();
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setSendingOtp(false);
     }

@@ -70,6 +70,13 @@ func Load() *Config {
 		log.Printf("Warning: Could not load config.env file: %v", err)
 	}
 
+	// Log key config presence for debugging
+	if getEnv("RESEND_API_KEY", "") == "" {
+		log.Printf("Warning: RESEND_API_KEY is not set — emails will not be sent")
+	} else {
+		log.Printf("Info: RESEND_API_KEY loaded, FROM=%s", getEnv("RESEND_FROM", ""))
+	}
+
 	// Parse JWT expires duration
 	jwtExpiresStr := getEnv("JWT_EXPIRES_IN", "24h")
 	jwtExpires, err := time.ParseDuration(jwtExpiresStr)

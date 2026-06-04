@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 
 	"enfor-data-backend/internal/config"
@@ -22,7 +24,12 @@ func NewEmailService(cfg *config.Config) *EmailService {
 }
 
 func (s *EmailService) SendOTPEmail(toEmail, otp string) error {
-	body := fmt.Sprintf(`
+	if s.apiKey == "" {
+		log.Printf("[EMAIL] No API key configured — skipping send to %s", toEmail)
+		return nil
+	}
+
+	htmlBody := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:30px;">
@@ -45,12 +52,12 @@ func (s *EmailService) SendOTPEmail(toEmail, otp string) error {
 		"from":    fmt.Sprintf("EnforData <%s>", s.from),
 		"to":      []string{toEmail},
 		"subject": "Your EnforData Password Reset OTP",
-		"html":    body,
+		"html":    htmlBody,
 	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to encode email payload: %w", err)
+		return fmt.Errorf("failed to encode payload: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(jsonData))
@@ -62,12 +69,17 @@ func (s *EmailService) SendOTPEmail(toEmail, otp string) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+		return fmt.Errorf("failed to reach Resend API: %w", err)
 	}
 	defer resp.Body.Close()
 
+	respBody, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("email service error (status %d)", resp.StatusCode)
+		log.Printf("[EMAIL ERROR] Resend status %d: %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("email delivery failed (status %d): %s", resp.StatusCode, string(respBody))
 	}
+
+	log.Printf("[EMAIL] OTP sent to %s (status %d)", toEmail, resp.StatusCode)
 	return nil
 }

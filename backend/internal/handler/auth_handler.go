@@ -124,9 +124,11 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request", Message: err.Error()})
 		return
 	}
-	_ = h.passwordResetService.SendOTP(req.Email)
-	// Always succeed to prevent email enumeration
-	c.JSON(http.StatusOK, SuccessResponse{Message: "If this email is registered, an OTP has been sent."})
+	if err := h.passwordResetService.SendOTP(req.Email); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Email failed", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "OTP sent to your registered email."})
 }
 
 // ResetPassword verifies the email OTP and updates the password
