@@ -44,10 +44,10 @@ const useInView = (threshold = 0.2) => {
 const NAV_LINKS = ['Features', 'Pricing', 'Resources', 'About Us', 'Contact'];
 
 const STATS = [
-  { icon: '🏢', value: 10000, suffix: '+', label: 'Properties Managed' },
-  { icon: '👥', value: 5000,  suffix: '+', label: 'Leads Tracked' },
-  { icon: '🤝', value: 500,   suffix: '+', label: 'Broker Connections' },
-  { icon: '📈', value: 30,    suffix: '%', label: 'Faster Deal Closure' },
+  { icon: '🏢', value: 1500, suffix: '+', label: 'Properties Managed' },
+  { icon: '👥', value: 2000, suffix: '+', label: 'Leads Tracked' },
+  { icon: '🤝', value: 300,  suffix: '+', label: 'Broker Connections' },
+  { icon: '📈', value: 35,   suffix: '%', label: 'Faster Deal Closure' },
 ];
 
 const FEATURES = [
@@ -644,7 +644,7 @@ const LandingPage: React.FC = () => {
             <p className="text-xs text-gray-600">© {new Date().getFullYear()} EnforData. All rights reserved.</p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-blue-500" /> support@enfordata.in
+                <Mail className="w-3.5 h-3.5 text-blue-500" /> info@enfordata.com
               </span>
               <span className="flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-blue-500" /> +91 88060 04191
