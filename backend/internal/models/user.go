@@ -32,11 +32,12 @@ type User struct {
 
 	// Profile
 	ProfileImage *string `json:"profile_image" db:"profile_image"`
+	Bio          *string `json:"bio" db:"bio"`
 
 	// Broker Statistics
 	YearsExperience *int      `json:"years_experience" db:"years_experience"`
 	DealsCompleted  *int      `json:"deals_completed" db:"deals_completed"`
-	Specializations *[]string `json:"specializations" db:"specializations"`
+	Specializations *string   `json:"specializations" db:"specializations"`
 
 	// Status and Verification
 	IsVerified       bool       `json:"is_verified" db:"is_verified"`

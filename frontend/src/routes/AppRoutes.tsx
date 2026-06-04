@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from './routePaths';
-import { ProtectedRoute, PublicRoute } from './guards';
+import { ProtectedRoute, PublicRoute, RequirePaidRoute } from './guards';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
@@ -66,8 +66,26 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterForm /></PublicRoute>} />
       </Route>
 
-      {/* Protected Routes */}
-      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+      {/* Checkout — authenticated but NOT behind the payment gate,
+          so a freshly-registered (unpaid) user can complete payment here. */}
+      <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+        <Route path={ROUTES.SUBSCRIPTION_CHECKOUT} element={
+          <Suspense fallback={<PageLoader />}>
+            <CheckoutPage />
+          </Suspense>
+        } />
+      </Route>
+
+      {/* Payment success — public, since it logs the user out and sends
+          them to the login page to sign in with their now-paid account. */}
+      <Route path={ROUTES.SUBSCRIPTION_SUCCESS} element={
+        <Suspense fallback={<PageLoader />}>
+          <SuccessPage />
+        </Suspense>
+      } />
+
+      {/* Protected Routes — require an active paid subscription */}
+      <Route element={<ProtectedRoute><RequirePaidRoute><MainLayout /></RequirePaidRoute></ProtectedRoute>}>
         <Route path={ROUTES.DASHBOARD} element={
           <Suspense fallback={<PageLoader />}>
             <BrokerDashboard />
@@ -157,17 +175,7 @@ export const AppRoutes: React.FC = () => {
             <ActivateTrialPage />
           </Suspense>
         } />
-        <Route path={ROUTES.SUBSCRIPTION_CHECKOUT} element={
-          <Suspense fallback={<PageLoader />}>
-            <CheckoutPage />
-          </Suspense>
-        } />
-        <Route path={ROUTES.SUBSCRIPTION_SUCCESS} element={
-          <Suspense fallback={<PageLoader />}>
-            <SuccessPage />
-          </Suspense>
-        } />
-        
+
         {/* Catch-all redirect to Dashboard if logged in */}
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
       </Route>

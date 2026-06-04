@@ -1,8 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const SuccessPage: React.FC = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  // Payment is done — end the temporary signup session so the user logs in fresh.
+  const goToLogin = async () => {
+    await logout();
+    navigate('/login', {
+      replace: true,
+      state: { message: 'Payment successful! Please log in to access your account.' },
+    });
+  };
+
+  // Auto-redirect to login a few seconds after showing the confirmation.
+  useEffect(() => {
+    const t = setTimeout(() => { goToLogin(); }, 4000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -17,23 +35,21 @@ const SuccessPage: React.FC = () => {
           Payment Successful!
         </h1>
         <p className="text-gray-600 mb-8">
-          Your subscription has been activated. Welcome aboard!
+          Your subscription has been activated. Please log in to access your account.
         </p>
 
         <div className="space-y-3">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={goToLogin}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700"
           >
-            Go to Dashboard
-          </button>
-          <button
-            onClick={() => navigate('/subscription')}
-            className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-semibold hover:bg-gray-200"
-          >
-            View Subscription
+            Continue to Login
           </button>
         </div>
+
+        <p className="text-xs text-gray-400 mt-4">
+          Redirecting you to the login page…
+        </p>
       </div>
     </div>
   );

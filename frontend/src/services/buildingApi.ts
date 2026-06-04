@@ -66,4 +66,14 @@ export const buildingApi = {
 
   deleteContact: (id: string): Promise<{ message: string }> =>
     apiClient.request(`/building-contacts/${id}`, { method: 'DELETE' }),
+
+  // Excel upload functionality
+  uploadExcel: (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.request('/upload/building-contacts-excel', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

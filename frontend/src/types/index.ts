@@ -9,13 +9,15 @@ export interface User {
   role: 'broker' | 'channel_partner' | 'admin';
   city: string;
   state: string;
+  address?: string;
+  bio?: string;
   company_name?: string;
   firm_name?: string;
   profile_image?: string;
   is_verified: boolean;
   years_experience?: number;
   deals_completed?: number;
-  specializations?: string[];
+  specializations?: string;
   created_at: string;
   updated_at: string;
 }

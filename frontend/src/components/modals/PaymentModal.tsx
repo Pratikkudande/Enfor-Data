@@ -181,6 +181,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           <div className="mb-6">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">What's Included</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {selectedPlan.sms_credits > 0 && (
+                <FeatureItem text={`${selectedPlan.sms_credits.toLocaleString()} SMS credits (₹${selectedPlan.sms_rate.toFixed(2)}/SMS)`} />
+              )}
               <FeatureItem text={`${formatLimit(selectedPlan.max_properties)} Properties`} />
               <FeatureItem text={`${formatLimit(selectedPlan.max_clients)} Clients`} />
               <FeatureItem text={`${formatLimit(selectedPlan.max_appointments_per_month)} Appointments/month`} />

@@ -17,7 +17,11 @@ type SubscriptionPlan struct {
 	MonthlyPrice float64 `json:"monthly_price" db:"monthly_price"`
 	AnnualPrice  float64 `json:"annual_price" db:"annual_price"`
 	Currency     string  `json:"currency" db:"currency"`
-	
+
+	// SMS Package (per package-calculation sheet)
+	SmsCredits int     `json:"sms_credits" db:"sms_credits"`
+	SmsRate    float64 `json:"sms_rate" db:"sms_rate"`
+
 	// Feature Limits (NULL means unlimited)
 	MaxProperties              *int `json:"max_properties" db:"max_properties"`
 	MaxClients                 *int `json:"max_clients" db:"max_clients"`
@@ -40,6 +44,9 @@ type SubscriptionPlan struct {
 	IsVisible bool `json:"is_visible" db:"is_visible"`
 	IsPopular bool `json:"is_popular" db:"is_popular"`
 	SortOrder int  `json:"sort_order" db:"sort_order"`
+
+	// Which user role this plan is offered to ('broker' or 'channel_partner')
+	TargetRole string `json:"target_role" db:"target_role"`
 	
 	// Timestamps
 	CreatedAt time.Time `json:"created_at" db:"created_at"`

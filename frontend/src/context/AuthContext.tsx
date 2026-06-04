@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, DashboardStats, Appointment } from '../types';
 import { apiClient } from '../services/api';
+import { getSubscriptionStatus } from '../services/subscriptionApi';
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +12,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any) => Promise<void>;
+  refreshUser: () => Promise<void>;
+  // Payment gate: null = unknown/checking, true = paid subscription active, false = unpaid
+  subscriptionPaid: boolean | null;
+  refreshSubscription: () => Promise<void>;
   loading: boolean;
 }
 
@@ -31,6 +36,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [appointments, setAppointments] = useState<Appointment[] | null>(null);
   const [appointmentStats, setAppointmentStats] = useState<any | null>(null);
+  const [subscriptionPaid, setSubscriptionPaid] = useState<boolean | null>(null);
+
+  // Fetches the user's subscription status to drive the payment gate.
+  const refreshSubscription = async (): Promise<void> => {
+    try {
+      const status = await getSubscriptionStatus();
+      setSubscriptionPaid(!!status.is_paid);
+    } catch {
+      setSubscriptionPaid(false);
+    }
+  };
+
+  // Whenever the authenticated user changes, (re)check their payment status.
+  useEffect(() => {
+    if (user) {
+      refreshSubscription();
+    } else {
+      setSubscriptionPaid(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Check for existing session and validate token
@@ -43,17 +68,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData: User = {
               id: response.data.id,
               email: response.data.email,
-              name: `${response.data.first_name} ${response.data.last_name}`,
-              phone: response.data.whatsapp_number || '',
+              name: response.data.name || `${response.data.first_name} ${response.data.last_name}`,
+              first_name: response.data.first_name,
+              last_name: response.data.last_name,
+              phone: response.data.phone || response.data.whatsapp_number || '',
               whatsapp_number: response.data.whatsapp_number,
               role: response.data.role as 'broker' | 'channel_partner' | 'admin',
               city: response.data.city,
               state: response.data.state,
-              company_name: response.data.firm_name,
+              address: response.data.address,
+              bio: response.data.bio,
+              company_name: response.data.company_name || response.data.firm_name,
+              firm_name: response.data.firm_name,
               profile_image: response.data.profile_image || undefined,
               is_verified: response.data.is_verified,
+              years_experience: response.data.years_experience,
+              deals_completed: response.data.deals_completed,
+              specializations: response.data.specializations,
               created_at: response.data.created_at,
-              updated_at: response.data.created_at,
+              updated_at: response.data.updated_at || response.data.created_at,
             };
             setUser(userData);
             localStorage.setItem('enfor_user', JSON.stringify(userData));
@@ -117,16 +150,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const userData: User = {
                   id: meResponse.data.id,
                   email: meResponse.data.email,
-                  name: `${meResponse.data.first_name} ${meResponse.data.last_name}`,
-                  phone: meResponse.data.whatsapp_number || '',
+                  name: meResponse.data.name || `${meResponse.data.first_name} ${meResponse.data.last_name}`,
+                  first_name: meResponse.data.first_name,
+                  last_name: meResponse.data.last_name,
+                  phone: meResponse.data.phone || meResponse.data.whatsapp_number || '',
                   whatsapp_number: meResponse.data.whatsapp_number,
                   role: meResponse.data.role as 'broker' | 'channel_partner' | 'admin',
                   city: meResponse.data.city,
                   state: meResponse.data.state,
-                  company_name: meResponse.data.firm_name,
+                  address: meResponse.data.address,
+                  bio: meResponse.data.bio,
+                  company_name: meResponse.data.company_name || meResponse.data.firm_name,
+                  firm_name: meResponse.data.firm_name,
+                  profile_image: meResponse.data.profile_image,
                   is_verified: meResponse.data.is_verified,
+                  years_experience: meResponse.data.years_experience,
+                  deals_completed: meResponse.data.deals_completed,
+                  specializations: meResponse.data.specializations,
                   created_at: meResponse.data.created_at,
-                  updated_at: meResponse.data.created_at,
+                  updated_at: meResponse.data.updated_at || meResponse.data.created_at,
                 };
                 setUser(userData);
                 localStorage.setItem('enfor_user', JSON.stringify(userData));
@@ -161,16 +203,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData: User = {
           id: response.data.user.id,
           email: response.data.user.email,
-          name: `${response.data.user.first_name} ${response.data.user.last_name}`,
-          phone: response.data.user.whatsapp_number || '',
+          name: response.data.user.name || `${response.data.user.first_name} ${response.data.user.last_name}`,
+          first_name: response.data.user.first_name,
+          last_name: response.data.user.last_name,
+          phone: response.data.user.phone || response.data.user.whatsapp_number || '',
           whatsapp_number: response.data.user.whatsapp_number,
           role: response.data.user.role as 'broker' | 'channel_partner' | 'admin',
           city: response.data.user.city,
           state: response.data.user.state,
-          company_name: response.data.user.firm_name,
+          address: response.data.user.address,
+          bio: response.data.user.bio,
+          company_name: response.data.user.company_name || response.data.user.firm_name,
+          firm_name: response.data.user.firm_name,
+          profile_image: response.data.user.profile_image,
           is_verified: response.data.user.is_verified,
+          years_experience: response.data.user.years_experience,
+          deals_completed: response.data.user.deals_completed,
+          specializations: response.data.user.specializations,
           created_at: response.data.user.created_at,
-          updated_at: response.data.user.created_at
+          updated_at: response.data.user.updated_at || response.data.user.created_at
         };
         
         setUser(userData);
@@ -252,16 +303,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newUser: User = {
           id: response.data.user.id,
           email: response.data.user.email,
-          name: `${response.data.user.first_name} ${response.data.user.last_name}`,
-          phone: response.data.user.whatsapp_number || '',
+          name: response.data.user.name || `${response.data.user.first_name} ${response.data.user.last_name}`,
+          first_name: response.data.user.first_name,
+          last_name: response.data.user.last_name,
+          phone: response.data.user.phone || response.data.user.whatsapp_number || '',
           whatsapp_number: response.data.user.whatsapp_number,
           role: response.data.user.role as 'broker' | 'channel_partner' | 'admin',
           city: response.data.user.city,
           state: response.data.user.state,
-          company_name: response.data.user.firm_name,
+          address: response.data.user.address,
+          bio: response.data.user.bio,
+          company_name: response.data.user.company_name || response.data.user.firm_name,
+          firm_name: response.data.user.firm_name,
+          profile_image: response.data.user.profile_image,
           is_verified: response.data.user.is_verified,
+          years_experience: response.data.user.years_experience,
+          deals_completed: response.data.user.deals_completed,
+          specializations: response.data.user.specializations,
           created_at: response.data.user.created_at,
-          updated_at: response.data.user.created_at
+          updated_at: response.data.user.updated_at || response.data.user.created_at
         };
         
         setUser(newUser);
@@ -317,6 +377,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async (): Promise<void> => {
+    try {
+      const response = await apiClient.getMe();
+      if (response.data) {
+        const userData: User = {
+          id: response.data.id,
+          email: response.data.email,
+          name: response.data.name || `${response.data.first_name} ${response.data.last_name}`,
+          first_name: response.data.first_name,
+          last_name: response.data.last_name,
+          phone: response.data.phone || response.data.whatsapp_number || '',
+          whatsapp_number: response.data.whatsapp_number,
+          role: response.data.role as 'broker' | 'channel_partner' | 'admin',
+          city: response.data.city,
+          state: response.data.state,
+          address: response.data.address,
+          bio: response.data.bio,
+          company_name: response.data.company_name || response.data.firm_name,
+          firm_name: response.data.firm_name,
+          profile_image: response.data.profile_image || undefined,
+          is_verified: response.data.is_verified,
+          years_experience: response.data.years_experience,
+          deals_completed: response.data.deals_completed,
+          specializations: response.data.specializations,
+          created_at: response.data.created_at,
+          updated_at: response.data.updated_at || response.data.created_at,
+        };
+        setUser(userData);
+        localStorage.setItem('enfor_user', JSON.stringify(userData));
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -326,6 +421,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     register,
+    refreshUser,
+    subscriptionPaid,
+    refreshSubscription,
     loading
   };
 

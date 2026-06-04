@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Mail, Phone, MapPin, Calendar, Briefcase, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { profileApi, UpdateProfileRequest } from '../../services/profileApi';
+import { apiClient } from '../../services/api';
 import { ENV } from '../../config/env';
 
 const resolvePhoto = (path?: string | null): string | null => {
@@ -12,24 +13,73 @@ const resolvePhoto = (path?: string | null): string | null => {
 };
 
 const ProfileView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { showToast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(resolvePhoto(user?.profile_image));
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    propertiesCount: 0,
+    clientsCount: 0
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    address: (user as any)?.address || '',
-    bio: (user as any)?.bio || '',
+    address: user?.address || '',
+    bio: user?.bio || '',
     company: user?.company_name || '',
-    experience: String((user as any)?.years_experience || ''),
-    specialization: (user as any)?.specialization || '',
+    experience: String(user?.years_experience || ''),
+    specialization: user?.specializations || '',
   });
+
+  // Fetch user's properties and clients count
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        const [propertiesRes, clientsRes] = await Promise.all([
+          apiClient.getProperties(),
+          apiClient.getClients()
+        ]);
+
+        setStats({
+          propertiesCount: propertiesRes?.data?.length || 0,
+          clientsCount: clientsRes?.data?.length || 0
+        });
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        // Don't show error toast for stats, just keep default values
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  // Update profile data when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        bio: user.bio || '',
+        company: user.company_name || '',
+        experience: String(user.years_experience || ''),
+        specialization: user.specializations || '',
+      });
+      setPhotoUrl(resolvePhoto(user.profile_image));
+    }
+  }, [user]);
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
@@ -94,6 +144,8 @@ const ProfileView: React.FC = () => {
         specialization: profileData.specialization,
       };
       await profileApi.updateProfile(updateData);
+      // Refresh user data from the server to get the latest information
+      await refreshUser();
       setIsEditing(false);
       showToast({ type: 'success', title: 'Profile Updated', message: 'Your profile has been updated successfully.' });
     } catch {
@@ -106,11 +158,11 @@ const ProfileView: React.FC = () => {
       name: user?.name || '',
       email: user?.email || '',
       phone: user?.phone || '',
-      address: (user as any)?.address || '',
-      bio: (user as any)?.bio || '',
+      address: user?.address || '',
+      bio: user?.bio || '',
       company: user?.company_name || '',
-      experience: String((user as any)?.years_experience || ''),
-      specialization: (user as any)?.specialization || '',
+      experience: String(user?.years_experience || ''),
+      specialization: user?.specializations || '',
     });
     setIsEditing(false);
   };
@@ -197,12 +249,24 @@ const ProfileView: React.FC = () => {
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">24</p>
-                  <p className="text-xs text-gray-500">Properties</p>
+                  {loading ? (
+                    <div className="flex justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-blue-600">{stats.propertiesCount}</p>
+                  )}
+                  <p className="text-xs text-gray-500">Own Properties</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-green-600">156</p>
-                  <p className="text-xs text-gray-500">Clients</p>
+                  {loading ? (
+                    <div className="flex justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-green-600">{stats.clientsCount}</p>
+                  )}
+                  <p className="text-xs text-gray-500">Own Clients</p>
                 </div>
               </div>
             </div>

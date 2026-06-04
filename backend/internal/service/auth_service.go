@@ -180,3 +180,30 @@ func (s *AuthService) UpdateProfileImage(userID, imagePath string) error {
 func (s *AuthService) GenerateToken(userID, email, role string) (string, error) {
 	return s.jwtUtil.GenerateToken(userID, email, role)
 }
+// UpdateProfile updates user profile information
+func (s *AuthService) UpdateProfile(userID string, req *dto.UpdateProfileRequest) error {
+	return s.userRepo.UpdateProfile(userID, req)
+}
+
+// ChangePassword changes user password
+func (s *AuthService) ChangePassword(userID string, req *dto.ChangePasswordRequest) error {
+	// Get current user to verify current password
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		return fmt.Errorf("current password is incorrect")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update password
+	return s.userRepo.ChangePassword(userID, string(hashedPassword))
+}

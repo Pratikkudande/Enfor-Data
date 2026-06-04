@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Building2, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Building2, CheckCircle, XCircle, Upload, Loader2, Eye, Edit2, Trash2 } from 'lucide-react';
 import { buildingApi, BuildingContact } from '../../services/buildingApi';
+import { API_CONFIG } from '../../config/api';
 import LoadingState from '../../components/common/LoadingState';
 import ErrorState from '../../components/common/ErrorState';
-import BuildingCard from './BuildingCard';
 import BuildingForm, { BuildingFormData } from './BuildingForm';
 
 const emptyForm: BuildingFormData = {
@@ -32,6 +32,9 @@ const BuildingDataView: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -158,12 +161,58 @@ const BuildingDataView: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Building Data</h1>
           <p className="text-gray-600 mt-1">Store building owner contacts for marketing and lead generation</p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex gap-2">
           <button
             onClick={openAddModal}
             className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" /> Add Contact
+          </button>
+          <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/building-contacts-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
+            Download Sample Excel
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            id="buildingContactsExcelInput"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUploadFileName(file.name);
+              setUploading(true);
+              try {
+                const response = await buildingApi.uploadExcel(file);
+                const data = (response as any)?.data;
+                const created = data?.created ?? 0;
+                const duplicates = data?.duplicates ?? 0;
+                const errors = data?.errors ?? [];
+                let msg = `${created} building contact${created !== 1 ? 's' : ''} imported successfully`;
+                if (duplicates > 0) msg += ` · ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
+                if (errors.length > 0) msg += ` · ${errors.length} row${errors.length !== 1 ? 's' : ''} failed`;
+                showSuccess(msg);
+                fetchContacts();
+              } catch (err) {
+                showError(err instanceof Error ? err.message : 'Upload failed. Please check your file and try again.');
+              } finally {
+                setUploading(false);
+                setUploadFileName('');
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-2" />
+            )}
+            {uploading ? 'Uploading…' : 'Upload Excel'}
           </button>
         </div>
       </div>
@@ -215,40 +264,93 @@ const BuildingDataView: React.FC = () => {
       {error && !loading && <ErrorState message={error} onRetry={fetchContacts} />}
 
       {!loading && !error && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredContacts.map(contact => (
-            <BuildingCard
-              key={contact.id}
-              contact={contact}
-              onView={openViewModal}
-              onEdit={openEditModal}
-              onDelete={handleDelete}
-              isDeleting={deletingId === contact.id}
-            />
-          ))}
-
-          {filteredContacts.length === 0 && (
-            <div className="col-span-full text-center py-12">
-              <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="h-8 w-8 text-orange-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No building contacts found</h3>
-              <p className="text-gray-500 mb-4">
-                {searchTerm || filterArea || filterBuilding
-                  ? 'Try adjusting your search or filters'
-                  : 'Start building your database by adding the first contact'}
-              </p>
-              {!searchTerm && !filterArea && !filterBuilding && (
-                <button
-                  onClick={openAddModal}
-                  className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors"
-                >
-                  Add Contact
-                </button>
-              )}
+        filteredContacts.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 text-center py-12">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Building2 className="h-8 w-8 text-orange-400" />
             </div>
-          )}
-        </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No building contacts found</h3>
+            <p className="text-gray-500 mb-4">
+              {searchTerm || filterArea || filterBuilding
+                ? 'Try adjusting your search or filters'
+                : 'Start building your database by adding the first contact'}
+            </p>
+            {!searchTerm && !filterArea && !filterBuilding && (
+              <button
+                onClick={openAddModal}
+                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Add Contact
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th className="px-4 py-3">Building</th>
+                  <th className="px-4 py-3">Owner</th>
+                  <th className="px-4 py-3">Mobile</th>
+                  <th className="px-4 py-3">Area</th>
+                  <th className="px-4 py-3">Notes</th>
+                  <th className="px-4 py-3">Added</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredContacts.map(contact => (
+                  <tr key={contact.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div className="ml-3">
+                          <div className="font-semibold text-gray-900">
+                            {contact.building_name || <span className="text-gray-400 italic">No Building Name</span>}
+                          </div>
+                          <div className="text-xs text-gray-400 font-mono">ID: {contact.id.slice(0, 8)}…</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{contact.owner_name || <span className="text-gray-400">—</span>}</td>
+                    <td className="px-4 py-3 font-medium text-gray-700">{contact.mobile_number}</td>
+                    <td className="px-4 py-3 text-gray-700">{contact.area || <span className="text-gray-400">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{contact.notes || <span className="text-gray-400">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{new Date(contact.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openViewModal(contact)}
+                          className="bg-blue-50 text-blue-700 p-2 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="View"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => openEditModal(contact)}
+                          className="bg-gray-50 text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(contact)}
+                          disabled={deletingId === contact.id}
+                          className="bg-red-50 text-red-700 p-2 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {showModal && (

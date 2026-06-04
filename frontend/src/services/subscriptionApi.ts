@@ -12,6 +12,8 @@ export interface SubscriptionPlan {
   monthly_price: number;
   annual_price: number;
   currency: string;
+  sms_credits: number;
+  sms_rate: number;
   max_properties: number | null;
   max_clients: number | null;
   max_appointments_per_month: number | null;
@@ -29,6 +31,7 @@ export interface SubscriptionPlan {
   is_visible: boolean;
   is_popular: boolean;
   sort_order: number;
+  target_role: string;
   created_at: string;
   updated_at: string;
 }

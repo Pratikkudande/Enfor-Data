@@ -25,14 +25,16 @@ type UploadHandler struct {
 	config      *config.Config
 	clientSvc   *service.ClientService
 	propertySvc *service.PropertyService
+	buildingSvc *service.BuildingService
 }
 
-func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clientSvc *service.ClientService, propertySvc *service.PropertyService) *UploadHandler {
+func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clientSvc *service.ClientService, propertySvc *service.PropertyService, buildingSvc *service.BuildingService) *UploadHandler {
 	return &UploadHandler{
 		authService: authService,
 		config:      cfg,
 		clientSvc:   clientSvc,
 		propertySvc: propertySvc,
+		buildingSvc: buildingSvc,
 	}
 }
 
@@ -1026,4 +1028,232 @@ func isValidImageType(filename string) bool {
 		}
 	}
 	return false
+}
+
+// UploadBuildingContactsExcel handles bulk building contact Excel uploads
+func (h *UploadHandler) UploadBuildingContactsExcel(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No file provided", Message: "Please attach an Excel file"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > h.config.Upload.MaxFileSize {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File too large", Message: fmt.Sprintf("File size must be less than %d MB", h.config.Upload.MaxFileSize/1024/1024)})
+		return
+	}
+
+	// Read file into buffer
+	buf := bytes.NewBuffer(nil)
+	if _, err := io.Copy(buf, file); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read file", Message: err.Error()})
+		return
+	}
+
+	f, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid Excel file", Message: err.Error()})
+		return
+	}
+	defer f.Close()
+
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Empty Excel file"})
+		return
+	}
+
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Failed to read rows", Message: err.Error()})
+		return
+	}
+
+	if len(rows) < 2 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No data rows found"})
+		return
+	}
+
+	headerRow := rows[0]
+	colIndex := map[string]int{}
+	for i, hname := range headerRow {
+		colIndex[strings.ToLower(strings.TrimSpace(hname))] = i
+	}
+
+	created := 0
+	duplicates := 0
+	errorsList := []string{}
+
+	for r := 1; r < len(rows); r++ {
+		row := rows[r]
+		// Skip empty rows
+		if len(row) == 0 {
+			continue
+		}
+
+		get := func(key string) string {
+			idx, ok := colIndex[key]
+			if !ok || idx >= len(row) {
+				return ""
+			}
+			return strings.TrimSpace(row[idx])
+		}
+
+		ownerName := get("owner_name")
+		mobileNumber := get("mobile_number")
+		buildingName := get("building_name")
+		area := get("area")
+		notes := get("notes")
+
+		// 1. Skip blank rows
+		if ownerName == "" && mobileNumber == "" && buildingName == "" && area == "" {
+			continue
+		}
+
+		// 2. Skip description rows (contain "Required:" or "Optional:")
+		if strings.Contains(strings.ToLower(ownerName), "required:") || strings.Contains(strings.ToLower(ownerName), "optional:") ||
+			strings.Contains(strings.ToLower(mobileNumber), "required:") {
+			continue
+		}
+
+		// 3. Skip example rows
+		if ownerName == "Ramesh" && mobileNumber == "+911234567890" {
+			continue
+		}
+
+		// Mobile number is required
+		if mobileNumber == "" {
+			errorsList = append(errorsList, fmt.Sprintf("row %d: mobile number is required", r+1))
+			continue
+		}
+
+		var req dto.CreateBuildingContactRequest
+		req.MobileNumber = mobileNumber
+		if ownerName != "" {
+			req.OwnerName = &ownerName
+		}
+		if buildingName != "" {
+			req.BuildingName = &buildingName
+		}
+		if area != "" {
+			req.Area = &area
+		}
+		if notes != "" {
+			req.Notes = &notes
+		}
+
+		// Attempt create
+		if _, err := h.buildingSvc.CreateBuildingContact(&req, userID.(string)); err != nil {
+			// Separate duplicate errors from other errors for clearer reporting
+			if strings.Contains(err.Error(), "already exists") {
+				duplicates++
+			} else {
+				errorsList = append(errorsList, fmt.Sprintf("row %d: %v", r+1, err))
+			}
+			continue
+		}
+		created++
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Building contacts processed",
+		Data: gin.H{
+			"created":    created,
+			"duplicates": duplicates,
+			"errors":     errorsList,
+		},
+	})
+}
+
+// DownloadBuildingContactsSample generates and serves an Excel template for building contacts
+func (h *UploadHandler) DownloadBuildingContactsSample(c *gin.Context) {
+	f := excelize.NewFile()
+	sheet := f.GetSheetName(0)
+
+	headers := []string{
+		"owner_name", "mobile_number", "building_name", "area", "notes",
+	}
+
+	// Write headers row 1
+	for i, v := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, v)
+	}
+	lastCol, _ := excelize.CoordinatesToCellName(len(headers), 1)
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"#F3F4F6"}, Pattern: 1},
+	})
+	_ = f.SetCellStyle(sheet, "A1", lastCol, headerStyle)
+
+	// Description row 2
+	descMap := map[string]string{
+		"owner_name":    "Optional: Building owner name",
+		"mobile_number": "Required: Mobile number",
+		"building_name": "Optional: Building name",
+		"area":          "Optional: Area/Location",
+		"notes":         "Optional: Additional notes",
+	}
+	for i, v := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
+		f.SetCellValue(sheet, cell, descMap[v])
+	}
+
+	// Example row 3
+	example := []interface{}{
+		"Ramesh Kumar", "+911234567890", "Sunrise Apartments", "Andheri West", "Contact for property inquiries",
+	}
+	for i, v := range example {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 3)
+		f.SetCellValue(sheet, cell, v)
+	}
+
+	_ = f.SetColWidth(sheet, "A", "E", 25)
+
+	// INSTRUCTIONS sheet
+	instr := "INSTRUCTIONS"
+	f.NewSheet(instr)
+	ins := []string{
+		"How to use this template:",
+		"- Do not change header names in row 1.",
+		"- Row 2 contains field descriptions.",
+		"- Add one record per row starting from row 3.",
+		"- Only mobile_number is required.",
+		"",
+		"Column guide:",
+	}
+	for i, line := range ins {
+		cell, _ := excelize.CoordinatesToCellName(1, i+1)
+		f.SetCellValue(instr, cell, line)
+	}
+	instrDescMap := map[string]string{
+		"owner_name":    "Optional. Name of the building owner.",
+		"mobile_number": "Required. Mobile number of the contact.",
+		"building_name": "Optional. Name of the building.",
+		"area":          "Optional. Area or location of the building.",
+		"notes":         "Optional. Additional notes or comments.",
+	}
+	for i, col := range headers {
+		row := len(ins) + i + 2
+		cellH, _ := excelize.CoordinatesToCellName(1, row)
+		cellD, _ := excelize.CoordinatesToCellName(2, row)
+		f.SetCellValue(instr, cellH, col)
+		f.SetCellValue(instr, cellD, instrDescMap[col])
+	}
+	_ = f.SetColWidth(instr, "A", "B", 50)
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to generate sample"})
+		return
+	}
+	c.Header("Content-Disposition", "attachment; filename=building_contacts_sample.xlsx")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }

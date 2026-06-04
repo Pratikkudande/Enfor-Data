@@ -208,7 +208,7 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 		       u.firm_name, u.profile_image,
 		       COALESCE(u.years_experience, 0) AS years_experience,
 		       COALESCE(u.deals_completed, 0) AS deals_completed,
-		       COALESCE(array_to_string(u.specializations, ','), '') AS specializations,
+		       COALESCE(u.specializations, '') AS specializations,
 		       COALESCE((SELECT COUNT(*) FROM properties WHERE broker_id=u.id AND status='available'), 0) AS properties_count,
 		       COALESCE(cr.status,
 		           CASE WHEN conn.id IS NOT NULL THEN 'connected' ELSE 'none' END

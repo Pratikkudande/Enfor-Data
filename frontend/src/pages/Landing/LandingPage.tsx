@@ -158,7 +158,7 @@ const LandingPage: React.FC = () => {
             <Link to="/register"
               className="text-sm font-semibold text-white px-5 py-2 rounded-lg transition-all hover:opacity-90 hover:-translate-y-0.5"
               style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
-              Start Free Trial
+              Get Started
             </Link>
           </div>
 
@@ -179,7 +179,7 @@ const LandingPage: React.FC = () => {
             <div className="pt-2 flex flex-col gap-2">
               <Link to="/login" className="text-center text-sm font-medium border border-white/20 rounded-lg py-2 text-gray-300">Login</Link>
               <Link to="/register" className="text-center text-sm font-semibold text-white rounded-lg py-2"
-                style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Start Free Trial</Link>
+                style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>Get Started</Link>
             </div>
           </div>
         )}
@@ -220,7 +220,7 @@ const LandingPage: React.FC = () => {
                 <Link to="/register"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-lg hover:opacity-90 hover:-translate-y-0.5 transition-all"
                   style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 24px rgba(99,102,241,0.45)' }}>
-                  Start Free Trial <ArrowRight className="w-4 h-4" />
+                  Get Started <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a href="#features"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
@@ -590,7 +590,7 @@ const LandingPage: React.FC = () => {
             <Link to="/register"
               className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg hover:opacity-90 hover:-translate-y-0.5 transition-all"
               style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 28px rgba(99,102,241,0.5)' }}>
-              Start Free Trial <ArrowRight className="w-4 h-4" />
+              Get Started <ArrowRight className="w-4 h-4" />
             </Link>
             <a href="#"
               className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
@@ -602,7 +602,7 @@ const LandingPage: React.FC = () => {
             </a>
           </div>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-gray-500">
-            {['No credit card required', '14-day free trial', 'Cancel anytime'].map(t => (
+            {['Simple annual plans', 'Secure Razorpay payment', 'Cancel anytime'].map(t => (
               <span key={t} className="flex items-center gap-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-blue-400" /> {t}
               </span>

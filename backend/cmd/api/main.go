@@ -102,7 +102,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
-	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService)
+	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService)
 	propertyHandler := handler.NewPropertyHandler(propertyService)
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
@@ -174,10 +174,15 @@ func main() {
 		protected := api.Group("/")
 		protected.Use(authMiddleware.RequireAuth())
 		{
+			// Profile routes
+			protected.PUT("/profile/update", authHandler.UpdateProfile)
+			protected.POST("/profile/change-password", authHandler.ChangePassword)
+
 			// File upload routes
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
 			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
 			protected.POST("/upload/properties-excel", uploadHandler.UploadPropertiesExcel)
+			protected.POST("/upload/building-contacts-excel", uploadHandler.UploadBuildingContactsExcel)
 			protected.POST("/upload/property-photos/:id", uploadHandler.UploadPropertyPhotos)
 			protected.DELETE("/upload/property-photos/:id/:filename", uploadHandler.DeletePropertyPhoto)
 
@@ -413,6 +418,7 @@ func main() {
 		// Sample download templates
 		api.GET("/download/clients-sample", uploadHandler.DownloadClientsSample)
 		api.GET("/download/properties-sample", uploadHandler.DownloadPropertiesSample)
+		api.GET("/download/building-contacts-sample", uploadHandler.DownloadBuildingContactsSample)
 	}
 
 	// Start server

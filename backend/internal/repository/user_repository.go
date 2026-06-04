@@ -3,8 +3,11 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"enfor-data-backend/internal/database"
+	"enfor-data-backend/internal/dto"
 	"enfor-data-backend/internal/models"
 )
 
@@ -49,6 +52,8 @@ func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 			id, first_name, last_name, email, password_hash, date_of_birth,
 			firm_name, role, whatsapp_number, alternative_number, foreign_number,
 			address, location, city, state, postal_code, profile_image,
+			bio, years_experience, deals_completed, specializations,
+			mobile_verified, mobile_verified_at,
 			is_verified, is_active, created_at, updated_at
 		FROM users 
 		WHERE email = $1 AND is_active = true
@@ -58,6 +63,8 @@ func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PasswordHash, &user.DateOfBirth,
 		&user.FirmName, &user.Role, &user.WhatsappNumber, &user.AlternativeNumber, &user.ForeignNumber,
 		&user.Address, &user.Location, &user.City, &user.State, &user.PostalCode, &user.ProfileImage,
+		&user.Bio, &user.YearsExperience, &user.DealsCompleted, &user.Specializations,
+		&user.MobileVerified, &user.MobileVerifiedAt,
 		&user.IsVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -79,6 +86,8 @@ func (r *UserRepository) GetUserByID(id string) (*models.User, error) {
 			id, first_name, last_name, email, password_hash, date_of_birth,
 			firm_name, role, whatsapp_number, alternative_number, foreign_number,
 			address, location, city, state, postal_code, profile_image,
+			bio, years_experience, deals_completed, specializations,
+			mobile_verified, mobile_verified_at,
 			is_verified, is_active, created_at, updated_at
 		FROM users 
 		WHERE id = $1 AND is_active = true
@@ -88,6 +97,8 @@ func (r *UserRepository) GetUserByID(id string) (*models.User, error) {
 		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PasswordHash, &user.DateOfBirth,
 		&user.FirmName, &user.Role, &user.WhatsappNumber, &user.AlternativeNumber, &user.ForeignNumber,
 		&user.Address, &user.Location, &user.City, &user.State, &user.PostalCode, &user.ProfileImage,
+		&user.Bio, &user.YearsExperience, &user.DealsCompleted, &user.Specializations,
+		&user.MobileVerified, &user.MobileVerifiedAt,
 		&user.IsVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -160,6 +171,8 @@ func (r *UserRepository) GetUserByMobile(mobileNumber string) (*models.User, err
 			id, first_name, last_name, email, password_hash, date_of_birth,
 			firm_name, role, whatsapp_number, alternative_number, foreign_number,
 			address, location, city, state, postal_code, profile_image,
+			bio, years_experience, deals_completed, specializations,
+			mobile_verified, mobile_verified_at,
 			is_verified, is_active, created_at, updated_at
 		FROM users 
 		WHERE whatsapp_number = $1 AND is_active = true
@@ -169,6 +182,8 @@ func (r *UserRepository) GetUserByMobile(mobileNumber string) (*models.User, err
 		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PasswordHash, &user.DateOfBirth,
 		&user.FirmName, &user.Role, &user.WhatsappNumber, &user.AlternativeNumber, &user.ForeignNumber,
 		&user.Address, &user.Location, &user.City, &user.State, &user.PostalCode, &user.ProfileImage,
+		&user.Bio, &user.YearsExperience, &user.DealsCompleted, &user.Specializations,
+		&user.MobileVerified, &user.MobileVerifiedAt,
 		&user.IsVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -211,4 +226,104 @@ func (r *UserRepository) MobileExists(mobileNumber string) (bool, error) {
 	}
 
 	return exists, nil
+}
+// UpdateProfile updates user profile information
+func (r *UserRepository) UpdateProfile(userID string, req *dto.UpdateProfileRequest) error {
+	// Build dynamic query based on provided fields
+	setParts := []string{}
+	args := []interface{}{}
+	argIndex := 1
+
+	if req.Name != nil {
+		// Split name into first and last name
+		names := strings.Fields(strings.TrimSpace(*req.Name))
+		if len(names) >= 1 {
+			setParts = append(setParts, fmt.Sprintf("first_name = $%d", argIndex))
+			args = append(args, names[0])
+			argIndex++
+		}
+		if len(names) >= 2 {
+			setParts = append(setParts, fmt.Sprintf("last_name = $%d", argIndex))
+			args = append(args, strings.Join(names[1:], " "))
+			argIndex++
+		}
+	}
+
+	if req.Phone != nil {
+		setParts = append(setParts, fmt.Sprintf("whatsapp_number = $%d", argIndex))
+		args = append(args, *req.Phone)
+		argIndex++
+	}
+
+	if req.Address != nil {
+		setParts = append(setParts, fmt.Sprintf("address = $%d", argIndex))
+		args = append(args, *req.Address)
+		argIndex++
+	}
+
+	if req.Bio != nil {
+		setParts = append(setParts, fmt.Sprintf("bio = $%d", argIndex))
+		args = append(args, *req.Bio)
+		argIndex++
+	}
+
+	if req.Company != nil {
+		setParts = append(setParts, fmt.Sprintf("firm_name = $%d", argIndex))
+		args = append(args, *req.Company)
+		argIndex++
+	}
+
+	if req.Experience != nil {
+		// Try to parse experience as integer
+		if exp, err := strconv.Atoi(*req.Experience); err == nil {
+			setParts = append(setParts, fmt.Sprintf("years_experience = $%d", argIndex))
+			args = append(args, exp)
+			argIndex++
+		}
+	}
+
+	if req.Specialization != nil {
+		setParts = append(setParts, fmt.Sprintf("specializations = $%d", argIndex))
+		args = append(args, *req.Specialization)
+		argIndex++
+	}
+
+	if len(setParts) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	// Add updated_at
+	setParts = append(setParts, fmt.Sprintf("updated_at = NOW()"))
+
+	// Add user ID as the last parameter
+	args = append(args, userID)
+
+	query := fmt.Sprintf(`
+		UPDATE users SET %s
+		WHERE id = $%d
+	`, strings.Join(setParts, ", "), argIndex)
+
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to update profile: %w", err)
+	}
+
+	return nil
+}
+
+// ChangePassword updates user password
+func (r *UserRepository) ChangePassword(userID, newPasswordHash string) error {
+	query := `
+		UPDATE users SET 
+			password_hash = $1,
+			updated_at = NOW()
+		WHERE id = $2
+	`
+
+	_, err := r.db.Exec(query, newPasswordHash, userID)
+	if err != nil {
+		return fmt.Errorf("failed to change password: %w", err)
+	}
+
+	return nil
 }

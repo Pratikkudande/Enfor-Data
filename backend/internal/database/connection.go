@@ -941,6 +941,43 @@ END $$;
 	}
 
 	log.Println("Database migrations completed successfully")
+
+	// Migration 013: Add bio column to users table
+	bioMigration := `
+-- Add bio column to users table for profile updates
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+-- Add years_experience column if not exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS years_experience INTEGER;
+-- Add deals_completed column if not exists  
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deals_completed INTEGER;
+-- Add specializations column if not exists (as TEXT, not array)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specializations TEXT;
+-- Fix specializations column type if it's an array
+DO $$
+BEGIN
+    -- Check if specializations is text[] and convert to text
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name = 'specializations' 
+        AND data_type = 'ARRAY'
+    ) THEN
+        -- Clean up empty arrays first
+        UPDATE users SET specializations = NULL WHERE specializations = '{}';
+        -- Convert column type
+        ALTER TABLE users ALTER COLUMN specializations TYPE TEXT;
+    END IF;
+END $$;
+-- Add mobile verification columns if not exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_verified_at TIMESTAMP WITH TIME ZONE;
+`
+	_, err = db.Exec(bioMigration)
+	if err != nil {
+		return fmt.Errorf("failed to run bio migration: %w", err)
+	}
+
+	log.Println("Bio column migration completed successfully")
 	return nil
 }
 
@@ -1543,6 +1580,10 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     annual_price  DECIMAL(10, 2) NOT NULL DEFAULT 0,
     currency VARCHAR(3) DEFAULT 'INR',
 
+    -- SMS Package (per package-calculation sheet)
+    sms_credits INTEGER NOT NULL DEFAULT 0,
+    sms_rate    DECIMAL(10, 4) NOT NULL DEFAULT 0,
+
     -- Feature Limits (NULL means unlimited)
     max_properties              INTEGER,
     max_clients                 INTEGER,
@@ -1565,6 +1606,9 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     is_visible BOOLEAN DEFAULT true,
     is_popular BOOLEAN DEFAULT false,
     sort_order INTEGER DEFAULT 0,
+
+    -- Which user role this plan is offered to ('broker' or 'channel_partner')
+    target_role VARCHAR(20) NOT NULL DEFAULT 'broker',
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -1680,29 +1724,53 @@ CREATE INDEX IF NOT EXISTS idx_subscription_events_user ON subscription_events(u
 	}
 
 	// Seed default subscription plans
+	// Seeded from the package-calculation sheet. All paid plans are annual-only,
+	// and annual_price is the GST-inclusive total charged via Razorpay.
+	// max_sms_messages_per_month mirrors sms_credits so feature gating stays consistent.
 	plansSql := `
 INSERT INTO subscription_plans (
     name, display_name, description,
     monthly_price, annual_price,
+    sms_credits, sms_rate,
     max_properties, max_clients, max_appointments_per_month,
     max_whatsapp_messages_per_month, max_sms_messages_per_month,
     max_broker_connections, max_business_posts_per_month, max_team_members,
     has_analytics, has_advanced_analytics, has_api_access, has_custom_templates, has_priority_support,
-    is_active, is_visible, is_popular, sort_order
+    is_active, is_visible, is_popular, sort_order, target_role
 ) VALUES
-    ('free_trial', 'Free Trial', '15-day free trial with limited features',
-     0.00, 0.00, 5, 10, 5, 50, 50, 0, 0, 1,
-     true, false, false, false, false, true, false, false, 0),
-    ('starter', 'Starter Plan', 'Perfect for individual brokers getting started',
-     999.00, 9999.00, 50, 100, NULL, 500, 500, 20, 5, 1,
-     true, false, false, false, false, true, true, false, 1),
-    ('professional', 'Professional Plan', 'For growing teams and serious brokers',
-     2499.00, 24999.00, NULL, NULL, NULL, 2000, 2000, NULL, NULL, 3,
-     true, true, true, true, true, true, true, true, 2),
-    ('enterprise', 'Enterprise Plan', 'Custom solution for large organizations',
-     0.00, 0.00, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-     true, true, true, true, true, true, true, false, 3)
-ON CONFLICT (name) DO NOTHING;
+    -- ── Broker Plans ──────────────────────────────────────────────
+    ('basic', 'Basic Plan', 'Annual subscription with 5,555 SMS credits',
+     0.00, 6869.96, 5555, 0.40, NULL, NULL, NULL, NULL, 5555, NULL, NULL, 1,
+     true, false, false, false, false, true, true, false, 1, 'broker'),
+    ('standard', 'Standard Plan', 'Annual subscription with 11,111 SMS credits',
+     0.00, 8836.84, 11111, 0.35, NULL, NULL, NULL, NULL, 11111, NULL, NULL, 1,
+     true, false, false, true, false, true, true, false, 2, 'broker'),
+    ('premium', 'Premium Plan', 'Annual subscription with 15,555 SMS credits',
+     0.00, 9754.47, 15555, 0.30, NULL, NULL, NULL, NULL, 15555, NULL, NULL, 3,
+     true, true, false, true, false, true, true, true, 3, 'broker'),
+    ('enterprise', 'Enterprise Plan', 'Annual subscription with 25,555 SMS credits',
+     0.00, 12389.82, 25555, 0.27, NULL, NULL, NULL, NULL, 25555, NULL, NULL, 5,
+     true, true, true, true, true, true, true, false, 4, 'broker'),
+
+    -- ── Channel Partner Plans ─────────────────────────────────────
+    ('partner', 'Partner Plan', 'Annual channel partner subscription with 11,111 SMS credits',
+     0.00, 8836.84, 11111, 0.35, NULL, NULL, NULL, NULL, 11111, NULL, NULL, 3,
+     true, false, false, true, false, true, true, false, 5, 'channel_partner'),
+    ('partner_pro', 'Partner Pro Plan', 'Annual channel partner subscription with 33,333 SMS credits',
+     0.00, 14081.24, 33333, 0.25, NULL, NULL, NULL, NULL, 33333, NULL, NULL, 10,
+     true, true, true, true, true, true, true, false, 6, 'channel_partner')
+ON CONFLICT (name) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    description = EXCLUDED.description,
+    monthly_price = EXCLUDED.monthly_price,
+    annual_price = EXCLUDED.annual_price,
+    sms_credits = EXCLUDED.sms_credits,
+    sms_rate = EXCLUDED.sms_rate,
+    max_sms_messages_per_month = EXCLUDED.max_sms_messages_per_month,
+    is_popular = EXCLUDED.is_popular,
+    sort_order = EXCLUDED.sort_order,
+    target_role = EXCLUDED.target_role,
+    updated_at = NOW();
 `
 
 	_, err = db.Exec(plansSql)

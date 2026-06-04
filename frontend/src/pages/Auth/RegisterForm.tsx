@@ -104,6 +104,10 @@ const RegisterForm: React.FC = () => {
 
       await register(userData);
 
+      // New users have no paid subscription yet — send them to choose a plan.
+      // The payment gate (RequirePaidRoute) keeps the app locked until they pay.
+      navigate(ROUTES.PRICING);
+
     } catch (err: any) {
       console.error('Registration error:', err);
       let errorMessage = err.message || 'Registration failed. Please try again.';

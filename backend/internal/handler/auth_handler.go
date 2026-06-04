@@ -183,3 +183,94 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		},
 	})
 }
+// UpdateProfile handles profile update requests
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if err := h.authService.UpdateProfile(userID.(string), &req); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Update failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Get updated user data
+	user, err := h.authService.GetUserByID(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to retrieve updated profile",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Profile updated successfully",
+		Data:    dto.ToPublicUser(user),
+	})
+}
+
+// ChangePassword handles password change requests
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	var req dto.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Validation failed",
+			Message: formatValidationErrors(err),
+		})
+		return
+	}
+
+	if err := h.authService.ChangePassword(userID.(string), &req); err != nil {
+		if strings.Contains(err.Error(), "current password is incorrect") {
+			c.JSON(http.StatusBadRequest, ErrorResponse{
+				Error:   "Invalid current password",
+				Message: "The current password you entered is incorrect",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Password change failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Password changed successfully",
+	})
+}

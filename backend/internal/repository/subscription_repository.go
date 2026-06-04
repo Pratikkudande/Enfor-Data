@@ -27,12 +27,13 @@ func NewSubscriptionRepository(db *database.DB) *SubscriptionRepository {
 func (r *SubscriptionRepository) GetAllPlans() ([]models.SubscriptionPlan, error) {
 	query := `
 		SELECT id, name, display_name, description, monthly_price, annual_price, currency,
+		       sms_credits, sms_rate,
 		       max_properties, max_clients, max_appointments_per_month,
 		       max_whatsapp_messages_per_month, max_sms_messages_per_month,
 		       max_broker_connections, max_business_posts_per_month, max_team_members,
 		       has_analytics, has_advanced_analytics, has_api_access,
 		       has_custom_templates, has_priority_support,
-		       is_active, is_visible, is_popular, sort_order,
+		       is_active, is_visible, is_popular, sort_order, target_role,
 		       created_at, updated_at
 		FROM subscription_plans
 		WHERE is_active = true
@@ -56,6 +57,8 @@ func (r *SubscriptionRepository) GetAllPlans() ([]models.SubscriptionPlan, error
 			&plan.MonthlyPrice,
 			&plan.AnnualPrice,
 			&plan.Currency,
+			&plan.SmsCredits,
+			&plan.SmsRate,
 			&plan.MaxProperties,
 			&plan.MaxClients,
 			&plan.MaxAppointmentsPerMonth,
@@ -73,6 +76,7 @@ func (r *SubscriptionRepository) GetAllPlans() ([]models.SubscriptionPlan, error
 			&plan.IsVisible,
 			&plan.IsPopular,
 			&plan.SortOrder,
+			&plan.TargetRole,
 			&plan.CreatedAt,
 			&plan.UpdatedAt,
 		)
@@ -89,12 +93,13 @@ func (r *SubscriptionRepository) GetAllPlans() ([]models.SubscriptionPlan, error
 func (r *SubscriptionRepository) GetPlanByID(planID string) (*models.SubscriptionPlan, error) {
 	query := `
 		SELECT id, name, display_name, description, monthly_price, annual_price, currency,
+		       sms_credits, sms_rate,
 		       max_properties, max_clients, max_appointments_per_month,
 		       max_whatsapp_messages_per_month, max_sms_messages_per_month,
 		       max_broker_connections, max_business_posts_per_month, max_team_members,
 		       has_analytics, has_advanced_analytics, has_api_access,
 		       has_custom_templates, has_priority_support,
-		       is_active, is_visible, is_popular, sort_order,
+		       is_active, is_visible, is_popular, sort_order, target_role,
 		       created_at, updated_at
 		FROM subscription_plans
 		WHERE id = $1 AND is_active = true
@@ -109,6 +114,8 @@ func (r *SubscriptionRepository) GetPlanByID(planID string) (*models.Subscriptio
 		&plan.MonthlyPrice,
 		&plan.AnnualPrice,
 		&plan.Currency,
+		&plan.SmsCredits,
+		&plan.SmsRate,
 		&plan.MaxProperties,
 		&plan.MaxClients,
 		&plan.MaxAppointmentsPerMonth,
@@ -126,6 +133,7 @@ func (r *SubscriptionRepository) GetPlanByID(planID string) (*models.Subscriptio
 		&plan.IsVisible,
 		&plan.IsPopular,
 		&plan.SortOrder,
+		&plan.TargetRole,
 		&plan.CreatedAt,
 		&plan.UpdatedAt,
 	)
@@ -144,12 +152,13 @@ func (r *SubscriptionRepository) GetPlanByID(planID string) (*models.Subscriptio
 func (r *SubscriptionRepository) GetPlanBySlug(slug string) (*models.SubscriptionPlan, error) {
 	query := `
 		SELECT id, name, display_name, description, monthly_price, annual_price, currency,
+		       sms_credits, sms_rate,
 		       max_properties, max_clients, max_appointments_per_month,
 		       max_whatsapp_messages_per_month, max_sms_messages_per_month,
 		       max_broker_connections, max_business_posts_per_month, max_team_members,
 		       has_analytics, has_advanced_analytics, has_api_access,
 		       has_custom_templates, has_priority_support,
-		       is_active, is_visible, is_popular, sort_order,
+		       is_active, is_visible, is_popular, sort_order, target_role,
 		       created_at, updated_at
 		FROM subscription_plans
 		WHERE name = $1 AND is_active = true
@@ -164,6 +173,8 @@ func (r *SubscriptionRepository) GetPlanBySlug(slug string) (*models.Subscriptio
 		&plan.MonthlyPrice,
 		&plan.AnnualPrice,
 		&plan.Currency,
+		&plan.SmsCredits,
+		&plan.SmsRate,
 		&plan.MaxProperties,
 		&plan.MaxClients,
 		&plan.MaxAppointmentsPerMonth,
@@ -181,6 +192,7 @@ func (r *SubscriptionRepository) GetPlanBySlug(slug string) (*models.Subscriptio
 		&plan.IsVisible,
 		&plan.IsPopular,
 		&plan.SortOrder,
+		&plan.TargetRole,
 		&plan.CreatedAt,
 		&plan.UpdatedAt,
 	)
