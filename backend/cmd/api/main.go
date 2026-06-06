@@ -54,6 +54,9 @@ func main() {
 	if err := db.RunBusinessPostsMigrations(); err != nil {
 		log.Fatal("Failed to run Business Posts migrations:", err)
 	}
+	if err := db.RunAdminMigrations(); err != nil {
+		log.Fatal("Failed to run Admin migrations:", err)
+	}
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
@@ -72,6 +75,7 @@ func main() {
 	externalBrokerRepo := repository.NewExternalBrokerRepository(db)
 	businessPostRepo := repository.NewBusinessPostRepository(db)
 	staffRepo := repository.NewStaffRepository(db)
+	adminRepo := repository.NewAdminRepository(db)
 
 	// Initialize services
 	smsService := service.NewSMSService(cfg)
@@ -94,6 +98,7 @@ func main() {
 	externalBrokerService := service.NewExternalBrokerService(externalBrokerRepo, userRepo)
 	businessPostService := service.NewBusinessPostService(businessPostRepo)
 	staffService := service.NewStaffService(staffRepo)
+	adminService := service.NewAdminService(adminRepo, userRepo, authService)
 	
 	// Initialize appointment reminder service
 	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
@@ -120,6 +125,7 @@ func main() {
 	externalBrokerHandler := handler.NewExternalBrokerHandler(externalBrokerService)
 	businessPostHandler := handler.NewBusinessPostHandler(businessPostService)
 	staffHandler := handler.NewStaffHandler(staffService)
+	adminHandler := handler.NewAdminHandler(adminService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -393,13 +399,29 @@ func main() {
 			admin := protected.Group("/admin")
 			admin.Use(authMiddleware.RequireRole("admin"))
 			{
-				admin.GET("/dashboard", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{
-						"message": "Admin dashboard",
-						"user_id": c.GetString("user_id"),
-					})
-				})
+				admin.GET("/dashboard", adminHandler.GetDashboard)
+				admin.GET("/users", adminHandler.GetUsers)
+				admin.GET("/users/:id", adminHandler.GetUserDetails)
+				admin.PUT("/users/:id/status", adminHandler.UpdateUserStatus)
+				admin.DELETE("/users/:id", adminHandler.DeleteUser)
+				admin.POST("/users/:id/login-as", adminHandler.LoginAsBroker)
+				admin.GET("/revenue", adminHandler.GetRevenue)
+				admin.GET("/sms", adminHandler.GetSMS)
+				admin.GET("/audit-logs", adminHandler.GetAuditLogs)
+				admin.GET("/announcements", adminHandler.GetAnnouncements)
+				admin.POST("/announcements", adminHandler.CreateAnnouncement)
+				admin.POST("/announcements/:id/send", adminHandler.SendAnnouncement)
+				admin.GET("/feedback", adminHandler.GetFeedback)
+				admin.PUT("/feedback/:id", adminHandler.UpdateFeedback)
+				admin.GET("/renewals", adminHandler.GetRenewals)
+				admin.GET("/activity", adminHandler.GetActivity)
+				admin.GET("/storage", adminHandler.GetStorage)
+				admin.GET("/config", adminHandler.GetConfig)
+				admin.PUT("/config", adminHandler.UpdateConfig)
+				admin.GET("/download/:type", adminHandler.DownloadData)
 			}
+			// Broker feedback submission (accessible to all authenticated users)
+			protected.POST("/feedback", adminHandler.SubmitFeedback)
 		}
 
 		// File serving routes (public for uploaded files)
