@@ -16,7 +16,9 @@ export const ROUTES = {
   AGREEMENTS: '/agreements',
   PROJECTS: '/projects',
   BUILDING_DATA: '/building-data',
-  
+  ANALYTICS: '/analytics',
+  LEADS: '/leads',
+
   // Profile & Settings Routes
   PROFILE: '/profile',
   SETTINGS: '/settings',

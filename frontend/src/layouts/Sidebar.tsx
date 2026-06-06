@@ -15,7 +15,6 @@ import {
   UserCheck,
   Briefcase,
   CreditCard,
-  Crown,
   Bell,
   HardHat,
 } from 'lucide-react';
@@ -58,7 +57,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'marketing', label: 'Marketing', icon: Megaphone },
-    { id: 'pricing', label: 'Pricing Plans', icon: Crown },
     { id: 'subscription', label: 'My Subscription', icon: CreditCard },
     { id: 'profile', label: 'Profile', icon: UserCheck },
     { id: 'settings', label: 'Settings', icon: Settings }

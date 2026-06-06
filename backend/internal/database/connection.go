@@ -1558,14 +1558,6 @@ CREATE TRIGGER trg_staff_poster
 // RunSubscriptionMigrations creates the subscription and payment tables.
 func (db *DB) RunSubscriptionMigrations() error {
 	migrationSQL := `
--- Drop and recreate to fix any corrupt schema from previous broken migrations
-DROP TABLE IF EXISTS subscription_events CASCADE;
-DROP TABLE IF EXISTS feature_usage_logs CASCADE;
-DROP TABLE IF EXISTS feature_usage CASCADE;
-DROP TABLE IF EXISTS payments CASCADE;
-DROP TABLE IF EXISTS user_subscriptions CASCADE;
-DROP TABLE IF EXISTS subscription_plans CASCADE;
-
 -- Subscription Plans Table (schema matches repository queries)
 CREATE TABLE IF NOT EXISTS subscription_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1660,7 +1652,7 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-CREATE UNIQUE INDEX idx_user_active_subscription
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_active_subscription
     ON user_subscriptions(user_id)
     WHERE status IN ('trial', 'active');
 CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user ON user_subscriptions(user_id);
@@ -1721,6 +1713,17 @@ CREATE INDEX IF NOT EXISTS idx_subscription_events_user ON subscription_events(u
 	_, err := db.Exec(migrationSQL)
 	if err != nil {
 		return fmt.Errorf("failed to run subscription migrations: %w", err)
+	}
+
+	// Idempotent schema upgrades for existing databases (tables are no longer
+	// dropped on startup, so add any newer columns here if they are missing).
+	alterSQL := `
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sms_credits INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sms_rate DECIMAL(10, 4) NOT NULL DEFAULT 0;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS target_role VARCHAR(20) NOT NULL DEFAULT 'broker';
+`
+	if _, err := db.Exec(alterSQL); err != nil {
+		return fmt.Errorf("failed to apply subscription schema upgrades: %w", err)
 	}
 
 	// Seed default subscription plans

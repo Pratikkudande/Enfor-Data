@@ -140,20 +140,48 @@ const SettingsView: React.FC = () => {
   };
 
   const handleChangePassword = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
+    // Require the current password.
+    if (!passwordData.currentPassword) {
       showToast({
         type: 'error',
-        title: 'Password Mismatch',
-        message: 'New passwords do not match. Please try again.'
+        title: 'Current Password Required',
+        message: 'Please enter your current password.'
       });
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
+    // Validate the new password against the policy and report the first failing rule.
+    const policy: { test: (p: string) => boolean; message: string }[] = [
+      { test: (p) => p.length >= 8, message: 'Password must be at least 8 characters long.' },
+      { test: (p) => /[A-Z]/.test(p), message: 'Password must contain at least one uppercase letter.' },
+      { test: (p) => /[a-z]/.test(p), message: 'Password must contain at least one lowercase letter.' },
+      { test: (p) => /\d/.test(p), message: 'Password must contain at least one number.' },
+      { test: (p) => /[^A-Za-z0-9]/.test(p), message: 'Password must contain at least one special character.' },
+    ];
+    const failed = policy.find((rule) => !rule.test(passwordData.newPassword));
+    if (failed) {
       showToast({
         type: 'error',
-        title: 'Password Too Short',
-        message: 'Password must be at least 8 characters long.'
+        title: 'Password Does Not Meet Requirements',
+        message: failed.message
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showToast({
+        type: 'error',
+        title: 'Password Mismatch',
+        message: 'New password and confirm password do not match.'
+      });
+      return;
+    }
+
+    if (passwordData.newPassword === passwordData.currentPassword) {
+      showToast({
+        type: 'error',
+        title: 'Choose a Different Password',
+        message: 'New password must be different from your current password.'
       });
       return;
     }
@@ -177,10 +205,15 @@ const SettingsView: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to change password:', error);
+      const raw = (error instanceof Error ? error.message : '').toLowerCase();
+      // Backend returns "current password is incorrect" for a wrong current password.
+      const isWrongCurrent = raw.includes('current password') || raw.includes('incorrect');
       showToast({
         type: 'error',
-        title: 'Password Change Failed',
-        message: 'Failed to change your password. Please check your current password and try again.'
+        title: isWrongCurrent ? 'Incorrect Current Password' : 'Password Change Failed',
+        message: isWrongCurrent
+          ? 'The current password you entered is incorrect. Please try again.'
+          : 'Failed to change your password. Please try again.'
       });
     }
   };

@@ -26,6 +26,7 @@ const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
 const AgreementsView = lazy(() => import('../pages/Agreements/AgreementsView'));
 const ProjectsView = lazy(() => import('../pages/Projects/ProjectsView'));
 const BuildingDataView = lazy(() => import('../pages/BuildingData/BuildingDataView'));
+const ComingSoonView = lazy(() => import('../pages/ComingSoon/ComingSoonView'));
 
 // Profile & Settings Pages
 const ProfileView = lazy(() => import('../pages/Profile/ProfileView'));
@@ -146,6 +147,19 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.BUILDING_DATA} element={
           <Suspense fallback={<PageLoader />}>
             <BuildingDataView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.ANALYTICS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ComingSoonView title="Analytics" />
+          </Suspense>
+        } />
+        <Route path={ROUTES.LEADS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ComingSoonView
+              title="Leads Management"
+              description="Capture, assign and track your leads end-to-end. We’re building this feature to help you convert more enquiries into deals."
+            />
           </Suspense>
         } />
         

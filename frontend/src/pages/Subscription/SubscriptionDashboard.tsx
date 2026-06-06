@@ -7,6 +7,9 @@ import { getCurrentSubscription, cancelSubscription, SubscriptionDetails } from 
 const SubscriptionDashboard: React.FC = () => {
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,18 +33,23 @@ const SubscriptionDashboard: React.FC = () => {
     }
   };
 
-  const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription?')) {
-      return;
-    }
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    window.setTimeout(() => setToast(null), 5000);
+  };
 
+  const handleConfirmCancel = async () => {
     try {
+      setCanceling(true);
       await cancelSubscription();
-      
-      alert('Subscription canceled successfully');
+      setShowCancelModal(false);
+      showToast('success', 'Subscription canceled successfully.');
       fetchSubscription();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to cancel subscription');
+      setShowCancelModal(false);
+      showToast('error', error.response?.data?.message || 'Failed to cancel subscription.');
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -151,7 +159,7 @@ const SubscriptionDashboard: React.FC = () => {
                     Change Plan
                   </button>
                   <button
-                    onClick={handleCancelSubscription}
+                    onClick={() => setShowCancelModal(true)}
                     className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
                   >
                     Cancel Subscription
@@ -200,6 +208,60 @@ const SubscriptionDashboard: React.FC = () => {
           <p className="text-gray-600">No payment history available</p>
         </div>
       </div>
+
+      {/* Cancel confirmation modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 9v2m0 4h.01M5.07 19h13.86a2 2 0 001.74-2.99l-6.93-12a2 2 0 00-3.48 0l-6.93 12A2 2 0 005.07 19z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Cancel Subscription?</h3>
+                <p className="text-gray-600 text-sm mt-1">
+                  Are you sure you want to cancel your subscription? You’ll keep access until the end
+                  of your current billing period.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={canceling}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
+              >
+                Keep Subscription
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={canceling}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center"
+              >
+                {canceling && (
+                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/40 border-t-white mr-2" />
+                )}
+                {canceling ? 'Canceling…' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Result toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white text-sm max-w-sm ${
+            toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };

@@ -6,6 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../routes/routePaths';
 import NotificationDropdown from '../components/notifications/NotificationDropdown';
 import logo from '../assets/logo.png';
+import { ENV } from '../config/env';
+
+// Resolves a stored profile image path to a full URL (same logic as the Profile page).
+const resolvePhoto = (path?: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http') || path.startsWith('blob:')) return path;
+  return `${ENV.API_URL}${path}`;
+};
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -115,12 +123,20 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
               className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-lg hover:bg-white/10 transition-colors"
             >
               <div
-                className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
+                className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
                 style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}
               >
-                <span className="text-white font-medium text-sm">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </span>
+                {resolvePhoto(user?.profile_image) ? (
+                  <img
+                    src={resolvePhoto(user?.profile_image) as string}
+                    alt={user?.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-medium text-sm">
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-white">{user?.name}</p>

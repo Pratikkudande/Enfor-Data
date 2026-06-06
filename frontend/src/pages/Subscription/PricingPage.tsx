@@ -119,24 +119,25 @@ const PricingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#030B24' }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#030B24' }}>
         <div className="text-center">
-          <div className="text-red-600 text-xl mb-4">{error}</div>
+          <div className="text-red-400 text-xl mb-4">{error}</div>
           <button
             onClick={() => {
               setError('');
               setLoading(true);
               fetchPlans();
             }}
-            className="btn-primary px-6 py-2"
+            className="text-white px-6 py-2 rounded-lg font-semibold"
+            style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}
           >
             Try Again
           </button>
@@ -146,127 +147,116 @@ const PricingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="relative min-h-screen overflow-hidden py-16 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24', color: '#fff' }}>
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full opacity-20 blur-3xl"
+          style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.5),transparent 60%)' }} />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Choose Your Plan
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-5 border border-blue-500/30"
+            style={{ background: 'rgba(59,130,246,0.12)', color: '#93C5FD' }}>
+            ✨ Annual subscription · prices include GST
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+            <span className="bg-clip-text text-transparent"
+              style={{ backgroundImage: 'linear-gradient(135deg,#60A5FA,#A78BFA,#818CF8)' }}>
+              Choose Your Plan
+            </span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="text-lg text-gray-400 max-w-xl mx-auto">
             Pick the annual plan that fits your business.
           </p>
-
-          {/* Annual billing note (all paid plans are annual, GST-inclusive) */}
-          <div className="inline-flex items-center bg-white rounded-lg px-6 py-2 shadow-sm text-sm font-medium text-gray-700">
-            Annual subscription · prices include GST
-          </div>
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 justify-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {visiblePlans.map((plan) => (
             <div
               key={plan.id}
-              className={`bg-white rounded-lg shadow-lg overflow-hidden ${
-                plan.is_popular ? 'ring-2 ring-blue-600' : ''
-              }`}
+              className="relative rounded-2xl overflow-hidden flex flex-col transition-transform duration-300 hover:-translate-y-1"
+              style={
+                plan.is_popular
+                  ? {
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(99,102,241,0.55)',
+                      boxShadow: '0 0 40px rgba(99,102,241,0.35)',
+                      backdropFilter: 'blur(16px)',
+                    }
+                  : {
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.10)',
+                      backdropFilter: 'blur(16px)',
+                    }
+              }
             >
               {plan.is_popular && (
-                <div className="bg-blue-600 text-white text-center py-2 text-sm font-semibold">
+                <div className="text-white text-center py-2 text-xs font-bold tracking-wide"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>
                   MOST POPULAR
                 </div>
               )}
 
-              <div className="p-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  {plan.display_name}
-                </h3>
-                <p className="text-gray-600 text-sm mb-6 h-12">
-                  {plan.description}
-                </p>
+              <div className="p-6 flex flex-col flex-1">
+                <h3 className="text-xl font-bold text-white mb-1">{plan.display_name}</h3>
+                <p className="text-gray-400 text-sm mb-5 min-h-[40px]">{plan.description}</p>
 
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">
-                    {formatPrice(
-                      billingCycle === 'monthly' ? plan.monthly_price : plan.annual_price
-                    )}
+                <div className="mb-5">
+                  <span className="text-4xl font-extrabold text-white">
+                    {formatPrice(billingCycle === 'monthly' ? plan.monthly_price : plan.annual_price)}
                   </span>
-                  <span className="text-gray-600">
+                  <span className="text-gray-400 text-sm">
                     /{billingCycle === 'monthly' ? 'month' : 'year'}
                   </span>
                 </div>
 
-                <button
-                  onClick={() => handleSelectPlan(plan)}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
-                    plan.is_popular
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  {plan.name === 'free_trial' ? 'Start Free Trial' : 'Get Started'}
-                </button>
-
                 {plan.sms_credits > 0 && (
-                  <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-center">
-                    <div className="text-lg font-bold text-blue-700">
+                  <div className="mb-5 rounded-xl px-4 py-3 text-center border border-blue-500/20"
+                    style={{ background: 'rgba(59,130,246,0.10)' }}>
+                    <div className="text-lg font-bold" style={{ color: '#93C5FD' }}>
                       {plan.sms_credits.toLocaleString()} SMS credits
                     </div>
-                    <div className="text-xs text-blue-600">
+                    <div className="text-xs text-blue-300/80">
                       at ₹{plan.sms_rate.toFixed(2)} / SMS
                     </div>
                   </div>
                 )}
 
-                <div className="mt-6 space-y-3">
-                  {plan.sms_credits > 0 && (
-                    <Feature
-                      text={`${plan.sms_credits.toLocaleString()} SMS credits / year`}
-                      included={true}
-                    />
-                  )}
-                  <Feature
-                    text={`${formatLimit(plan.max_properties)} Properties`}
-                    included={true}
-                  />
-                  <Feature
-                    text={`${formatLimit(plan.max_clients)} Clients`}
-                    included={true}
-                  />
-                  <Feature
-                    text={`${formatLimit(plan.max_appointments_per_month)} Appointments/month`}
-                    included={true}
-                  />
-                  <Feature
-                    text={`${formatLimit(plan.max_sms_messages_per_month)} SMS/month`}
-                    included={plan.max_sms_messages_per_month !== null && plan.max_sms_messages_per_month > 0}
-                  />
+                <div className="space-y-3 flex-1">
+                  <Feature text={`${formatLimit(plan.max_properties)} Properties`} included={true} />
+                  <Feature text={`${formatLimit(plan.max_clients)} Clients`} included={true} />
+                  <Feature text={`${formatLimit(plan.max_appointments_per_month)} Appointments/month`} included={true} />
                   <Feature
                     text={`${formatLimit(plan.max_whatsapp_messages_per_month)} WhatsApp/month`}
                     included={plan.max_whatsapp_messages_per_month !== null && plan.max_whatsapp_messages_per_month > 0}
                   />
-                  <Feature
-                    text="Basic Analytics"
-                    included={plan.has_analytics}
-                  />
-                  <Feature
-                    text="Advanced Analytics"
-                    included={plan.has_advanced_analytics}
-                  />
-                  <Feature
-                    text="Priority Support"
-                    included={plan.has_priority_support}
-                  />
+                  <Feature text="Basic Analytics" included={plan.has_analytics} />
+                  <Feature text="Advanced Analytics" included={plan.has_advanced_analytics} />
+                  <Feature text="Priority Support" included={plan.has_priority_support} />
                 </div>
+
+                <button
+                  onClick={() => handleSelectPlan(plan)}
+                  className="mt-6 w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all hover:opacity-90 hover:-translate-y-0.5"
+                  style={
+                    plan.is_popular
+                      ? { background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', color: '#fff', boxShadow: '0 0 22px rgba(99,102,241,0.45)' }
+                      : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }
+                  }
+                >
+                  {plan.name === 'free_trial' ? 'Start Free Trial' : 'Get Started'}
+                </button>
               </div>
             </div>
           ))}
         </div>
 
         {/* FAQ Section */}
-        <div className="mt-16 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <div className="mt-20 text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-6">
             Frequently Asked Questions
           </h2>
           <div className="max-w-3xl mx-auto text-left space-y-4">
@@ -275,8 +265,8 @@ const PricingPage: React.FC = () => {
               answer="Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately."
             />
             <FAQItem
-              question="What happens after my trial ends?"
-              answer="After your 15-day trial, you'll need to subscribe to a paid plan to continue using premium features."
+              question="Are prices inclusive of GST?"
+              answer="Yes — every plan price shown is the final annual amount, inclusive of GST. There are no hidden charges."
             />
             <FAQItem
               question="Do you offer refunds?"
@@ -317,26 +307,29 @@ const PricingPage: React.FC = () => {
 };
 
 const Feature: React.FC<{ text: string; included: boolean }> = ({ text, included }) => (
-  <div className="flex items-center">
+  <div className="flex items-center text-sm">
     {included ? (
-      <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <svg className="w-4 h-4 mr-2 flex-shrink-0 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
       </svg>
     ) : (
-      <svg className="w-5 h-5 text-gray-300 mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <svg className="w-4 h-4 mr-2 flex-shrink-0 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
       </svg>
     )}
-    <span className={included ? 'text-gray-700' : 'text-gray-400 line-through'}>
+    <span className={included ? 'text-gray-300' : 'text-gray-600 line-through'}>
       {text}
     </span>
   </div>
 );
 
 const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => (
-  <div className="bg-white p-6 rounded-lg shadow">
-    <h3 className="font-semibold text-gray-900 mb-2">{question}</h3>
-    <p className="text-gray-600">{answer}</p>
+  <div
+    className="p-6 rounded-2xl"
+    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(12px)' }}
+  >
+    <h3 className="font-semibold text-white mb-2">{question}</h3>
+    <p className="text-gray-400 text-sm leading-relaxed">{answer}</p>
   </div>
 );
 

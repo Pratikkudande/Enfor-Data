@@ -1,12 +1,23 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, Check, X as XIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../routes/routePaths';
 import { indianStates } from '../../constants/options';
 import FormInput from '../../components/common/FormInput';
 import RoleSelector from './RoleSelector';
 import ProfilePhotoUpload from './ProfilePhotoUpload';
+
+// Password policy rules — used both for live feedback and submit validation.
+const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
+  { label: 'At least 8 characters long', test: (p) => p.length >= 8 },
+  { label: 'Contains at least one uppercase letter', test: (p) => /[A-Z]/.test(p) },
+  { label: 'Contains at least one lowercase letter', test: (p) => /[a-z]/.test(p) },
+  { label: 'Contains at least one number', test: (p) => /\d/.test(p) },
+  { label: 'Contains at least one special character', test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
+const isPasswordValid = (p: string) => PASSWORD_RULES.every((r) => r.test(p));
 
 const RegisterForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -51,8 +62,8 @@ const RegisterForm: React.FC = () => {
       errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters long';
+    if (formData.password && !isPasswordValid(formData.password)) {
+      errors.password = 'Password does not meet the requirements below';
     }
 
     const requiredFields: Record<string, string> = {
@@ -74,6 +85,10 @@ const RegisterForm: React.FC = () => {
 
     if (formData.whatsappNumber && !/^\+?[\d\s-]{10,}$/.test(formData.whatsappNumber)) {
       errors.whatsappNumber = 'Please enter a valid phone number';
+    }
+
+    if (formData.postalCode && !/^\d{4,10}$/.test(formData.postalCode)) {
+      errors.postalCode = 'Postal code must be 4 to 10 digits';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -165,7 +180,12 @@ const RegisterForm: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+    // Postal codes are numeric only, capped at the longest global length (10 digits).
+    if (name === 'postalCode') {
+      value = value.replace(/\D/g, '').slice(0, 10);
+    }
     setFormData({ ...formData, [name]: value });
     if (fieldErrors[name]) {
       setFieldErrors(prev => {
@@ -367,6 +387,10 @@ const RegisterForm: React.FC = () => {
               label="Postal Code"
               id="postalCode"
               name="postalCode"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={10}
               value={formData.postalCode}
               onChange={handleChange}
               error={fieldErrors.postalCode}
@@ -420,7 +444,24 @@ const RegisterForm: React.FC = () => {
               </button>
             </div>
             {fieldErrors.password && <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>}
-            <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
+            <ul className="mt-2 space-y-1">
+              {PASSWORD_RULES.map((rule) => {
+                const ok = rule.test(formData.password);
+                return (
+                  <li
+                    key={rule.label}
+                    className={`flex items-center text-xs ${ok ? 'text-green-600' : 'text-gray-500'}`}
+                  >
+                    {ok ? (
+                      <Check className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                    ) : (
+                      <XIcon className="h-3.5 w-3.5 mr-1.5 flex-shrink-0 text-gray-400" />
+                    )}
+                    {rule.label}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           <div>

@@ -149,7 +149,11 @@ const LandingPage: React.FC = () => {
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-7">
             {NAV_LINKS.map(l => (
-              <a key={l} href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</a>
+              l === 'Pricing' ? (
+                <Link key={l} to="/pricing" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</Link>
+              ) : (
+                <a key={l} href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</a>
+              )
             ))}
           </nav>
 
@@ -174,8 +178,13 @@ const LandingPage: React.FC = () => {
           <div className="lg:hidden border-t px-4 py-4 space-y-3"
             style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255,255,255,0.07)' }}>
             {NAV_LINKS.map(l => (
-              <a key={l} href="#" onClick={() => setMenuOpen(false)}
-                className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</a>
+              l === 'Pricing' ? (
+                <Link key={l} to="/pricing" onClick={() => setMenuOpen(false)}
+                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</Link>
+              ) : (
+                <a key={l} href="#" onClick={() => setMenuOpen(false)}
+                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</a>
+              )
             ))}
             <div className="pt-2 flex flex-col gap-2">
               <Link to="/login" className="text-center text-sm font-medium border rounded-lg py-2 text-gray-300"
