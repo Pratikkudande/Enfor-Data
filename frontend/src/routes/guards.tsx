@@ -60,17 +60,36 @@ export const RequirePaidRoute: React.FC<ProtectedRouteProps> = ({ children }) =>
   return <>{children}</>;
 };
 
+export const AdminRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullScreenLoader />;
+
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading, subscriptionPaid } = useAuth();
+  const { user, isAuthenticated, loading, subscriptionPaid } = useAuth();
 
   if (loading) return <FullScreenLoader />;
 
   if (isAuthenticated) {
+    // Admin users always go to admin dashboard
+    if (user?.role === 'admin') {
+      return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />;
+    }
     // Still checking payment status — wait before deciding.
     if (subscriptionPaid === null) return <FullScreenLoader />;
-    // Only paid users get pushed straight into the app. An authenticated but
-    // unpaid user (registered, payment pending) can still browse public pages
-    // like the landing, login and pricing pages.
+    // Only paid users get pushed straight into the app.
     if (subscriptionPaid) {
       return <Navigate to={ROUTES.DASHBOARD} replace />;
     }

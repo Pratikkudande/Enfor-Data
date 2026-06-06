@@ -49,9 +49,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Whenever the authenticated user changes, (re)check their payment status.
+  // Admins bypass the subscription gate entirely.
   useEffect(() => {
     if (user) {
-      refreshSubscription();
+      if (user.role === 'admin') {
+        setSubscriptionPaid(true);
+      } else {
+        refreshSubscription();
+      }
     } else {
       setSubscriptionPaid(null);
     }
@@ -90,50 +95,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             setUser(userData);
             localStorage.setItem('enfor_user', JSON.stringify(userData));
-            // Prefetch dashboard stats for immediate availability in UI
-            try {
-              const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
-                  apiClient.getAllProperties(),
-                  apiClient.getClients(),
-                  apiClient.getAppointmentStats(),
-                  apiClient.getAppointments(),
-                ]);
+            // Skip heavy broker prefetch for admin users
+            if (userData.role !== 'admin') {
+              try {
+                const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
+                    apiClient.getAllProperties(),
+                    apiClient.getClients(),
+                    apiClient.getAppointmentStats(),
+                    apiClient.getAppointments(),
+                  ]);
 
-              const properties = propsRes?.data ?? [];
-              const clients = clientsRes?.data ?? [];
-              const apptStats = apptRes?.data ?? apptRes ?? {};
-              const appts = apptsRes?.data ?? apptsRes ?? [];
+                const properties = propsRes?.data ?? [];
+                const clients = clientsRes?.data ?? [];
+                const apptStats = apptRes?.data ?? apptRes ?? {};
+                const appts = apptsRes?.data ?? apptsRes ?? [];
 
-              const derived: DashboardStats = {
-                totalProperties: Array.isArray(properties) ? properties.length : 0,
-                activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-                totalClients: Array.isArray(clients) ? clients.length : 0,
-                userClientsCount: Array.isArray(clients) ? clients.length : 0,
-                totalAppointments: apptStats?.total ?? 0,
-                todaysAppointments: apptStats?.today ?? 0,
-                whatsappMessagesCount: 0,
-                remainingMessages: 0,
-                clientsByType: {
-                  buyers: 0,
-                  sellers: 0,
-                  tenants: 0,
-                  owners: 0,
-                },
-                propertiesByStatus: {
-                  available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-                  sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
-                  rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
-                  hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
-                  closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
-                  under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
-                },
-              };
+                const derived: DashboardStats = {
+                  totalProperties: Array.isArray(properties) ? properties.length : 0,
+                  activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+                  totalClients: Array.isArray(clients) ? clients.length : 0,
+                  userClientsCount: Array.isArray(clients) ? clients.length : 0,
+                  totalAppointments: apptStats?.total ?? 0,
+                  todaysAppointments: apptStats?.today ?? 0,
+                  whatsappMessagesCount: 0,
+                  remainingMessages: 0,
+                  clientsByType: { buyers: 0, sellers: 0, tenants: 0, owners: 0 },
+                  propertiesByStatus: {
+                    available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+                    sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
+                    rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
+                    hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
+                    closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
+                    under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
+                  },
+                };
 
-              setDashboardStats(derived);
-              setAppointments(Array.isArray(appts) ? appts : []);
-              setAppointmentStats(apptStats);
-            } catch (e) {
-              // ignore prefetch errors — dashboard will fetch on demand
+                setDashboardStats(derived);
+                setAppointments(Array.isArray(appts) ? appts : []);
+                setAppointmentStats(apptStats);
+              } catch (e) {
+                // ignore prefetch errors
+              }
             }
             setLoading(false);
             return;
@@ -226,50 +228,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(userData);
         localStorage.setItem('enfor_user', JSON.stringify(userData));
-        // Prefetch dashboard stats immediately after login
-        try {
-          const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
-            apiClient.getAllProperties(),
-            apiClient.getClients(),
-            apiClient.getAppointmentStats(),
-            apiClient.getAppointments(),
-          ]);
+        // Skip heavy broker prefetch for admin users — they go straight to admin dashboard
+        if (userData.role !== 'admin') {
+          try {
+            const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
+              apiClient.getAllProperties(),
+              apiClient.getClients(),
+              apiClient.getAppointmentStats(),
+              apiClient.getAppointments(),
+            ]);
 
-          const properties = propsRes?.data ?? [];
-          const clients = clientsRes?.data ?? [];
-          const apptStats = apptRes?.data ?? apptRes ?? {};
-          const appts = apptsRes?.data ?? apptsRes ?? [];
+            const properties = propsRes?.data ?? [];
+            const clients = clientsRes?.data ?? [];
+            const apptStats = apptRes?.data ?? apptRes ?? {};
+            const appts = apptsRes?.data ?? apptsRes ?? [];
 
-          const derived: DashboardStats = {
-            totalProperties: Array.isArray(properties) ? properties.length : 0,
-            activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-            totalClients: Array.isArray(clients) ? clients.length : 0,
-            userClientsCount: Array.isArray(clients) ? clients.length : 0,
-            totalAppointments: apptStats?.total ?? 0,
-            todaysAppointments: apptStats?.today ?? 0,
-            whatsappMessagesCount: 0,
-            remainingMessages: 0,
-            clientsByType: {
-              buyers: 0,
-              sellers: 0,
-              tenants: 0,
-              owners: 0,
-            },
-            propertiesByStatus: {
-              available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-              sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
-              rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
-              hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
-              closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
-              under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
-            },
-          };
+            const derived: DashboardStats = {
+              totalProperties: Array.isArray(properties) ? properties.length : 0,
+              activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+              totalClients: Array.isArray(clients) ? clients.length : 0,
+              userClientsCount: Array.isArray(clients) ? clients.length : 0,
+              totalAppointments: apptStats?.total ?? 0,
+              todaysAppointments: apptStats?.today ?? 0,
+              whatsappMessagesCount: 0,
+              remainingMessages: 0,
+              clientsByType: { buyers: 0, sellers: 0, tenants: 0, owners: 0 },
+              propertiesByStatus: {
+                available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+                sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
+                rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
+                hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
+                closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
+                under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
+              },
+            };
 
-          setDashboardStats(derived);
-          setAppointments(Array.isArray(appts) ? appts : []);
-          setAppointmentStats(apptStats);
-        } catch (e) {
-          // ignore
+            setDashboardStats(derived);
+            setAppointments(Array.isArray(appts) ? appts : []);
+            setAppointmentStats(apptStats);
+          } catch (e) {
+            // ignore
+          }
         }
       }
     } catch (error: any) {
@@ -326,50 +325,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(newUser);
         localStorage.setItem('enfor_user', JSON.stringify(newUser));
-        // Prefetch dashboard stats after registration
-        try {
-          const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
-            apiClient.getAllProperties(),
-            apiClient.getClients(),
-            apiClient.getAppointmentStats(),
-            apiClient.getAppointments(),
-          ]);
+        if (newUser.role !== 'admin') {
+          try {
+            const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
+              apiClient.getAllProperties(),
+              apiClient.getClients(),
+              apiClient.getAppointmentStats(),
+              apiClient.getAppointments(),
+            ]);
 
-          const properties = propsRes?.data ?? [];
-          const clients = clientsRes?.data ?? [];
-          const apptStats = apptRes?.data ?? apptRes ?? {};
-          const appts = apptsRes?.data ?? apptsRes ?? [];
+            const properties = propsRes?.data ?? [];
+            const clients = clientsRes?.data ?? [];
+            const apptStats = apptRes?.data ?? apptRes ?? {};
+            const appts = apptsRes?.data ?? apptsRes ?? [];
 
-          const derived: DashboardStats = {
-            totalProperties: Array.isArray(properties) ? properties.length : 0,
-            activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-            totalClients: Array.isArray(clients) ? clients.length : 0,
-            userClientsCount: Array.isArray(clients) ? clients.length : 0,
-            totalAppointments: apptStats?.total ?? 0,
-            todaysAppointments: apptStats?.today ?? 0,
-            whatsappMessagesCount: 0,
-            remainingMessages: 0,
-            clientsByType: {
-              buyers: 0,
-              sellers: 0,
-              tenants: 0,
-              owners: 0,
-            },
-            propertiesByStatus: {
-              available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-              sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
-              rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
-              hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
-              closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
-              under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
-            },
-          };
+            const derived: DashboardStats = {
+              totalProperties: Array.isArray(properties) ? properties.length : 0,
+              activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+              totalClients: Array.isArray(clients) ? clients.length : 0,
+              userClientsCount: Array.isArray(clients) ? clients.length : 0,
+              totalAppointments: apptStats?.total ?? 0,
+              todaysAppointments: apptStats?.today ?? 0,
+              whatsappMessagesCount: 0,
+              remainingMessages: 0,
+              clientsByType: { buyers: 0, sellers: 0, tenants: 0, owners: 0 },
+              propertiesByStatus: {
+                available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
+                sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
+                rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
+                hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
+                closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
+                under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
+              },
+            };
 
-          setDashboardStats(derived);
-          setAppointments(Array.isArray(appts) ? appts : []);
-          setAppointmentStats(apptStats);
-        } catch (e) {
-          // ignore
+            setDashboardStats(derived);
+            setAppointments(Array.isArray(appts) ? appts : []);
+            setAppointmentStats(apptStats);
+          } catch (e) {
+            // ignore
+          }
         }
       }
     } catch (error: any) {

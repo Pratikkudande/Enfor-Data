@@ -1,11 +1,12 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from './routePaths';
-import { ProtectedRoute, PublicRoute, RequirePaidRoute } from './guards';
+import { ProtectedRoute, PublicRoute, RequirePaidRoute, AdminRoute } from './guards';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
+import AdminLayout from '../layouts/AdminLayout';
 
 // Direct Imports for smaller bundles
 import LandingPage from '../pages/Landing/LandingPage';
@@ -39,6 +40,20 @@ const ActivateTrialPage = lazy(() => import('../pages/Subscription/ActivateTrial
 const SubscriptionDashboard = lazy(() => import('../pages/Subscription/SubscriptionDashboard'));
 const CheckoutPage = lazy(() => import('../pages/Subscription/CheckoutPage'));
 const SuccessPage = lazy(() => import('../pages/Subscription/SuccessPage'));
+
+// Admin Pages
+const AdminDashboard = lazy(() => import('../pages/Admin/AdminDashboard'));
+const UserManagement = lazy(() => import('../pages/Admin/UserManagement'));
+const RevenueManagement = lazy(() => import('../pages/Admin/RevenueManagement'));
+const SMSManagement = lazy(() => import('../pages/Admin/SMSManagement'));
+const DataDownload = lazy(() => import('../pages/Admin/DataDownload'));
+const AnnouncementCenter = lazy(() => import('../pages/Admin/AnnouncementCenter'));
+const FeedbackManagement = lazy(() => import('../pages/Admin/FeedbackManagement'));
+const ActivityMonitoring = lazy(() => import('../pages/Admin/ActivityMonitoring'));
+const RenewalMonitoring = lazy(() => import('../pages/Admin/RenewalMonitoring'));
+const AuditLogs = lazy(() => import('../pages/Admin/AuditLogs'));
+const StorageMonitoring = lazy(() => import('../pages/Admin/StorageMonitoring'));
+const SystemConfiguration = lazy(() => import('../pages/Admin/SystemConfiguration'));
 
 // Loading Fallback
 const PageLoader = () => (
@@ -194,6 +209,48 @@ export const AppRoutes: React.FC = () => {
 
         {/* Catch-all redirect to Dashboard if logged in */}
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+      </Route>
+
+      {/* Admin Routes */}
+      <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route path={ROUTES.ADMIN_DASHBOARD} element={
+          <Suspense fallback={<PageLoader />}><AdminDashboard /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_USERS} element={
+          <Suspense fallback={<PageLoader />}><UserManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_REVENUE} element={
+          <Suspense fallback={<PageLoader />}><RevenueManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_SMS} element={
+          <Suspense fallback={<PageLoader />}><SMSManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_DOWNLOAD} element={
+          <Suspense fallback={<PageLoader />}><DataDownload /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_ANNOUNCEMENTS} element={
+          <Suspense fallback={<PageLoader />}><AnnouncementCenter /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_FEEDBACK} element={
+          <Suspense fallback={<PageLoader />}><FeedbackManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_ACTIVITY} element={
+          <Suspense fallback={<PageLoader />}><ActivityMonitoring /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_RENEWALS} element={
+          <Suspense fallback={<PageLoader />}><RenewalMonitoring /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_AUDIT_LOGS} element={
+          <Suspense fallback={<PageLoader />}><AuditLogs /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_STORAGE} element={
+          <Suspense fallback={<PageLoader />}><StorageMonitoring /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_CONFIG} element={
+          <Suspense fallback={<PageLoader />}><SystemConfiguration /></Suspense>
+        } />
+        <Route path="/admin" element={<Navigate to={ROUTES.ADMIN_DASHBOARD} replace />} />
+        <Route path="/admin/*" element={<Navigate to={ROUTES.ADMIN_DASHBOARD} replace />} />
       </Route>
     </Routes>
   );

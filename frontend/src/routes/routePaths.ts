@@ -30,4 +30,18 @@ export const ROUTES = {
   SUBSCRIPTION_ACTIVATE_TRIAL: '/subscription/activate-trial',
   SUBSCRIPTION_CHECKOUT: '/subscription/checkout/:planId',
   SUBSCRIPTION_SUCCESS: '/subscription/success',
+
+  // Admin Routes
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_REVENUE: '/admin/revenue',
+  ADMIN_SMS: '/admin/sms',
+  ADMIN_DOWNLOAD: '/admin/download',
+  ADMIN_ANNOUNCEMENTS: '/admin/announcements',
+  ADMIN_FEEDBACK: '/admin/feedback',
+  ADMIN_ACTIVITY: '/admin/activity',
+  ADMIN_RENEWALS: '/admin/renewals',
+  ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+  ADMIN_STORAGE: '/admin/storage',
+  ADMIN_CONFIG: '/admin/config',
 } as const;
