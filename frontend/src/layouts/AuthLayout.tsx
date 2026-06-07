@@ -35,7 +35,7 @@ const AuthLayout: React.FC = () => {
 
           <div className="relative w-full max-w-md text-center z-10">
             {/* Logo */}
-            <div className="mb-4 flex justify-center">
+            <div className="mt-8 mb-4 flex justify-center">
               <img src={logo} alt="Enfor Data" className="h-24" />
             </div>
 
