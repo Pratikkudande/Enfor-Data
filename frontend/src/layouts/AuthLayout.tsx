@@ -13,7 +13,7 @@ const AuthLayout: React.FC = () => {
 
         {/* Left Side — Branding */}
         <div
-          className="hidden lg:flex lg:w-1/2 p-8 items-center justify-center relative overflow-hidden"
+          className="hidden lg:flex lg:w-1/2 px-8 pt-8 pb-0 items-center justify-center relative overflow-hidden"
           style={{ background: 'linear-gradient(160deg, #030B24 0%, #050F2E 60%, #0D1B3E 100%)' }}
         >
           {/* Ambient glow blobs */}
@@ -100,7 +100,7 @@ const AuthLayout: React.FC = () => {
             </div>
 
             {/* Bottom badge */}
-            <div className="mt-5 mb-4 flex justify-center">
+            <div className="mt-5 mb-10 flex justify-center">
               <div
                 className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full border"
                 style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', color: '#93C5FD' }}
