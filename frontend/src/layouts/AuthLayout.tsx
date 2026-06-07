@@ -6,14 +6,14 @@ import logo from '../assets/logo.png';
 const AuthLayout: React.FC = () => {
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center py-10 px-4"
       style={{ backgroundColor: '#030B24' }}
     >
-      <div className="w-full max-w-6xl flex bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-6xl flex bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[88vh]">
 
         {/* Left Side — Branding */}
         <div
-          className="hidden lg:flex lg:w-1/2 p-12 items-center justify-center relative overflow-hidden"
+          className="hidden lg:flex lg:w-1/2 p-8 items-center justify-center relative overflow-hidden"
           style={{ background: 'linear-gradient(160deg, #030B24 0%, #050F2E 60%, #0D1B3E 100%)' }}
         >
           {/* Ambient glow blobs */}
@@ -110,8 +110,8 @@ const AuthLayout: React.FC = () => {
         </div>
 
         {/* Right Side — Auth Forms */}
-        <div className="w-full lg:w-1/2 p-12 flex flex-col items-center justify-center bg-white">
-          <div className="w-full max-h-[80vh] overflow-y-auto">
+        <div className="w-full lg:w-1/2 p-8 flex flex-col items-center justify-center bg-white">
+          <div className="w-full overflow-y-auto">
             <div className="mb-6">
               <Link
                 to={ROUTES.HOME}
