@@ -100,11 +100,13 @@ const AuthLayout: React.FC = () => {
             </div>
 
             {/* Bottom badge */}
-            <div
-              className="mt-5 inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full border"
-              style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', color: '#93C5FD' }}
-            >
-              ✨ Built for Indian Real Estate Brokers
+            <div className="mt-5 mb-4 flex justify-center">
+              <div
+                className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full border"
+                style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', color: '#93C5FD' }}
+              >
+                ✨ Built for Indian Real Estate Brokers
+              </div>
             </div>
           </div>
         </div>
