@@ -9,7 +9,7 @@ interface AuthContextType {
   dashboardStats?: DashboardStats | null;
   appointments?: Appointment[] | null;
   appointmentStats?: any;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
   register: (userData: any) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -192,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<string> => {
     try {
       const response = await apiClient.login({ email, password });
       
@@ -270,7 +270,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // ignore
           }
         }
+        return userData.role;
       }
+      return 'broker';
     } catch (error: any) {
       throw new Error(error.message || 'Login failed');
     }

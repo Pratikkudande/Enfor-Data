@@ -22,10 +22,8 @@ const LoginForm: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      await login(email, password);
-      // Route through the payment gate: paid users reach the dashboard,
-      // unpaid users are redirected to the pricing page to complete payment.
-      navigate(ROUTES.DASHBOARD);
+      const role = await login(email, password);
+      navigate(role === 'admin' ? ROUTES.ADMIN_DASHBOARD : ROUTES.DASHBOARD);
     } catch (err) {
       setError('Invalid email or password');
     } finally {
