@@ -140,10 +140,10 @@ const ClientsView: React.FC = () => {
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'buyer': return 'Buyer';
-      case 'seller': return 'Sell Property';
-      case 'tenant': return 'Rent a Property';
-      case 'list_property_for_rent': return 'Property for Rent';
+      case 'buyer': return 'Buy';
+      case 'seller': return 'Sell';
+      case 'tenant': return 'Rent';
+      case 'list_property_for_rent': return 'Property Owner';
       case 'owner': return 'Owner';
       default: return type.replace(/_/g, ' ');
     }
@@ -354,10 +354,10 @@ const ClientsView: React.FC = () => {
           <div className="flex gap-4">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all">All Types</option>
-              <option value="buyer">Buyer</option>
-              <option value="seller">Sell Property</option>
-              <option value="tenant">Rent a Property</option>
-              <option value="list_property_for_rent">Property for Rent</option>
+              <option value="buyer">Buy</option>
+              <option value="seller">Sell</option>
+              <option value="tenant">Rent</option>
+              <option value="list_property_for_rent">Property Owner</option>
             </select>
           </div>
         </div>
