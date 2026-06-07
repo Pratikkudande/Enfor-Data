@@ -4,7 +4,7 @@ import {
   Users, Calendar, Star, ArrowRight, CheckCircle,
   Menu, X, Phone, Mail, MapPin, TrendingUp,
   Bell, Clock, DollarSign, ChevronRight,
-  Home, Handshake, FolderOpen, Play, Network,
+  Home, Handshake, FolderOpen, Network, MessageSquare,
 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
@@ -75,6 +75,11 @@ const FEATURES = [
     icon: FolderOpen, title: 'Agreements & Documents',
     img: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&q=80',
     items: ['Store agreements', 'Property documents', 'Client KYC', 'Secure cloud storage'],
+  },
+  {
+    icon: MessageSquare, title: 'SMS Marketing',
+    img: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=400&q=80',
+    items: ['Bulk SMS campaigns', 'Targeted client outreach', 'Delivery tracking', 'Custom message templates'],
   },
 ];
 
@@ -233,10 +238,6 @@ const LandingPage: React.FC = () => {
                   style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 24px rgba(99,102,241,0.45)' }}>
                   Get Started <ArrowRight className="w-4 h-4" />
                 </Link>
-                <a href="#features"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
-                  <Play className="w-4 h-4" /> Book a Demo
-                </a>
               </div>
 
               {/* Stats row */}
@@ -373,7 +374,7 @@ const LandingPage: React.FC = () => {
       {/* ══ FEATURES ══════════════════════════════════════════ */}
       <section id="features" className="py-24 px-4 sm:px-6 lg:px-8"
         style={{ background: 'linear-gradient(180deg,#030B24 0%,#050F2E 100%)' }}>
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-screen-2xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-blue-500/30"
               style={{ background: 'rgba(59,130,246,0.1)', color: '#93C5FD' }}>
@@ -383,7 +384,7 @@ const LandingPage: React.FC = () => {
               Everything a Real Estate Broker Needs
             </h2>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5">
             {FEATURES.map(f => (
               <div key={f.title}
                 className="group rounded-2xl overflow-hidden border border-white/10 hover:border-blue-500/40 hover:-translate-y-2 transition-all duration-300 cursor-default"
@@ -605,10 +606,6 @@ const LandingPage: React.FC = () => {
               style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 28px rgba(99,102,241,0.5)' }}>
               Get Started <ArrowRight className="w-4 h-4" />
             </Link>
-            <a href="#"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
-              <Play className="w-4 h-4" /> Book a Demo
-            </a>
             <a href="#"
               className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-lg border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all">
               <Phone className="w-4 h-4" /> Talk to Sales
