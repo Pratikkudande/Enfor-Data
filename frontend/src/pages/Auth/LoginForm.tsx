@@ -22,8 +22,8 @@ const LoginForm: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      await login(email, password);
-      navigate(ROUTES.DASHBOARD);
+      const role = await login(email, password);
+      navigate(role === 'admin' ? ROUTES.ADMIN_DASHBOARD : ROUTES.DASHBOARD);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       // Valid credentials but no paid subscription — send them to pricing.

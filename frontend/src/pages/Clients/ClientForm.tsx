@@ -41,10 +41,10 @@ interface ClientFormProps {
 }
 
 const typeConfig = {
-  buyer:                  { label: 'Buyer',              color: 'border-blue-500 bg-blue-50 text-blue-700',     inactive: 'border-gray-200 hover:border-blue-300'   },
-  seller:                 { label: 'Sell Property',      color: 'border-green-500 bg-green-50 text-green-700',  inactive: 'border-gray-200 hover:border-green-300'  },
-  tenant:                 { label: 'Rent a Property',    color: 'border-orange-500 bg-orange-50 text-orange-700', inactive: 'border-gray-200 hover:border-orange-300' },
-  list_property_for_rent: { label: 'Property for Rent',  color: 'border-purple-500 bg-purple-50 text-purple-700', inactive: 'border-gray-200 hover:border-purple-300' },
+  buyer:                  { label: 'Buy',             color: 'border-blue-500 bg-blue-50 text-blue-700',       inactive: 'border-gray-200 hover:border-blue-300'   },
+  seller:                 { label: 'Sell',            color: 'border-green-500 bg-green-50 text-green-700',    inactive: 'border-gray-200 hover:border-green-300'  },
+  tenant:                 { label: 'Rent',            color: 'border-orange-500 bg-orange-50 text-orange-700', inactive: 'border-gray-200 hover:border-orange-300' },
+  list_property_for_rent: { label: 'Property Owner',  color: 'border-purple-500 bg-purple-50 text-purple-700', inactive: 'border-gray-200 hover:border-purple-300' },
 };
 
 const ClientForm: React.FC<ClientFormProps> = ({

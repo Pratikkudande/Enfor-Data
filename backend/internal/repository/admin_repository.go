@@ -23,48 +23,107 @@ func (r *AdminRepository) GetDashboardStats() (*models.AdminDashboardStats, erro
 	now := time.Now()
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	thirtyDaysAgo := now.AddDate(0, 0, -30)
+	thirtyDaysLater := now.AddDate(0, 0, 30)
 
-	r.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND is_active = TRUE AND COALESCE(is_blocked, FALSE) = FALSE`).Scan(&stats.ActiveUsers)
-	r.db.QueryRow(`SELECT COALESCE(SUM(amount),0) FROM payments WHERE status = 'captured'`).Scan(&stats.TotalRevenue)
-	r.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND created_at >= $1`, startOfMonth).Scan(&stats.NewRegistrations)
-	r.db.QueryRow(`SELECT COUNT(*) FROM properties WHERE created_at >= $1 AND deleted_at IS NULL`, startOfMonth).Scan(&stats.PropertiesAdded)
-	r.db.QueryRow(`SELECT COUNT(*) FROM feedback WHERE status = 'new'`).Scan(&stats.FeedbackCount)
-	r.db.QueryRow(`SELECT COUNT(*) FROM user_subscriptions WHERE current_period_end BETWEEN $1 AND $2 AND status = 'active'`, now, now.AddDate(0, 0, 30)).Scan(&stats.RenewalsDue)
-	r.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND created_at >= $1`, thirtyDaysAgo).Scan(&stats.BrokerNetworkGrowth)
-
-	// SMS usage - count from sms_campaigns
-	r.db.QueryRow(`SELECT COALESCE(SUM(sent_count),0) FROM sms_campaigns WHERE created_at >= $1`, startOfMonth).Scan(&stats.SMSUsage)
-
+	// Single round trip: all 8 KPIs as correlated sub-selects
+	err := r.db.QueryRow(`
+		SELECT
+			(SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND is_active = TRUE AND COALESCE(is_blocked, FALSE) = FALSE),
+			(SELECT COALESCE(SUM(amount),0) FROM payments WHERE status = 'captured'),
+			(SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND created_at >= $1),
+			(SELECT COUNT(*) FROM properties WHERE created_at >= $1 AND deleted_at IS NULL),
+			(SELECT COUNT(*) FROM feedback WHERE status = 'new'),
+			(SELECT COUNT(*) FROM user_subscriptions WHERE current_period_end BETWEEN $2 AND $3 AND status = 'active'),
+			(SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND created_at >= $4),
+			(SELECT COALESCE(SUM(sent_count),0) FROM sms_campaigns WHERE created_at >= $1)
+	`, startOfMonth, now, thirtyDaysLater, thirtyDaysAgo).Scan(
+		&stats.ActiveUsers, &stats.TotalRevenue, &stats.NewRegistrations, &stats.PropertiesAdded,
+		&stats.FeedbackCount, &stats.RenewalsDue, &stats.BrokerNetworkGrowth, &stats.SMSUsage,
+	)
+	if err != nil {
+		return stats, err
+	}
 	return stats, nil
 }
 
 func (r *AdminRepository) GetAnalytics() (*models.AdminAnalytics, error) {
 	analytics := &models.AdminAnalytics{}
 
-	// Last 6 months trend data
-	for i := 5; i >= 0; i-- {
-		now := time.Now()
-		start := time.Date(now.Year(), now.Month()-time.Month(i), 1, 0, 0, 0, 0, now.Location())
-		end := time.Date(now.Year(), now.Month()-time.Month(i)+1, 1, 0, 0, 0, 0, now.Location())
-		label := start.Format("Jan 06")
+	now := time.Now()
+	// Start of the month 5 months ago
+	sixMonthsAgo := time.Date(now.Year(), now.Month()-5, 1, 0, 0, 0, 0, now.Location())
 
-		var regCount, propCount, smsCount float64
-		r.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role IN ('broker','channel_partner') AND created_at >= $1 AND created_at < $2`, start, end).Scan(&regCount)
-		r.db.QueryRow(`SELECT COUNT(*) FROM properties WHERE created_at >= $1 AND created_at < $2 AND deleted_at IS NULL`, start, end).Scan(&propCount)
-		r.db.QueryRow(`SELECT COALESCE(SUM(sent_count),0) FROM sms_campaigns WHERE created_at >= $1 AND created_at < $2`, start, end).Scan(&smsCount)
-
-		var revenue float64
-		r.db.QueryRow(`SELECT COALESCE(SUM(amount),0) FROM payments WHERE status='captured' AND created_at >= $1 AND created_at < $2`, start, end).Scan(&revenue)
-
-		var renewals float64
-		r.db.QueryRow(`SELECT COUNT(*) FROM user_subscriptions WHERE current_period_end >= $1 AND current_period_end < $2`, start, end).Scan(&renewals)
-
-		analytics.RegistrationTrend = append(analytics.RegistrationTrend, models.TrendPoint{Label: label, Value: regCount})
-		analytics.RevenueTrend = append(analytics.RevenueTrend, models.TrendPoint{Label: label, Value: revenue})
-		analytics.PropertyTrend = append(analytics.PropertyTrend, models.TrendPoint{Label: label, Value: propCount})
-		analytics.SMSTrend = append(analytics.SMSTrend, models.TrendPoint{Label: label, Value: smsCount})
-		analytics.RenewalTrend = append(analytics.RenewalTrend, models.TrendPoint{Label: label, Value: renewals})
+	// Build an ordered month bucket map so we always have all 6 months even if a month has 0 rows
+	type monthKey struct{ year int; month time.Month }
+	buckets := make([]monthKey, 6)
+	labels := make([]string, 6)
+	for i := 0; i < 6; i++ {
+		t := time.Date(now.Year(), now.Month()-time.Month(5-i), 1, 0, 0, 0, 0, now.Location())
+		buckets[i] = monthKey{t.Year(), t.Month()}
+		labels[i] = t.Format("Jan 06")
 	}
+
+	// Helper: run one GROUP BY month query and map results into a TrendPoint slice
+	type monthRow struct {
+		year  int
+		month int
+		value float64
+	}
+	queryTrend := func(q string, args ...interface{}) []models.TrendPoint {
+		rows, err := r.db.Query(q, args...)
+		if err != nil {
+			// Return zeroed slice on error rather than crashing
+			out := make([]models.TrendPoint, 6)
+			for i, lbl := range labels {
+				out[i] = models.TrendPoint{Label: lbl, Value: 0}
+			}
+			return out
+		}
+		defer rows.Close()
+
+		m := make(map[monthKey]float64)
+		for rows.Next() {
+			var r monthRow
+			rows.Scan(&r.year, &r.month, &r.value)
+			m[monthKey{r.year, time.Month(r.month)}] = r.value
+		}
+		out := make([]models.TrendPoint, 6)
+		for i, bk := range buckets {
+			out[i] = models.TrendPoint{Label: labels[i], Value: m[bk]}
+		}
+		return out
+	}
+
+	// 5 queries instead of 30 — GROUP BY replaces the per-month loop
+	analytics.RegistrationTrend = queryTrend(`
+		SELECT EXTRACT(YEAR FROM created_at)::int, EXTRACT(MONTH FROM created_at)::int, COUNT(*)::float
+		FROM users
+		WHERE role IN ('broker','channel_partner') AND created_at >= $1
+		GROUP BY 1, 2`, sixMonthsAgo)
+
+	analytics.PropertyTrend = queryTrend(`
+		SELECT EXTRACT(YEAR FROM created_at)::int, EXTRACT(MONTH FROM created_at)::int, COUNT(*)::float
+		FROM properties
+		WHERE deleted_at IS NULL AND created_at >= $1
+		GROUP BY 1, 2`, sixMonthsAgo)
+
+	analytics.SMSTrend = queryTrend(`
+		SELECT EXTRACT(YEAR FROM created_at)::int, EXTRACT(MONTH FROM created_at)::int, COALESCE(SUM(sent_count),0)::float
+		FROM sms_campaigns
+		WHERE created_at >= $1
+		GROUP BY 1, 2`, sixMonthsAgo)
+
+	analytics.RevenueTrend = queryTrend(`
+		SELECT EXTRACT(YEAR FROM created_at)::int, EXTRACT(MONTH FROM created_at)::int, COALESCE(SUM(amount),0)::float
+		FROM payments
+		WHERE status = 'captured' AND created_at >= $1
+		GROUP BY 1, 2`, sixMonthsAgo)
+
+	analytics.RenewalTrend = queryTrend(`
+		SELECT EXTRACT(YEAR FROM current_period_end)::int, EXTRACT(MONTH FROM current_period_end)::int, COUNT(*)::float
+		FROM user_subscriptions
+		WHERE current_period_end >= $1
+		GROUP BY 1, 2`, sixMonthsAgo)
 
 	return analytics, nil
 }
