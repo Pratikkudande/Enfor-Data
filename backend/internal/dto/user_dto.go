@@ -39,9 +39,13 @@ type LoginRequest struct {
 
 // LoginResponse represents the response after successful login
 type LoginResponse struct {
-	Token        string      `json:"token"`
-	RefreshToken string      `json:"refresh_token"`
+	Token        string     `json:"token"`
+	RefreshToken string     `json:"refresh_token"`
 	User         PublicUser `json:"user"`
+	// RequiresPayment is true when the credentials are valid but the account has
+	// no active paid subscription. The tokens are still returned so the user can
+	// complete payment, but the client must not log them into the app.
+	RequiresPayment bool `json:"requires_payment"`
 }
 
 // RefreshRequest represents the data required to refresh an access token

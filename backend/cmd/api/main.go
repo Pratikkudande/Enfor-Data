@@ -81,7 +81,7 @@ func main() {
 	smsService := service.NewSMSService(cfg)
 	emailService := service.NewEmailService(cfg)
 	passwordResetService := service.NewPasswordResetService(userRepo, emailService)
-	authService := service.NewAuthService(userRepo, cfg)
+	authService := service.NewAuthService(userRepo, subscriptionRepo, cfg)
 	propertyService := service.NewPropertyService(propertyRepo, clientRepo, userRepo)
 	clientService := service.NewClientService(clientRepo, userRepo)
 	appointmentService := service.NewAppointmentService(appointmentRepo, clientRepo, propertyRepo, userRepo, smsService)

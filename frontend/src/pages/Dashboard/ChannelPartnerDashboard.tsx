@@ -219,8 +219,8 @@ const ChannelPartnerDashboard: React.FC = () => {
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-3">
                   <div
-                    className="h-3 rounded-full transition-all" style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}
-                    style={{ width: `${overallSoldPct}%` }}
+                    className="h-3 rounded-full transition-all"
+                    style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', width: `${overallSoldPct}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-xs text-gray-400 mt-1">

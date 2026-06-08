@@ -23,10 +23,16 @@ const LoginForm: React.FC = () => {
     setError('');
     try {
       await login(email, password);
-      // Route through the payment gate: paid users reach the dashboard,
-      // unpaid users are redirected to the pricing page to complete payment.
       navigate(ROUTES.DASHBOARD);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      // Valid credentials but no paid subscription — send them to pricing.
+      if (msg.toLowerCase().includes('no_subscription') || msg.toLowerCase().includes('no subscription')) {
+        navigate(ROUTES.PRICING, {
+          state: { message: 'No subscription purchased. Choose any subscription to login.' },
+        });
+        return;
+      }
       setError('Invalid email or password');
     } finally {
       setIsLoading(false);

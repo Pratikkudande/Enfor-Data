@@ -9,6 +9,29 @@ declare global {
   }
 }
 
+const RAZORPAY_SCRIPT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
+
+// Loads the Razorpay checkout SDK on demand (only when the user pays), so other
+// pages don't eagerly preload Razorpay chunks they never use.
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${RAZORPAY_SCRIPT_SRC}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = RAZORPAY_SCRIPT_SRC;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 const CheckoutPage: React.FC = () => {
   const { planId } = useParams();
   const location = useLocation();
@@ -24,6 +47,14 @@ const CheckoutPage: React.FC = () => {
     setError('');
 
     try {
+      // Load the Razorpay SDK on demand.
+      const sdkReady = await loadRazorpayScript();
+      if (!sdkReady) {
+        setError('Failed to load the payment gateway. Please check your connection and try again.');
+        setLoading(false);
+        return;
+      }
+
       // Create order
       const orderData = await createPaymentOrder(planId!, billingCycle);
 

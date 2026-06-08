@@ -14,16 +14,27 @@ import (
 )
 
 type AuthService struct {
-	userRepo *repository.UserRepository
-	jwtUtil  *utils.JWTUtil
+	userRepo         *repository.UserRepository
+	subscriptionRepo *repository.SubscriptionRepository
+	jwtUtil          *utils.JWTUtil
 }
 
-func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, subscriptionRepo *repository.SubscriptionRepository, cfg *config.Config) *AuthService {
 	jwtUtil := utils.NewJWTUtil(cfg.JWT.Secret, cfg.JWT.ExpiresIn, cfg.JWT.RefreshExpiresIn)
 	return &AuthService{
-		userRepo: userRepo,
-		jwtUtil:  jwtUtil,
+		userRepo:         userRepo,
+		subscriptionRepo: subscriptionRepo,
+		jwtUtil:          jwtUtil,
 	}
+}
+
+// hasActivePaidSubscription reports whether the user has an active, paid subscription.
+func (s *AuthService) hasActivePaidSubscription(userID string) bool {
+	sub, err := s.subscriptionRepo.GetUserSubscription(userID)
+	if err != nil || sub == nil {
+		return false
+	}
+	return sub.Status == models.StatusActive && sub.RazorpaySubscriptionID != nil
 }
 
 // Signup creates a new user account
@@ -110,6 +121,11 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 		return nil, fmt.Errorf("invalid email or password")
 	}
 
+	// Determine whether the account has an active paid subscription (admins are
+	// always allowed). Unpaid users still receive tokens so they can complete
+	// payment, but the response flags that they must not be logged into the app.
+	requiresPayment := user.Role != "admin" && !s.hasActivePaidSubscription(user.ID)
+
 	// Generate access and refresh tokens
 	accessToken, err := s.jwtUtil.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
@@ -122,9 +138,10 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 	}
 
 	return &dto.LoginResponse{
-		Token:        accessToken,
-		RefreshToken: refreshToken,
-		User:         dto.ToPublicUser(user),
+		Token:           accessToken,
+		RefreshToken:    refreshToken,
+		User:            dto.ToPublicUser(user),
+		RequiresPayment: requiresPayment,
 	}, nil
 }
 

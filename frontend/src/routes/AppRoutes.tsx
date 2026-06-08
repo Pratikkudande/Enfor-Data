@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from './routePaths';
-import { ProtectedRoute, PublicRoute, RequirePaidRoute, AdminRoute } from './guards';
+import { ProtectedRoute, PublicRoute, RequirePaidRoute, AdminRoute, RequireCheckoutAccess } from './guards';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
@@ -84,9 +84,9 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordForm />} />
       </Route>
 
-      {/* Checkout — authenticated but NOT behind the payment gate,
-          so a freshly-registered (unpaid) user can complete payment here. */}
-      <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+      {/* Checkout — reachable by a logged-in user OR a just-registered /
+          blocked-login user holding a "payment pending" token (not logged in). */}
+      <Route element={<RequireCheckoutAccess><Outlet /></RequireCheckoutAccess>}>
         <Route path={ROUTES.SUBSCRIPTION_CHECKOUT} element={
           <Suspense fallback={<PageLoader />}>
             <CheckoutPage />

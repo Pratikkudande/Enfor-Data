@@ -66,7 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session and validate token
     const checkAuth = async () => {
       const token = localStorage.getItem('enfor_token');
-      if (token) {
+      // A "payment pending" token belongs to a just-registered, unpaid user —
+      // it's only for the checkout API, so don't auto-authenticate them.
+      const paymentPending = localStorage.getItem('enfor_payment_pending') === 'true';
+      if (token && !paymentPending) {
         try {
           const response = await apiClient.getMe();
           if (response.data) {
@@ -197,10 +200,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiClient.login({ email, password });
       
       if (response.data) {
-        // Store tokens
+        // Valid credentials but no active subscription: keep the token only so
+        // the user can pay, but do NOT log them in. Signal the caller to route
+        // them to the pricing page.
+        if (response.data.requires_payment) {
+          localStorage.setItem('enfor_token', response.data.token);
+          localStorage.setItem('enfor_refresh_token', response.data.refresh_token);
+          localStorage.setItem('enfor_payment_pending', 'true');
+          localStorage.setItem('enfor_pending_role', response.data.user?.role || '');
+          localStorage.removeItem('enfor_user');
+          const e: any = new Error('no_subscription');
+          e.code = 'no_subscription';
+          throw e;
+        }
+
+        // Store tokens (a successful login means the account is paid).
         localStorage.setItem('enfor_token', response.data.token);
         localStorage.setItem('enfor_refresh_token', response.data.refresh_token);
-        
+        localStorage.removeItem('enfor_payment_pending');
+        localStorage.removeItem('enfor_pending_role');
+
         // Create user object
         const userData: User = {
           id: response.data.user.id,
@@ -286,86 +305,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('enfor_token');
       localStorage.removeItem('enfor_refresh_token');
       localStorage.removeItem('enfor_user');
+      localStorage.removeItem('enfor_payment_pending');
+      localStorage.removeItem('enfor_pending_role');
     }
   };
 
   const register = async (userData: any): Promise<void> => {
     try {
       const response = await apiClient.signup(userData);
-      
+
       if (response.data) {
-        // Store tokens
+        // A new account has no subscription yet, so we do NOT log the user in.
+        // We only keep the token so they can pay on the checkout page. The user
+        // stays unauthenticated (no dashboard access, no data prefetch) until
+        // they pay and log in. The token is marked as "payment pending" so a
+        // page reload doesn't auto-authenticate them before payment.
         localStorage.setItem('enfor_token', response.data.token);
         localStorage.setItem('enfor_refresh_token', response.data.refresh_token);
-        
-        // Create user object
-        const newUser: User = {
-          id: response.data.user.id,
-          email: response.data.user.email,
-          name: response.data.user.name || `${response.data.user.first_name} ${response.data.user.last_name}`,
-          first_name: response.data.user.first_name,
-          last_name: response.data.user.last_name,
-          phone: response.data.user.phone || response.data.user.whatsapp_number || '',
-          whatsapp_number: response.data.user.whatsapp_number,
-          role: response.data.user.role as 'broker' | 'channel_partner' | 'admin',
-          city: response.data.user.city,
-          state: response.data.user.state,
-          address: response.data.user.address,
-          bio: response.data.user.bio,
-          company_name: response.data.user.company_name || response.data.user.firm_name,
-          firm_name: response.data.user.firm_name,
-          profile_image: response.data.user.profile_image,
-          is_verified: response.data.user.is_verified,
-          years_experience: response.data.user.years_experience,
-          deals_completed: response.data.user.deals_completed,
-          specializations: response.data.user.specializations,
-          created_at: response.data.user.created_at,
-          updated_at: response.data.user.updated_at || response.data.user.created_at
-        };
-        
-        setUser(newUser);
-        localStorage.setItem('enfor_user', JSON.stringify(newUser));
-        if (newUser.role !== 'admin') {
-          try {
-            const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
-              apiClient.getAllProperties(),
-              apiClient.getClients(),
-              apiClient.getAppointmentStats(),
-              apiClient.getAppointments(),
-            ]);
-
-            const properties = propsRes?.data ?? [];
-            const clients = clientsRes?.data ?? [];
-            const apptStats = apptRes?.data ?? apptRes ?? {};
-            const appts = apptsRes?.data ?? apptsRes ?? [];
-
-            const derived: DashboardStats = {
-              totalProperties: Array.isArray(properties) ? properties.length : 0,
-              activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-              totalClients: Array.isArray(clients) ? clients.length : 0,
-              userClientsCount: Array.isArray(clients) ? clients.length : 0,
-              totalAppointments: apptStats?.total ?? 0,
-              todaysAppointments: apptStats?.today ?? 0,
-              whatsappMessagesCount: 0,
-              remainingMessages: 0,
-              clientsByType: { buyers: 0, sellers: 0, tenants: 0, owners: 0 },
-              propertiesByStatus: {
-                available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-                sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
-                rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
-                hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
-                closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
-                under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
-              },
-            };
-
-            setDashboardStats(derived);
-            setAppointments(Array.isArray(appts) ? appts : []);
-            setAppointmentStats(apptStats);
-          } catch (e) {
-            // ignore
-          }
-        }
+        localStorage.setItem('enfor_payment_pending', 'true');
+        localStorage.setItem('enfor_pending_role', response.data.user?.role || '');
+        localStorage.removeItem('enfor_user');
       }
     } catch (error: any) {
       throw new Error(error.message || 'Registration failed');

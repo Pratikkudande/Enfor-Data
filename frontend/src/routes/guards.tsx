@@ -77,6 +77,22 @@ export const AdminRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Allows access to the checkout flow for either a logged-in user OR a
+// just-registered user who has a "payment pending" token but isn't logged in yet.
+export const RequireCheckoutAccess: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullScreenLoader />;
+
+  const hasToken = !!localStorage.getItem('enfor_token');
+  if (!isAuthenticated && !hasToken) {
+    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isAuthenticated, loading, subscriptionPaid } = useAuth();
 

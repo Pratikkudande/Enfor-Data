@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getSubscriptionPlans, SubscriptionPlan } from '../../services/subscriptionApi';
 import { useAuth } from '../../context/AuthContext';
 import RegistrationModal from '../../components/modals/RegistrationModal';
@@ -14,7 +14,10 @@ const PricingPage: React.FC = () => {
   // Plans are annual-only (GST-inclusive totals from the package sheet).
   const [billingCycle] = useState<'monthly' | 'annual'>('annual');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  // Message passed when login is blocked due to no active subscription.
+  const infoMessage = (location.state as { message?: string } | null)?.message;
 
   // Modal states
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
@@ -24,7 +27,12 @@ const PricingPage: React.FC = () => {
   const [userData, setUserData] = useState<any>(null);
   const [error, setError] = useState('');
 
+  // Guard against React 18 StrictMode invoking this effect twice in development,
+  // which would fire the /subscriptions/plans request two times.
+  const didFetch = useRef(false);
   useEffect(() => {
+    if (didFetch.current) return;
+    didFetch.current = true;
     fetchPlans();
   }, []);
 
@@ -42,30 +50,20 @@ const PricingPage: React.FC = () => {
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
     setSelectedPlan(plan);
-    
-    // If user is authenticated, go directly to checkout
-    if (user) {
-      if (plan.name === 'free_trial') {
-        navigate('/subscription/activate-trial');
-      } else {
-        navigate(`/subscription/checkout/${plan.id}`, { state: { plan, billingCycle } });
-      }
+
+    // A logged-in user, or a just-registered/blocked-login user with a
+    // "payment pending" token, can go straight to checkout.
+    const hasPendingToken =
+      localStorage.getItem('enfor_payment_pending') === 'true' &&
+      !!localStorage.getItem('enfor_token');
+
+    if (user || hasPendingToken) {
+      navigate(`/subscription/checkout/${plan.id}`, { state: { plan, billingCycle } });
       return;
     }
 
-    // If user is not authenticated, show registration modal
-    if (plan.name === 'free_trial') {
-      // For free trial, redirect to login with message
-      navigate('/login', { 
-        state: { 
-          returnTo: `/subscription/activate-trial`,
-          message: 'Please login to activate your free trial' 
-        }
-      });
-    } else {
-      // For paid plans, show registration modal
-      setShowRegistrationModal(true);
-    }
+    // Brand-new visitor with no account yet — collect their details first.
+    setShowRegistrationModal(true);
   };
 
   const handleRegistrationComplete = async (registrationData: any) => {
@@ -109,11 +107,13 @@ const PricingPage: React.FC = () => {
     return limit.toLocaleString();
   };
 
-  // Show only the plans for the user's role: channel partners see partner plans,
-  // everyone else (brokers) sees broker plans. Anonymous visitors see all plans.
-  const visiblePlans = user
+  // Show only the plans for the user's role. The role comes from the logged-in
+  // user, or — for a just-registered / blocked-login user pending payment — from
+  // the role saved at that time. Anonymous visitors with no role see all plans.
+  const effectiveRole = user?.role || localStorage.getItem('enfor_pending_role') || '';
+  const visiblePlans = effectiveRole
     ? plans.filter(
-        (p) => p.target_role === (user.role === 'channel_partner' ? 'channel_partner' : 'broker')
+        (p) => p.target_role === (effectiveRole === 'channel_partner' ? 'channel_partner' : 'broker')
       )
     : plans;
 
@@ -155,6 +155,13 @@ const PricingPage: React.FC = () => {
       </div>
 
       <div className="relative max-w-7xl mx-auto">
+        {infoMessage && (
+          <div className="max-w-xl mx-auto mb-8 rounded-xl px-5 py-4 text-center text-sm font-medium border border-amber-400/40"
+            style={{ background: 'rgba(245,158,11,0.12)', color: '#FCD34D' }}>
+            {infoMessage}
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-5 border border-blue-500/30"
