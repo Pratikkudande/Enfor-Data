@@ -62,8 +62,10 @@ const PricingPage: React.FC = () => {
       return;
     }
 
-    // Brand-new visitor with no account yet — collect their details first.
-    setShowRegistrationModal(true);
+    // Brand-new visitor with no account yet — send them to the full registration
+    // form (same fields as /register) for the chosen plan; after they create the
+    // account they continue to checkout for this plan.
+    navigate('/register', { state: { plan, billingCycle } });
   };
 
   const handleRegistrationComplete = async (registrationData: any) => {

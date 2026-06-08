@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus, Check, X as XIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../routes/routePaths';
@@ -20,6 +20,14 @@ const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
 const isPasswordValid = (p: string) => PASSWORD_RULES.every((r) => r.test(p));
 
 const RegisterForm: React.FC = () => {
+  const location = useLocation();
+  // A plan chosen on the pricing page is passed through here; it preselects the
+  // matching role and is carried on to checkout after the account is created.
+  const selectedPlan = (location.state as { plan?: any; billingCycle?: string } | null)?.plan;
+  const selectedBillingCycle = (location.state as { billingCycle?: string } | null)?.billingCycle || 'annual';
+  const planRole: 'broker' | 'channel_partner' =
+    selectedPlan?.target_role === 'channel_partner' ? 'channel_partner' : 'broker';
+
   const [formData, setFormData] = useState({
     firmName: '',
     firstName: '',
@@ -36,7 +44,7 @@ const RegisterForm: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'broker' as 'broker' | 'channel_partner' | 'admin'
+    role: planRole as 'broker' | 'channel_partner' | 'admin'
   });
 
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
@@ -119,9 +127,16 @@ const RegisterForm: React.FC = () => {
 
       await register(userData);
 
-      // New users have no paid subscription yet — send them to choose a plan.
-      // The payment gate (RequirePaidRoute) keeps the app locked until they pay.
-      navigate(ROUTES.PRICING);
+      // New users have no paid subscription yet. If they came from the pricing
+      // page with a chosen plan, continue straight to that plan's checkout;
+      // otherwise send them to the pricing page to pick one.
+      if (selectedPlan) {
+        navigate(`/subscription/checkout/${selectedPlan.id}`, {
+          state: { plan: selectedPlan, billingCycle: selectedBillingCycle },
+        });
+      } else {
+        navigate(ROUTES.PRICING);
+      }
 
     } catch (err: any) {
       console.error('Registration error:', err);
@@ -226,10 +241,22 @@ const RegisterForm: React.FC = () => {
         <p className="text-gray-600 mt-2">Join ENFOR DATA and grow your business</p>
       </div>
 
-      <RoleSelector
-        role={formData.role}
-        onChange={(role) => setFormData({ ...formData, role })}
-      />
+      {selectedPlan && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-center">
+          <p className="text-sm text-blue-800">
+            You're signing up for the <span className="font-semibold">{selectedPlan.display_name}</span>
+            {' '}— you'll continue to payment after creating your account.
+          </p>
+        </div>
+      )}
+
+      {/* When a plan is chosen its target role is fixed, so the selector is hidden. */}
+      {!selectedPlan && (
+        <RoleSelector
+          role={formData.role}
+          onChange={(role) => setFormData({ ...formData, role })}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
