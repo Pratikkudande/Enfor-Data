@@ -628,25 +628,46 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ══ FOOTER ════════════════════════════════════════════ */}
-      <footer id="contact" className="border-t border-white/8 py-8 px-4 sm:px-6 lg:px-8"
-        style={{ backgroundColor: '#020918' }}>
-        <div className="max-w-7xl mx-auto">
+      {/* Gradient rule — mirrors the blue-purple accent used on every section badge */}
+      <div className="h-px w-full" style={{ background: 'linear-gradient(90deg,transparent,#3B82F6 30%,#8B5CF6 70%,transparent)' }} />
+
+      <footer id="contact" className="py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+        style={{ background: 'linear-gradient(180deg,#030B24 0%,#020914 100%)' }}>
+
+        {/* Ambient glow — matches hero / CTA radial glows */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 80% 100% at 50% 100%,rgba(59,130,246,0.08) 0%,transparent 70%)' }} />
+
+        <div className="relative max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 mb-8">
+
             {/* Brand */}
             <div className="max-w-xs">
               <img src={logoImg} alt="EnforData" className="h-16 w-auto object-contain mb-3" />
-              <p className="text-xs text-gray-500 leading-relaxed">
+              <p className="text-xs leading-relaxed" style={{ color: 'rgba(148,163,184,0.7)' }}>
                 The all-in-one CRM platform built specifically for Indian real estate brokers, property consultants, and channel partners.
               </p>
               <div className="flex gap-2 mt-4">
                 {['T', 'L', 'I'].map(s => (
                   <a key={s} href="#"
-                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/30 transition-all">
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs transition-all duration-200"
+                    style={{ color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(99,102,241,0.5)';
+                      (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(99,102,241,0.12)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(148,163,184,0.6)';
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                      (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.03)';
+                    }}>
                     {s}
                   </a>
                 ))}
               </div>
             </div>
+
             {/* Link columns */}
             <div className="flex gap-12 sm:gap-16">
               {[
@@ -664,14 +685,16 @@ const LandingPage: React.FC = () => {
                 ]},
               ].map(col => (
                 <div key={col.title}>
-                  <p className="text-white font-semibold mb-3 text-sm">{col.title}</p>
+                  <p className="text-sm font-semibold text-white mb-3 tracking-wide">{col.title}</p>
                   <ul className="space-y-2">
                     {col.links.map(({ label, href }) => (
                       <li key={label}>
                         {href === '/pricing' ? (
-                          <Link to={href} className="text-xs text-gray-500 hover:text-white transition-colors">{label}</Link>
+                          <Link to={href} className="text-xs transition-colors duration-200 hover:text-blue-400"
+                            style={{ color: 'rgba(148,163,184,0.65)' }}>{label}</Link>
                         ) : (
-                          <a href={href} className="text-xs text-gray-500 hover:text-white transition-colors">{label}</a>
+                          <a href={href} className="text-xs transition-colors duration-200 hover:text-blue-400"
+                            style={{ color: 'rgba(148,163,184,0.65)' }}>{label}</a>
                         )}
                       </li>
                     ))}
@@ -680,17 +703,22 @@ const LandingPage: React.FC = () => {
               ))}
             </div>
           </div>
-          <div className="border-t border-white/8 pt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-gray-600">© {new Date().getFullYear()} EnforData. All rights reserved.</p>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+
+          {/* Bottom bar */}
+          <div className="pt-5 flex flex-col sm:flex-row items-center justify-between gap-3"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-xs" style={{ color: 'rgba(100,116,139,0.8)' }}>
+              © {new Date().getFullYear()} EnforData. All rights reserved.
+            </p>
+            <div className="flex flex-wrap items-center gap-4 text-xs" style={{ color: 'rgba(100,116,139,0.8)' }}>
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3 h-3 text-blue-500" /> info@enfordata.com
+                <Mail className="w-3 h-3" style={{ color: '#60A5FA' }} /> info@enfordata.com
               </span>
               <span className="flex items-center gap-1.5">
-                <Phone className="w-3 h-3 text-blue-500" /> +91 88060 04191
+                <Phone className="w-3 h-3" style={{ color: '#60A5FA' }} /> +91 88060 04191
               </span>
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3 text-blue-500" /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
+                <MapPin className="w-3 h-3" style={{ color: '#60A5FA' }} /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
               </span>
             </div>
           </div>
