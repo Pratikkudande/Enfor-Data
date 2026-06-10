@@ -164,6 +164,22 @@ func main() {
 			})
 		})
 
+		// Contact form (public — no auth required)
+		api.POST("/contact", func(c *gin.Context) {
+			var body struct {
+				Name    string `json:"name"    binding:"required"`
+				Email   string `json:"email"   binding:"required"`
+				Phone   string `json:"phone"`
+				Message string `json:"message" binding:"required"`
+			}
+			if err := c.ShouldBindJSON(&body); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "name, email and message are required"})
+				return
+			}
+			go emailService.SendContactEmail(body.Name, body.Email, body.Phone, body.Message)
+			c.JSON(http.StatusOK, gin.H{"message": "Thank you! We'll be in touch shortly."})
+		})
+
 		// Authentication routes (public)
 		auth := api.Group("/auth")
 		{

@@ -5,8 +5,10 @@ import {
   Menu, X, Phone, Mail, MapPin, TrendingUp,
   Bell, Clock, DollarSign, ChevronRight,
   Home, Handshake, FolderOpen, Network, MessageSquare,
+  Send, MessageCircle,
 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import { ENV } from '../../config/env';
 
 /* ── Animated Counter ─────────────────────────────────────── */
 const useCounter = (target: number, duration = 2000, start = false) => {
@@ -42,11 +44,11 @@ const useInView = (threshold = 0.2) => {
 
 /* ── Data ─────────────────────────────────────────────────── */
 const NAV_LINKS: { label: string; href: string; external?: boolean }[] = [
-  { label: 'Features',   href: '#features'     },
+  { label: 'Features',   href: '#features'      },
   { label: 'Pricing',    href: '/pricing', external: true },
   { label: 'Resources',  href: '#testimonials'  },
   { label: 'About Us',   href: '#about'         },
-  { label: 'Contact',    href: '#contact'       },
+  { label: 'Contact',    href: '#contact-form'  },
 ];
 
 const STATS = [
@@ -124,6 +126,199 @@ const glass = {
   backdropFilter: 'blur(20px)',
   border: '1px solid rgba(255,255,255,0.10)',
 } as React.CSSProperties;
+
+/* ── Contact Section ──────────────────────────────────────── */
+const ContactSection: React.FC = () => {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('loading');
+    try {
+      const res = await fetch(`${ENV.API_URL}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      setStatus(res.ok ? 'success' : 'error');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  const inputCls = `w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all`;
+  const inputStyle = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: '#fff',
+  };
+
+  return (
+    <section id="contact-form" className="py-24 px-4 sm:px-6 lg:px-8"
+      style={{ background: 'linear-gradient(180deg,#030B24 0%,#050F2E 100%)' }}>
+      <div className="max-w-6xl mx-auto">
+
+        {/* Heading */}
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-blue-500/30"
+            style={{ background: 'rgba(59,130,246,0.1)', color: '#93C5FD' }}>
+            GET IN TOUCH
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            We'd Love to Hear From You
+          </h2>
+          <p className="mt-3 text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>
+            Have a question or want to see a demo? Send us a message and we'll get back to you within 24 hours.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-10">
+
+          {/* Contact info — left */}
+          <div className="lg:col-span-2 flex flex-col gap-5">
+            {[
+              {
+                icon: Mail,
+                label: 'Email Us',
+                value: 'info@enfordata.com',
+                sub: 'We reply within 24 hours',
+                color: '#3B82F6',
+              },
+              {
+                icon: Phone,
+                label: 'Call Us',
+                value: '+91 88060 04191',
+                sub: 'Mon–Sat, 10 AM – 7 PM IST',
+                color: '#8B5CF6',
+              },
+              {
+                icon: MessageCircle,
+                label: 'WhatsApp',
+                value: '+91 88060 04191',
+                sub: 'Quick replies on WhatsApp',
+                color: '#10B981',
+              },
+              {
+                icon: MapPin,
+                label: 'Office',
+                value: 'Pimple Saudagar, Pune',
+                sub: 'Sai Vision Society A/28, 411027',
+                color: '#F59E0B',
+              },
+            ].map(({ icon: Icon, label, value, sub, color }) => (
+              <div key={label}
+                className="flex items-start gap-4 p-5 rounded-2xl border border-white/8 transition-all duration-200 hover:border-white/15"
+                style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${color}18`, border: `1px solid ${color}33` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color }} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>{label}</p>
+                  <p className="text-sm font-semibold text-white">{value}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(100,116,139,0.8)' }}>{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Form — right */}
+          <div className="lg:col-span-3 rounded-2xl p-7 border border-white/8"
+            style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(12px)' }}>
+
+            {status === 'success' ? (
+              <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                  <CheckCircle className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Message Sent!</h3>
+                <p className="text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  Thanks for reaching out. Our team will respond within 24 hours.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Full Name *</label>
+                    <input
+                      type="text" required maxLength={100}
+                      value={form.name} onChange={set('name')}
+                      placeholder="Rajesh Patel"
+                      className={inputCls} style={inputStyle}
+                      onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Phone Number</label>
+                    <input
+                      type="tel" maxLength={10}
+                      value={form.phone} onChange={set('phone')}
+                      placeholder="Enter phone number"
+                      className={inputCls} style={inputStyle}
+                      onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Email Address *</label>
+                  <input
+                    type="email" required
+                    value={form.email} onChange={set('email')}
+                    placeholder="rajesh@example.com"
+                    className={inputCls} style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Message *</label>
+                  <textarea
+                    required rows={5} maxLength={1000}
+                    value={form.message} onChange={set('message')}
+                    placeholder="Tell us how we can help you…"
+                    className={`${inputCls} resize-none`} style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                  <p className="mt-1 text-xs text-right" style={{ color: 'rgba(100,116,139,0.6)' }}>
+                    {form.message.length}/1000
+                  </p>
+                </div>
+
+                {status === 'error' && (
+                  <p className="text-xs text-red-400 text-center">
+                    Something went wrong. Please try again or email us at info@enfordata.com
+                  </p>
+                )}
+
+                <button
+                  type="submit" disabled={status === 'loading'}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white py-3 rounded-xl transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(99,102,241,0.35)' }}>
+                  {status === 'loading' ? (
+                    <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Sending…</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Send Message</>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 /* ══════════════════════════════════════════════════════════ */
 const LandingPage: React.FC = () => {
@@ -628,6 +823,9 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ══ FOOTER ════════════════════════════════════════════ */}
+      {/* ══ CONTACT FORM ══════════════════════════════════════ */}
+      <ContactSection />
+
       {/* Gradient rule — mirrors the blue-purple accent used on every section badge */}
       <div className="h-px w-full" style={{ background: 'linear-gradient(90deg,transparent,#3B82F6 30%,#8B5CF6 70%,transparent)' }} />
 
@@ -680,8 +878,8 @@ const LandingPage: React.FC = () => {
                   { label: 'Blog',       href: '#testimonials' },
                 ]},
                 { title: 'Support', links: [
-                  { label: 'Help Center', href: '#contact'     },
-                  { label: 'Contact',     href: '#contact'     },
+                  { label: 'Help Center', href: '/faq'          },
+                  { label: 'Contact',     href: '#contact-form' },
                 ]},
               ].map(col => (
                 <div key={col.title}>
@@ -689,7 +887,7 @@ const LandingPage: React.FC = () => {
                   <ul className="space-y-2">
                     {col.links.map(({ label, href }) => (
                       <li key={label}>
-                        {href === '/pricing' ? (
+                        {href.startsWith('/') && !href.startsWith('/#') ? (
                           <Link to={href} className="text-xs transition-colors duration-200 hover:text-blue-400"
                             style={{ color: 'rgba(148,163,184,0.65)' }}>{label}</Link>
                         ) : (
