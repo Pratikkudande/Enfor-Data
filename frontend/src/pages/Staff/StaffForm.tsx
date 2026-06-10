@@ -207,7 +207,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => onInputChange('phone', e.target.value)}
-                      placeholder="+91 98765 43210"
+                      placeholder="Enter phone number"
                       maxLength={10}
                       className={`${inputCls()} pl-9`}
                     />

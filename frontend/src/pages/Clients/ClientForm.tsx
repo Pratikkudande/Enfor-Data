@@ -141,7 +141,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
               <div>
                 {label('Contact No', true)}
                 <input type="tel" name="contactNo" value={formData.contactNo} onChange={onInputChange}
-                  disabled={isViewOnly} maxLength={10} className={inputCls(isViewOnly)} placeholder="+91 9876543210" required />
+                  disabled={isViewOnly} maxLength={10} className={inputCls(isViewOnly)} placeholder="Enter phone number" required />
               </div>
               <div>
                 {label('Email ID')}

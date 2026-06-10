@@ -174,7 +174,7 @@ const Step2Details: React.FC<Step2Props> = ({
                   type="tel"
                   value={formData.contactPhone}
                   onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="Enter phone number"
                   className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                     errors.contactPhone ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'
                   }`}
@@ -194,7 +194,7 @@ const Step2Details: React.FC<Step2Props> = ({
                   type="tel"
                   value={formData.contactWhatsapp}
                   onChange={(e) => handleInputChange('contactWhatsapp', e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="Enter phone number"
                   className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>

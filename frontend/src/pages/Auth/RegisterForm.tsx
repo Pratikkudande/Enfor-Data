@@ -322,7 +322,7 @@ const RegisterForm: React.FC = () => {
             value={formData.whatsappNumber}
             onChange={handleChange}
             error={fieldErrors.whatsappNumber}
-            placeholder="+91 9876543210"
+            placeholder="Enter phone number"
             maxLength={10}
             required
           />
@@ -334,7 +334,7 @@ const RegisterForm: React.FC = () => {
             value={formData.alternativeNumber}
             onChange={handleChange}
             error={fieldErrors.alternativeNumber}
-            placeholder="+91 9876543211"
+            placeholder="Enter phone number"
             maxLength={10}
           />
           <FormInput
