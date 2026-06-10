@@ -41,7 +41,13 @@ const useInView = (threshold = 0.2) => {
 };
 
 /* ── Data ─────────────────────────────────────────────────── */
-const NAV_LINKS = ['Features', 'Pricing', 'Resources', 'About Us', 'Contact'];
+const NAV_LINKS: { label: string; href: string; external?: boolean }[] = [
+  { label: 'Features',   href: '#features'     },
+  { label: 'Pricing',    href: '/pricing', external: true },
+  { label: 'Resources',  href: '#testimonials'  },
+  { label: 'About Us',   href: '#contact'       },
+  { label: 'Contact',    href: '#contact'       },
+];
 
 const STATS = [
   { icon: '🏢', value: 1500, suffix: '+', label: 'Properties Managed' },
@@ -153,11 +159,11 @@ const LandingPage: React.FC = () => {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-7">
-            {NAV_LINKS.map(l => (
-              l === 'Pricing' ? (
-                <Link key={l} to="/pricing" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</Link>
+            {NAV_LINKS.map(({ label, href, external }) => (
+              external ? (
+                <Link key={label} to={href} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{label}</Link>
               ) : (
-                <a key={l} href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</a>
+                <a key={label} href={href} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{label}</a>
               )
             ))}
           </nav>
@@ -182,13 +188,13 @@ const LandingPage: React.FC = () => {
         {menuOpen && (
           <div className="lg:hidden border-t px-4 py-4 space-y-3"
             style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255,255,255,0.07)' }}>
-            {NAV_LINKS.map(l => (
-              l === 'Pricing' ? (
-                <Link key={l} to="/pricing" onClick={() => setMenuOpen(false)}
-                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</Link>
+            {NAV_LINKS.map(({ label, href, external }) => (
+              external ? (
+                <Link key={label} to={href} onClick={() => setMenuOpen(false)}
+                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{label}</Link>
               ) : (
-                <a key={l} href="#" onClick={() => setMenuOpen(false)}
-                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</a>
+                <a key={label} href={href} onClick={() => setMenuOpen(false)}
+                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{label}</a>
               )
             ))}
             <div className="pt-2 flex flex-col gap-2">
@@ -622,7 +628,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ══ FOOTER ════════════════════════════════════════════ */}
-      <footer className="border-t border-white/8 py-14 px-4 sm:px-6 lg:px-8"
+      <footer id="contact" className="border-t border-white/8 py-14 px-4 sm:px-6 lg:px-8"
         style={{ backgroundColor: '#020918' }}>
         <div className="max-w-7xl mx-auto">
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
