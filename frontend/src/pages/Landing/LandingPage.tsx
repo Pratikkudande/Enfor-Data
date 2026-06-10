@@ -628,67 +628,69 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ══ FOOTER ════════════════════════════════════════════ */}
-      <footer id="contact" className="border-t border-white/8 py-14 px-4 sm:px-6 lg:px-8"
+      <footer id="contact" className="border-t border-white/8 py-8 px-4 sm:px-6 lg:px-8"
         style={{ backgroundColor: '#020918' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
-            <div className="lg:col-span-2">
-              <div className="mb-5">
-                <img src={logoImg} alt="EnforData" className="h-24 w-auto object-contain" />
-              </div>
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 mb-8">
+            {/* Brand */}
+            <div className="max-w-xs">
+              <img src={logoImg} alt="EnforData" className="h-16 w-auto object-contain mb-3" />
+              <p className="text-xs text-gray-500 leading-relaxed">
                 The all-in-one CRM platform built specifically for Indian real estate brokers, property consultants, and channel partners.
               </p>
-              <div className="flex gap-3 mt-5">
+              <div className="flex gap-2 mt-4">
                 {['T', 'L', 'I'].map(s => (
                   <a key={s} href="#"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/30 transition-all">
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/30 transition-all">
                     {s}
                   </a>
                 ))}
               </div>
             </div>
-            {[
-              { title: 'Product', links: [
-                { label: 'Features',   href: '#features'     },
-                { label: 'Pricing',    href: '/pricing'      },
-              ]},
-              { title: 'Company', links: [
-                { label: 'About Us',   href: '#about'        },
-                { label: 'Blog',       href: '#testimonials' },
-              ]},
-              { title: 'Support', links: [
-                { label: 'Help Center', href: '#contact'     },
-                { label: 'Contact',     href: '#contact'     },
-              ]},
-            ].map(col => (
-              <div key={col.title}>
-                <p className="text-white font-semibold mb-4 text-sm">{col.title}</p>
-                <ul className="space-y-2.5">
-                  {col.links.map(({ label, href }) => (
-                    <li key={label}>
-                      {href === '/pricing' ? (
-                        <Link to={href} className="text-sm text-gray-500 hover:text-white transition-colors">{label}</Link>
-                      ) : (
-                        <a href={href} className="text-sm text-gray-500 hover:text-white transition-colors">{label}</a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {/* Link columns */}
+            <div className="flex gap-12 sm:gap-16">
+              {[
+                { title: 'Product', links: [
+                  { label: 'Features',   href: '#features'     },
+                  { label: 'Pricing',    href: '/pricing'      },
+                ]},
+                { title: 'Company', links: [
+                  { label: 'About Us',   href: '#about'        },
+                  { label: 'Blog',       href: '#testimonials' },
+                ]},
+                { title: 'Support', links: [
+                  { label: 'Help Center', href: '#contact'     },
+                  { label: 'Contact',     href: '#contact'     },
+                ]},
+              ].map(col => (
+                <div key={col.title}>
+                  <p className="text-white font-semibold mb-3 text-sm">{col.title}</p>
+                  <ul className="space-y-2">
+                    {col.links.map(({ label, href }) => (
+                      <li key={label}>
+                        {href === '/pricing' ? (
+                          <Link to={href} className="text-xs text-gray-500 hover:text-white transition-colors">{label}</Link>
+                        ) : (
+                          <a href={href} className="text-xs text-gray-500 hover:text-white transition-colors">{label}</a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="border-t border-white/8 pt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-gray-600">© {new Date().getFullYear()} EnforData. All rights reserved.</p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-blue-500" /> info@enfordata.com
+                <Mail className="w-3 h-3 text-blue-500" /> info@enfordata.com
               </span>
               <span className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-blue-500" /> +91 88060 04191
+                <Phone className="w-3 h-3 text-blue-500" /> +91 88060 04191
               </span>
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-blue-500" /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
+                <MapPin className="w-3 h-3 text-blue-500" /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
               </span>
             </div>
           </div>
