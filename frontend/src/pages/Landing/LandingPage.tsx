@@ -45,7 +45,7 @@ const NAV_LINKS: { label: string; href: string; external?: boolean }[] = [
   { label: 'Features',   href: '#features'     },
   { label: 'Pricing',    href: '/pricing', external: true },
   { label: 'Resources',  href: '#testimonials'  },
-  { label: 'About Us',   href: '#contact'       },
+  { label: 'About Us',   href: '#about'         },
   { label: 'Contact',    href: '#contact'       },
 ];
 
@@ -428,7 +428,7 @@ const LandingPage: React.FC = () => {
           the left column — from the heading to the last row.
           Strategy: grid items-stretch + right col h-full + image absolute inset-0
       ══════════════════════════════════════════════════════ */}
-      <section className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
+      <section id="about" className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
         <div className="max-w-7xl mx-auto">
           {/* items-stretch makes both columns the same height */}
           <div className="grid lg:grid-cols-2 gap-16 items-stretch">
