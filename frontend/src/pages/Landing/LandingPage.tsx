@@ -649,16 +649,35 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
             {[
-              { title: 'Product', links: ['Features', 'Pricing', 'Changelog', 'Roadmap'] },
-              { title: 'Company', links: ['About Us', 'Blog', 'Careers', 'Press'] },
-              { title: 'Support', links: ['Help Center', 'Contact', 'Privacy Policy', 'Terms'] },
+              { title: 'Product', links: [
+                { label: 'Features',   href: '#features'     },
+                { label: 'Pricing',    href: '/pricing'      },
+                { label: 'Changelog',  href: '#features'     },
+                { label: 'Roadmap',    href: '#features'     },
+              ]},
+              { title: 'Company', links: [
+                { label: 'About Us',   href: '#about'        },
+                { label: 'Blog',       href: '#testimonials' },
+                { label: 'Careers',    href: '#contact'      },
+                { label: 'Press',      href: '#contact'      },
+              ]},
+              { title: 'Support', links: [
+                { label: 'Help Center', href: '#contact'     },
+                { label: 'Contact',     href: '#contact'     },
+                { label: 'Privacy Policy', href: '#contact'  },
+                { label: 'Terms',       href: '#contact'     },
+              ]},
             ].map(col => (
               <div key={col.title}>
                 <p className="text-white font-semibold mb-4 text-sm">{col.title}</p>
                 <ul className="space-y-2.5">
-                  {col.links.map(l => (
-                    <li key={l}>
-                      <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a>
+                  {col.links.map(({ label, href }) => (
+                    <li key={label}>
+                      {href === '/pricing' ? (
+                        <Link to={href} className="text-sm text-gray-500 hover:text-white transition-colors">{label}</Link>
+                      ) : (
+                        <a href={href} className="text-sm text-gray-500 hover:text-white transition-colors">{label}</a>
+                      )}
                     </li>
                   ))}
                 </ul>
