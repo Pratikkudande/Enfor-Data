@@ -134,6 +134,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
                     value={formData.first_name}
                     onChange={(e) => onInputChange('first_name', e.target.value)}
                     placeholder={isRequired ? 'e.g. Sales Executive' : 'First name'}
+                    maxLength={50}
                     className={`${inputCls()} pl-9`}
                   />
                 </div>
@@ -146,6 +147,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
                     value={formData.last_name}
                     onChange={(e) => onInputChange('last_name', e.target.value)}
                     placeholder="Last name"
+                    maxLength={50}
                     className={inputCls()}
                   />
                 </div>
@@ -206,6 +208,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
                       value={formData.phone}
                       onChange={(e) => onInputChange('phone', e.target.value)}
                       placeholder="+91 98765 43210"
+                      maxLength={10}
                       className={`${inputCls()} pl-9`}
                     />
                   </div>

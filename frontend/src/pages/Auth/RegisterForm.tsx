@@ -285,6 +285,7 @@ const RegisterForm: React.FC = () => {
             onChange={handleChange}
             error={fieldErrors.firstName}
             placeholder="First name"
+            maxLength={50}
             required
           />
           <FormInput
@@ -295,6 +296,7 @@ const RegisterForm: React.FC = () => {
             onChange={handleChange}
             error={fieldErrors.lastName}
             placeholder="Last name"
+            maxLength={50}
             required
           />
         </div>
@@ -321,6 +323,7 @@ const RegisterForm: React.FC = () => {
             onChange={handleChange}
             error={fieldErrors.whatsappNumber}
             placeholder="+91 9876543210"
+            maxLength={10}
             required
           />
           <FormInput
@@ -332,6 +335,7 @@ const RegisterForm: React.FC = () => {
             onChange={handleChange}
             error={fieldErrors.alternativeNumber}
             placeholder="+91 9876543211"
+            maxLength={10}
           />
           <FormInput
             label="Foreign Number"
@@ -417,7 +421,7 @@ const RegisterForm: React.FC = () => {
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={10}
+              maxLength={6}
               value={formData.postalCode}
               onChange={handleChange}
               error={fieldErrors.postalCode}
