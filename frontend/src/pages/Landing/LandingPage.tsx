@@ -652,20 +652,14 @@ const LandingPage: React.FC = () => {
               { title: 'Product', links: [
                 { label: 'Features',   href: '#features'     },
                 { label: 'Pricing',    href: '/pricing'      },
-                { label: 'Changelog',  href: '#features'     },
-                { label: 'Roadmap',    href: '#features'     },
               ]},
               { title: 'Company', links: [
                 { label: 'About Us',   href: '#about'        },
                 { label: 'Blog',       href: '#testimonials' },
-                { label: 'Careers',    href: '#contact'      },
-                { label: 'Press',      href: '#contact'      },
               ]},
               { title: 'Support', links: [
                 { label: 'Help Center', href: '#contact'     },
                 { label: 'Contact',     href: '#contact'     },
-                { label: 'Privacy Policy', href: '#contact'  },
-                { label: 'Terms',       href: '#contact'     },
               ]},
             ].map(col => (
               <div key={col.title}>
