@@ -23,7 +23,6 @@ const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsVi
 const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
 const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
 const StaffView = lazy(() => import('../pages/Staff/StaffView'));
-const MarketingView = lazy(() => import('../pages/Marketing/MarketingView'));
 const AgreementsView = lazy(() => import('../pages/Agreements/AgreementsView'));
 const ProjectsView = lazy(() => import('../pages/Projects/ProjectsView'));
 const BuildingDataView = lazy(() => import('../pages/BuildingData/BuildingDataView'));
@@ -146,7 +145,10 @@ export const AppRoutes: React.FC = () => {
         } />
         <Route path={ROUTES.MARKETING} element={
           <Suspense fallback={<PageLoader />}>
-            <MarketingView />
+            <ComingSoonView
+              title="Marketing"
+              description="Campaigns, templates, and performance tracking are on the way. We’re building the Marketing Center to help you reach more clients across channels."
+            />
           </Suspense>
         } />
         <Route path={ROUTES.AGREEMENTS} element={

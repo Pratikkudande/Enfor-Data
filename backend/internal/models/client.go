@@ -4,6 +4,18 @@ import (
 	"time"
 )
 
+// ClientOption is a lightweight client representation for dropdowns/selects.
+// It carries only the fields the UI needs to render and link a client.
+type ClientOption struct {
+	ID                string `json:"id" db:"id"`
+	FirstName         string `json:"first_name" db:"first_name"`
+	LastName          string `json:"last_name" db:"last_name"`
+	Phone             string `json:"phone" db:"phone"`
+	Email             string `json:"email" db:"email"`
+	Type              string `json:"type" db:"type"`
+	PreferredLocation string `json:"preferred_location" db:"preferred_location"`
+}
+
 // Client represents a real estate client in the system
 type Client struct {
 	ID string `json:"id" db:"id"`

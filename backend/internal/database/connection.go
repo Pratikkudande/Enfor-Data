@@ -971,6 +971,8 @@ END $$;
 -- Add mobile verification columns if not exists
 ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_verified BOOLEAN DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_verified_at TIMESTAMP WITH TIME ZONE;
+-- Per-user app settings (notifications/privacy/preferences) stored as JSON
+ALTER TABLE users ADD COLUMN IF NOT EXISTS settings JSONB;
 `
 	_, err = db.Exec(bioMigration)
 	if err != nil {

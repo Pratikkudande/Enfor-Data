@@ -106,6 +106,11 @@ func (s *NetworkService) GetAllBrokers(userID string) ([]map[string]interface{},
 	return s.repo.GetAllBrokers(userID)
 }
 
+// GetConnectionStatus returns the connection status with a single broker.
+func (s *NetworkService) GetConnectionStatus(userID, brokerID string) (map[string]interface{}, error) {
+	return s.repo.GetConnectionStatus(userID, brokerID)
+}
+
 // ── Messaging ─────────────────────────────────────────────────────────────────
 
 // EnsureConversation gets or creates a conversation with a peer (must be connected).

@@ -280,6 +280,43 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 	return list, rows.Err()
 }
 
+// GetConnectionStatus returns the connection status between the current user and
+// a single broker (none|pending|connected) plus the pending request id/sender,
+// without scanning the whole broker directory.
+func (r *NetworkRepository) GetConnectionStatus(userID, brokerID string) (map[string]interface{}, error) {
+	var (
+		status, requestID, senderID *string
+	)
+	err := r.db.QueryRow(`
+		SELECT COALESCE(cr.status,
+		           CASE WHEN conn.id IS NOT NULL THEN 'connected' ELSE 'none' END
+		       ) AS connection_status,
+		       cr.id AS request_id,
+		       cr.sender_id
+		FROM users u
+		LEFT JOIN connection_requests cr ON (
+		    (cr.sender_id=$1 AND cr.receiver_id=u.id) OR
+		    (cr.receiver_id=$1 AND cr.sender_id=u.id)
+		) AND cr.status='pending'
+		LEFT JOIN connections conn ON (
+		    (conn.broker_a=$1 AND conn.broker_b=u.id) OR
+		    (conn.broker_a=u.id AND conn.broker_b=$1)
+		)
+		WHERE u.id=$2`, userID, brokerID).Scan(&status, &requestID, &senderID)
+	if err == sql.ErrNoRows {
+		none := "none"
+		return map[string]interface{}{"connection_status": &none, "request_id": nil, "sender_id": nil}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"connection_status": status,
+		"request_id":        requestID,
+		"sender_id":         senderID,
+	}, nil
+}
+
 // ── Conversations ─────────────────────────────────────────────────────────────
 
 // EnsureConversationWithPeer gets or creates a conversation and returns it fully populated with peer info.

@@ -93,6 +93,16 @@ func (s *ClientService) GetBrokerClients(brokerID string) ([]models.Client, erro
 	return clients, nil
 }
 
+// GetBrokerClientOptions returns lightweight client options for the broker,
+// used to populate selection dropdowns.
+func (s *ClientService) GetBrokerClientOptions(brokerID string) ([]models.ClientOption, error) {
+	options, err := s.clientRepo.GetOptionsByBrokerID(brokerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get broker client options: %w", err)
+	}
+	return options, nil
+}
+
 // GetClientByID retrieves a client by ID with ownership verification
 func (s *ClientService) GetClientByID(id, brokerID string) (*models.Client, error) {
 	// Call repository GetByID to fetch client

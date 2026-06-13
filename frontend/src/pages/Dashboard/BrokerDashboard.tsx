@@ -47,40 +47,27 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
       setLoading(true);
       setError(null);
       try {
-        const [propertiesRes, clientsRes, apptStatsRes] = await Promise.all([
-          // all properties (global) to compute active properties
-          // returns { data: Property[] }
-          apiClient.request('/properties/all'),
-          // clients for current user
-          apiClient.request('/clients'),
-          // appointment stats for current user
-          apiClient.request('/appointments/stats')
+        const [dashRes, apptStatsRes] = await Promise.all([
+          // Lightweight aggregate counts (properties breakdown + client count)
+          apiClient.request<any>('/dashboard/stats'),
+          // appointment stats for current user (already a lightweight counts endpoint)
+          apiClient.request<any>('/appointments/stats')
         ]);
 
-        const propertiesData = propertiesRes?.data ?? propertiesRes;
-        const clientsData = clientsRes?.data ?? clientsRes;
+        const props = dashRes?.properties ?? {};
+        const clientsTotal = dashRes?.clients_total ?? 0;
         const apptStatsData = apptStatsRes?.data ?? apptStatsRes;
 
         if (!mounted) return;
-
-        const propertiesArray = Array.isArray(propertiesData) ? propertiesData : [];
-        const availableCount = propertiesArray.filter((p: any) => p.status === 'available').length;
-        const soldCount = propertiesArray.filter((p: any) => p.status === 'sold').length;
-        const rentedCount = propertiesArray.filter((p: any) => p.status === 'rented').length;
-        const holdCount = propertiesArray.filter((p: any) => p.status === 'hold').length;
-        const closedCount = propertiesArray.filter((p: any) => p.status === 'closed').length;
-        const underDiscussionCount = propertiesArray.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length;
-
-        const userClientsCount = Array.isArray(clientsData) ? clientsData.length : 0;
 
         const todaysAppointments = apptStatsData?.today ?? apptStatsData?.data?.today ?? 0;
 
         // Construct a DashboardStats-compatible object (fill required fields conservatively)
         const derived: DashboardStats = {
-          totalProperties: propertiesArray.length,
-          activeProperties: availableCount,
-          totalClients: Array.isArray(clientsData) ? clientsData.length : 0,
-          userClientsCount,
+          totalProperties: props.total ?? 0,
+          activeProperties: props.available ?? 0,
+          totalClients: clientsTotal,
+          userClientsCount: clientsTotal,
           totalAppointments: apptStatsData?.total ?? 0,
           todaysAppointments,
           whatsappMessagesCount: 0,
@@ -92,12 +79,12 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
             owners: 0,
           },
           propertiesByStatus: {
-            available: availableCount,
-            sold: soldCount,
-            rented: rentedCount,
-            hold: holdCount,
-            closed: closedCount,
-            under_discussion: underDiscussionCount,
+            available: props.available ?? 0,
+            sold: props.sold ?? 0,
+            rented: props.rented ?? 0,
+            hold: props.hold ?? 0,
+            closed: props.closed ?? 0,
+            under_discussion: props.under_discussion ?? 0,
           },
         };
 

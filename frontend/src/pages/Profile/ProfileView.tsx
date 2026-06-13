@@ -22,9 +22,21 @@ const ProfileView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     propertiesCount: 0,
-    clientsCount: 0
+    clientsCount: 0,
+    projectsCount: 0
   });
+  const isChannelPartner = user?.role === 'channel_partner';
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Refresh the user from the server (GET /auth/me) when opening the profile,
+  // so it shows the latest data rather than the cached login snapshot.
+  const didRefreshUser = useRef(false);
+  useEffect(() => {
+    if (didRefreshUser.current) return;
+    didRefreshUser.current = true;
+    refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -37,21 +49,22 @@ const ProfileView: React.FC = () => {
     specialization: user?.specializations || '',
   });
 
-  // Fetch user's properties and clients count
+  // Fetch the property/client counts once — they're for the current user, so we
+  // don't refetch when the user object is refreshed or under StrictMode re-mounts.
+  const didFetchStats = useRef(false);
   useEffect(() => {
+    if (!user || didFetchStats.current) return;
+    didFetchStats.current = true;
+
     const fetchStats = async () => {
-      if (!user) return;
-      
       setLoading(true);
       try {
-        const [propertiesRes, clientsRes] = await Promise.all([
-          apiClient.getProperties(),
-          apiClient.getClients()
-        ]);
-
+        // Single lightweight endpoint that returns just the counts.
+        const res = await apiClient.getProfileStats();
         setStats({
-          propertiesCount: propertiesRes?.data?.length || 0,
-          clientsCount: clientsRes?.data?.length || 0
+          propertiesCount: res?.properties_count || 0,
+          clientsCount: res?.clients_count || 0,
+          projectsCount: res?.projects_count || 0
         });
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -121,6 +134,8 @@ const ProfileView: React.FC = () => {
       if (res?.data?.profile_image) {
         setPhotoUrl(resolvePhoto(res.data.profile_image));
       }
+      // Refresh the auth user so the navbar avatar updates immediately.
+      await refreshUser();
       showToast({ type: 'success', title: 'Photo Updated', message: 'Profile photo updated successfully.' });
     } catch (err) {
       setPhotoUrl(resolvePhoto(user?.profile_image)); // revert
@@ -247,28 +262,42 @@ const ProfileView: React.FC = () => {
 
             {/* Quick Stats */}
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
+              {isChannelPartner ? (
+                // Channel partners work with projects, not properties/clients.
+                <div className="text-center">
                   {loading ? (
                     <div className="flex justify-center">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
                     </div>
                   ) : (
-                    <p className="text-2xl font-bold text-blue-600">{stats.propertiesCount}</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats.projectsCount}</p>
                   )}
-                  <p className="text-xs text-gray-500">Own Properties</p>
+                  <p className="text-xs text-gray-500">My Projects</p>
                 </div>
-                <div>
-                  {loading ? (
-                    <div className="flex justify-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-green-600" />
-                    </div>
-                  ) : (
-                    <p className="text-2xl font-bold text-green-600">{stats.clientsCount}</p>
-                  )}
-                  <p className="text-xs text-gray-500">Own Clients</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    {loading ? (
+                      <div className="flex justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      </div>
+                    ) : (
+                      <p className="text-2xl font-bold text-blue-600">{stats.propertiesCount}</p>
+                    )}
+                    <p className="text-xs text-gray-500">Own Properties</p>
+                  </div>
+                  <div>
+                    {loading ? (
+                      <div className="flex justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+                      </div>
+                    ) : (
+                      <p className="text-2xl font-bold text-green-600">{stats.clientsCount}</p>
+                    )}
+                    <p className="text-xs text-gray-500">Own Clients</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

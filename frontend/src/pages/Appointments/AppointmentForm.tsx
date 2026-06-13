@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { CreateAppointmentRequest, Client } from '../../services/api';
+import { CreateAppointmentRequest, ClientOption } from '../../services/api';
 import { apiClient } from '../../services/api';
-import { Property } from '../../types';
+import { PropertyOption } from '../../types';
 
 type AppointmentMode = 'create' | 'edit' | 'view';
 
 interface AppointmentFormProps {
-  clients: Client[];
+  clients: ClientOption[];
   loadingClients: boolean;
   submitting: boolean;
   submitError?: string | null;
@@ -52,7 +52,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     type: (initialData?.type || 'site_visit') as 'site_visit' | 'meeting' | 'call'
   });
 
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -60,7 +60,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        const response = await apiClient.getProperties();
+        // Lightweight options endpoint (id, title, location, type) for the dropdown.
+        const response = await apiClient.getPropertyOptions();
         setProperties(response.data || []);
       } catch {
         // non-critical, property selection is optional

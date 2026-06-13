@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, Plus, Search, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import StatsCard from '../Dashboard/StatsCard';
-import { apiClient, Appointment as ApiAppointment, AppointmentStats, CreateAppointmentRequest, Client } from '../../services/api';
+import { apiClient, Appointment as ApiAppointment, AppointmentStats, CreateAppointmentRequest, ClientOption } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import AppointmentCard from './AppointmentCard';
 import AppointmentForm from './AppointmentForm';
@@ -43,13 +43,14 @@ const AppointmentsView: React.FC = () => {
   };
 
   // Clients state for dropdown
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
 
   useEffect(() => {
-    if (!ctxAppointments) fetchAppointments();
-    fetchClients();
-    if (!ctxAppointmentStats) fetchAppointmentStats();
+    // Always refresh on navigating here so the list/stats are up to date.
+    // Clients are fetched lazily only when the appointment form opens.
+    fetchAppointments();
+    fetchAppointmentStats();
   }, []);
 
   const formatLocalDate = (date: Date) => {
@@ -61,7 +62,9 @@ const AppointmentsView: React.FC = () => {
 
   const fetchAppointments = async () => {
     try {
-      setLoading(true);
+      // Only show the full-page loader when we have nothing to display yet;
+      // otherwise refresh silently in the background.
+      if (appointments.length === 0) setLoading(true);
       setError(null);
       const response = await apiClient.getAppointments();
       if (response.data) {
@@ -87,9 +90,12 @@ const AppointmentsView: React.FC = () => {
   };
 
   const fetchClients = async () => {
+    // Avoid refetching if we already have the options loaded this session.
+    if (clients.length > 0) return;
     try {
       setLoadingClients(true);
-      const response = await apiClient.getClients();
+      // Lightweight options endpoint (id, name, type, preferred_location).
+      const response = await apiClient.getClientOptions();
       if (response.data) {
         setClients(response.data);
       }
@@ -183,6 +189,7 @@ const AppointmentsView: React.FC = () => {
     setModalMode('create');
     setSelectedAppointment(null);
     setSubmitError(null);
+    fetchClients(); // load client options for the dropdown on demand
     setShowAddModal(true);
   };
 
@@ -190,6 +197,7 @@ const AppointmentsView: React.FC = () => {
     setModalMode('edit');
     setSelectedAppointment(appointment);
     setSubmitError(null);
+    fetchClients(); // load client options for the dropdown on demand
     setShowAddModal(true);
   };
 

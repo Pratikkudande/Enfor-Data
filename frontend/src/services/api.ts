@@ -10,6 +10,8 @@ import {
   CreateClientRequest,
   UpdateClientRequest,
   Client,
+  ClientOption,
+  PropertyOption,
   CreateAppointmentRequest,
   UpdateAppointmentRequest,
   Appointment,
@@ -112,6 +114,21 @@ class ApiService {
   // Client endpoints
   async getClients(): Promise<ApiResponse<Client[]>> {
     return apiClient.request<ApiResponse<Client[]>>('/clients');
+  }
+
+  // Lightweight client list (id + name + phone) for dropdowns
+  async getClientOptions(): Promise<ApiResponse<ClientOption[]>> {
+    return apiClient.request<ApiResponse<ClientOption[]>>('/clients/options');
+  }
+
+  // Lightweight property list (id + title + location + type) for dropdowns
+  async getPropertyOptions(): Promise<ApiResponse<PropertyOption[]>> {
+    return apiClient.request<ApiResponse<PropertyOption[]>>('/properties/options');
+  }
+
+  // Lightweight counts for the profile page (no full list payloads)
+  async getProfileStats(): Promise<{ properties_count: number; clients_count: number; projects_count: number }> {
+    return apiClient.request<{ properties_count: number; clients_count: number; projects_count: number }>('/profile/stats');
   }
 
   async createClient(clientData: CreateClientRequest): Promise<ApiResponse<Client>> {

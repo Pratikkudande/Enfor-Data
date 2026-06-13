@@ -12,6 +12,12 @@ export const networkApi = {
   getBrokers: () =>
     apiClient.request<ApiResponse<BrokerProfile[]>>(`${BASE}/brokers`),
 
+  // Lightweight connection status for a single broker (used by property cards)
+  getConnectionStatus: (brokerId: string) =>
+    apiClient.request<ApiResponse<{ connection_status: 'none' | 'pending' | 'connected' | null; request_id: string | null; sender_id: string | null }>>(
+      `${BASE}/brokers/${brokerId}/connection-status`
+    ),
+
   // Connections
   sendRequest: (receiverId: string) =>
     apiClient.request<ApiResponse<ConnectionRequest>>(`${BASE}/connect/send`, {

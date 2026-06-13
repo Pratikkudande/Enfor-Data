@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -188,6 +190,109 @@ func main() {
 			protected.PUT("/profile/update", authHandler.UpdateProfile)
 			protected.POST("/profile/change-password", authHandler.ChangePassword)
 
+			// ── User Settings (notifications / privacy / preferences) ───────
+			// Sensible defaults returned when the user hasn't saved settings yet.
+			defaultSettings := func() map[string]interface{} {
+				return map[string]interface{}{
+					"notifications": map[string]interface{}{
+						"emailNotifications": true, "smsNotifications": false, "pushNotifications": true,
+						"appointmentReminders": true, "propertyUpdates": true, "marketingEmails": false,
+						"weeklyReports": true,
+					},
+					"privacy": map[string]interface{}{
+						"profileVisibility": "network", "showEmail": false, "showPhone": true,
+						"allowDirectMessages": true, "showOnlineStatus": true,
+					},
+					"preferences": map[string]interface{}{
+						"theme": "light", "language": "en", "timezone": "Asia/Kolkata",
+						"dateFormat": "DD/MM/YYYY", "currency": "INR",
+					},
+				}
+			}
+
+			protected.GET("/settings", func(c *gin.Context) {
+				userID := c.GetString("user_id")
+				var raw sql.NullString
+				db.QueryRow(`SELECT settings::text FROM users WHERE id=$1`, userID).Scan(&raw)
+				settings := defaultSettings()
+				if raw.Valid && raw.String != "" {
+					_ = json.Unmarshal([]byte(raw.String), &settings)
+				}
+				c.JSON(http.StatusOK, gin.H{"success": true, "data": settings})
+			})
+
+			protected.PUT("/settings", func(c *gin.Context) {
+				userID := c.GetString("user_id")
+				var body map[string]interface{}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid settings payload"})
+					return
+				}
+				// Merge onto current (or default) settings so partial updates work.
+				var raw sql.NullString
+				db.QueryRow(`SELECT settings::text FROM users WHERE id=$1`, userID).Scan(&raw)
+				settings := defaultSettings()
+				if raw.Valid && raw.String != "" {
+					_ = json.Unmarshal([]byte(raw.String), &settings)
+				}
+				for k, v := range body {
+					settings[k] = v
+				}
+				merged, _ := json.Marshal(settings)
+				if _, err := db.Exec(`UPDATE users SET settings=$1, updated_at=NOW() WHERE id=$2`, string(merged), userID); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save settings"})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"success": true, "data": settings})
+			})
+
+			// Lightweight aggregate counts for the broker dashboard (avoids
+			// fetching the full /properties/all and /clients lists just to count).
+			protected.GET("/dashboard/stats", func(c *gin.Context) {
+				userID := c.GetString("user_id")
+				var p struct {
+					Total, Available, Sold, Rented, Hold, Closed, UnderDiscussion int
+				}
+				// Property status breakdown across all brokers (matches the
+				// dashboard's "all brokers" active-listings card).
+				db.QueryRow(`
+					SELECT COUNT(*),
+					       COUNT(*) FILTER (WHERE status='available'),
+					       COUNT(*) FILTER (WHERE status='sold'),
+					       COUNT(*) FILTER (WHERE status='rented'),
+					       COUNT(*) FILTER (WHERE status='hold'),
+					       COUNT(*) FILTER (WHERE status='closed'),
+					       COUNT(*) FILTER (WHERE status IN ('under_discussion','under_negotiation'))
+					FROM properties WHERE deleted_at IS NULL
+				`).Scan(&p.Total, &p.Available, &p.Sold, &p.Rented, &p.Hold, &p.Closed, &p.UnderDiscussion)
+
+				var clientsTotal int
+				db.QueryRow(`SELECT COUNT(*) FROM clients WHERE broker_id=$1`, userID).Scan(&clientsTotal)
+
+				c.JSON(http.StatusOK, gin.H{
+					"properties": gin.H{
+						"total": p.Total, "available": p.Available, "sold": p.Sold,
+						"rented": p.Rented, "hold": p.Hold, "closed": p.Closed,
+						"under_discussion": p.UnderDiscussion,
+					},
+					"clients_total": clientsTotal,
+				})
+			})
+
+			// Lightweight counts for the profile page (avoids fetching full lists)
+			protected.GET("/profile/stats", func(c *gin.Context) {
+				userID := c.GetString("user_id")
+				var propertiesCount, clientsCount, projectsCount int
+				db.QueryRow(`SELECT COUNT(*) FROM properties WHERE broker_id=$1 AND deleted_at IS NULL`, userID).Scan(&propertiesCount)
+				db.QueryRow(`SELECT COUNT(*) FROM clients WHERE broker_id=$1`, userID).Scan(&clientsCount)
+				db.QueryRow(`SELECT COUNT(*) FROM projects WHERE channel_partner_id=$1`, userID).Scan(&projectsCount)
+				c.JSON(http.StatusOK, gin.H{
+					"properties_count": propertiesCount,
+					"clients_count":    clientsCount,
+					"projects_count":   projectsCount,
+				})
+			})
+
 			// File upload routes
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
 			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
@@ -198,6 +303,7 @@ func main() {
 
 			// Property routes (accessible to all authenticated users)
 			protected.GET("/properties/all", propertyHandler.GetAllProperties)
+			protected.GET("/properties/options", propertyHandler.GetPropertyOptions)
 			protected.GET("/properties/view/:id", propertyHandler.GetAnyProperty)
 			protected.GET("/properties", propertyHandler.GetProperties)
 			protected.POST("/properties", propertyHandler.CreateProperty)
@@ -207,6 +313,7 @@ func main() {
 
 			// Client routes (accessible to all authenticated users)
 			protected.GET("/clients", clientHandler.GetClients)
+			protected.GET("/clients/options", clientHandler.GetClientOptions)
 			protected.POST("/clients", clientHandler.CreateClient)
 			protected.GET("/clients/:id", clientHandler.GetClient)
 			protected.PUT("/clients/:id", clientHandler.UpdateClient)
@@ -270,6 +377,7 @@ func main() {
 			{
 				// Discovery
 				network.GET("/brokers", networkHandler.GetAllBrokers)
+				network.GET("/brokers/:id/connection-status", networkHandler.GetConnectionStatus)
 
 				// Connections
 				network.POST("/connect/send", networkHandler.SendRequest)

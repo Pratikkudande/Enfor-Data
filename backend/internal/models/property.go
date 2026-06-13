@@ -4,6 +4,15 @@ import (
 	"time"
 )
 
+// PropertyOption is a lightweight property representation for dropdowns/selects.
+type PropertyOption struct {
+	ID       string `json:"id" db:"id"`
+	Title    string `json:"title" db:"title"`
+	Location string `json:"location" db:"location"`
+	City     string `json:"city" db:"city"`
+	Type     string `json:"type" db:"type"`
+}
+
 // Property represents a real estate property listing in the system
 type Property struct {
 	ID string `json:"id" db:"id"`

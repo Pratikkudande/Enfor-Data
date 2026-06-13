@@ -137,6 +137,15 @@ func (s *PropertyService) GetBrokerProperties(brokerID string) ([]models.Propert
 	return properties, nil
 }
 
+// GetBrokerPropertyOptions returns lightweight property options for dropdowns.
+func (s *PropertyService) GetBrokerPropertyOptions(brokerID string) ([]models.PropertyOption, error) {
+	options, err := s.propertyRepo.GetOptionsByBrokerID(brokerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get broker property options: %w", err)
+	}
+	return options, nil
+}
+
 // GetPropertyByID retrieves a single property with ownership verification.
 func (s *PropertyService) GetPropertyByID(id, brokerID string) (*models.Property, error) {
 	property, err := s.propertyRepo.GetByID(id)

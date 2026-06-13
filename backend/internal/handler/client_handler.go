@@ -55,6 +55,32 @@ func (h *ClientHandler) GetClients(c *gin.Context) {
 	})
 }
 
+// GetClientOptions handles GET /api/clients/options - lightweight client list for dropdowns
+func (h *ClientHandler) GetClientOptions(c *gin.Context) {
+	brokerID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "Authentication required",
+		})
+		return
+	}
+
+	options, err := h.clientService.GetBrokerClientOptions(brokerID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Internal server error",
+			Message: "Failed to retrieve client options: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Client options retrieved successfully",
+		Data:    options,
+	})
+}
+
 // CreateClient handles POST /api/clients - creates a new client
 func (h *ClientHandler) CreateClient(c *gin.Context) {
 	// Extract broker_id from gin context

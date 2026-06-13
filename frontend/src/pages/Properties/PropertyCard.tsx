@@ -67,9 +67,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await networkApi.getBrokers();
-      const broker = response.data?.find(b => b.id === property.broker_id);
-      setConnectionStatus(broker?.connection_status || 'none');
+      // Lightweight per-broker status instead of fetching the whole directory.
+      const response = await networkApi.getConnectionStatus(property.broker_id!);
+      setConnectionStatus(response.data?.connection_status || 'none');
     } catch (error) {
       console.error('Failed to check connection status:', error);
     }

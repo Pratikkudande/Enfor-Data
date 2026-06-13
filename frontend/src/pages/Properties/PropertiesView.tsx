@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Search, Building } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Property } from '../../types';
-import { apiClient, Client as ApiClientClient, CreatePropertyRequest, UpdatePropertyRequest } from '../../services/api';
+import { apiClient, ClientOption, CreatePropertyRequest, UpdatePropertyRequest } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
 import { PropertyFormData } from './types';
 import { initialFormData } from './constants';
@@ -25,7 +25,7 @@ const PropertiesView: React.FC = () => {
   const [filterOwner, setFilterOwner] = useState('all');
   const [filterListingType, setFilterListingType] = useState('all');
   const [properties, setProperties] = useState<Property[]>([]);
-  const [clients, setClients] = useState<ApiClientClient[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -46,7 +46,8 @@ const PropertiesView: React.FC = () => {
 
   useEffect(() => {
     fetchProperties();
-    fetchClients();
+    // Clients for the linked-client dropdown are fetched lazily when the
+    // Add/Edit property modal opens, so we don't fetch them on navigation.
   }, []);
   useEffect(() => {
     if (searchParams.get('openAdd') === '1') {
@@ -85,7 +86,8 @@ const PropertiesView: React.FC = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await apiClient.getClients();
+      // Lightweight options endpoint (id + name) for the linked-client dropdown.
+      const response = await apiClient.getClientOptions();
       setClients(response.data || []);
     } catch (err) {
       console.error('Error fetching clients for property form:', err);

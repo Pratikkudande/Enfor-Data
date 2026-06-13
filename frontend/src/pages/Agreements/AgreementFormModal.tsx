@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Building2, Calendar, AlertCircle, Loader2, Users, Search, ChevronDown, Check } from 'lucide-react';
-import { Agreement, Property, Client } from '../../types';
+import { Agreement, PropertyOption, ClientOption } from '../../types';
 import { apiClient } from '../../services/api';
 
 interface Props {
@@ -22,8 +22,8 @@ interface FormErrors {
 }
 
 const AgreementFormModal: React.FC<Props> = ({ onClose, onCreate }) => {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -46,9 +46,10 @@ const AgreementFormModal: React.FC<Props> = ({ onClose, onCreate }) => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
+        // Lightweight options endpoints (just the fields the dropdowns need).
         const [propsRes, clientsRes] = await Promise.all([
-          apiClient.getProperties(),
-          apiClient.getClients(),
+          apiClient.getPropertyOptions(),
+          apiClient.getClientOptions(),
         ]);
         setProperties(propsRes.data || []);
         setClients(clientsRes.data || []);

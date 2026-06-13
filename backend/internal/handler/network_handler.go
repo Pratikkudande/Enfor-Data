@@ -116,6 +116,22 @@ func (h *NetworkHandler) GetAllBrokers(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{Message: "ok", Data: list})
 }
 
+// GET /api/network/brokers/:id/connection-status — lightweight status for one broker
+func (h *NetworkHandler) GetConnectionStatus(c *gin.Context) {
+	userID := c.GetString("user_id")
+	brokerID := c.Param("id")
+	if brokerID == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "broker id required"})
+		return
+	}
+	status, err := h.svc.GetConnectionStatus(userID, brokerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to get connection status"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "ok", Data: status})
+}
+
 // ── Messaging endpoints ───────────────────────────────────────────────────────
 
 // POST /api/network/conversations/ensure  — get or create the conversation with a connected peer

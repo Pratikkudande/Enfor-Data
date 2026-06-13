@@ -26,6 +26,34 @@ const clientSelectCols = `
 	created_at, updated_at
 `
 
+// clientListSelectCols omits the denormalized broker_name/broker_city fields,
+// which the clients list doesn't need (the broker is the requesting user).
+const clientListSelectCols = `
+	id, first_name, last_name, email, phone, type, status,
+	budget_min, budget_max, expected_amount,
+	min_price, max_price, property_address,
+	buildup_area, carpet_area, measurement_unit, deposit_budget,
+	preferred_location, address, city, state, postal_code,
+	requirements, notes, broker_id,
+	created_at, updated_at
+`
+
+// scanClientList scans the columns in clientListSelectCols (no broker name/city),
+// leaving BrokerName/BrokerCity nil so they are omitted from the JSON response.
+func scanClientList(row interface{ Scan(...interface{}) error }) (models.Client, error) {
+	var c models.Client
+	err := row.Scan(
+		&c.ID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.Type, &c.Status,
+		&c.BudgetMin, &c.BudgetMax, &c.ExpectedAmount,
+		&c.MinPrice, &c.MaxPrice, &c.PropertyAddress,
+		&c.BuildupArea, &c.CarpetArea, &c.MeasurementUnit, &c.DepositBudget,
+		&c.PreferredLocation, &c.Address, &c.City, &c.State, &c.PostalCode,
+		&c.Requirements, &c.Notes, &c.BrokerID,
+		&c.CreatedAt, &c.UpdatedAt,
+	)
+	return c, err
+}
+
 func scanClient(row interface{ Scan(...interface{}) error }) (models.Client, error) {
 	var c models.Client
 	err := row.Scan(
@@ -80,7 +108,7 @@ func (r *ClientRepository) Create(client *models.Client) error {
 }
 
 func (r *ClientRepository) GetByBrokerID(brokerID string) ([]models.Client, error) {
-	query := `SELECT ` + clientSelectCols + ` FROM clients WHERE broker_id = $1 ORDER BY created_at DESC`
+	query := `SELECT ` + clientListSelectCols + ` FROM clients WHERE broker_id = $1 ORDER BY created_at DESC`
 	rows, err := r.db.Query(query, brokerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query clients: %w", err)
@@ -89,7 +117,7 @@ func (r *ClientRepository) GetByBrokerID(brokerID string) ([]models.Client, erro
 
 	var clients []models.Client
 	for rows.Next() {
-		c, err := scanClient(rows)
+		c, err := scanClientList(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan client: %w", err)
 		}
@@ -102,6 +130,31 @@ func (r *ClientRepository) GetByBrokerID(brokerID string) ([]models.Client, erro
 		clients = []models.Client{}
 	}
 	return clients, nil
+}
+
+// GetOptionsByBrokerID returns lightweight client options (id, name, phone) for
+// the broker — used to populate dropdowns without fetching full client records.
+func (r *ClientRepository) GetOptionsByBrokerID(brokerID string) ([]models.ClientOption, error) {
+	query := `SELECT id, first_name, last_name, phone, COALESCE(email, ''), type, COALESCE(preferred_location, '')
+		FROM clients WHERE broker_id = $1 ORDER BY first_name, last_name`
+	rows, err := r.db.Query(query, brokerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query client options: %w", err)
+	}
+	defer rows.Close()
+
+	options := []models.ClientOption{}
+	for rows.Next() {
+		var o models.ClientOption
+		if err := rows.Scan(&o.ID, &o.FirstName, &o.LastName, &o.Phone, &o.Email, &o.Type, &o.PreferredLocation); err != nil {
+			return nil, fmt.Errorf("failed to scan client option: %w", err)
+		}
+		options = append(options, o)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return options, nil
 }
 
 func (r *ClientRepository) GetByID(id string) (*models.Client, error) {

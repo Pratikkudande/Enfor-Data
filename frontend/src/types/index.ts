@@ -54,6 +54,26 @@ export interface Property {
   updated_at: string;
 }
 
+// Lightweight property shape for dropdowns (matches GET /properties/options).
+export interface PropertyOption {
+  id: string;
+  title: string;
+  location: string;
+  city: string;
+  type: string;
+}
+
+// Lightweight client shape for dropdowns (matches GET /clients/options).
+export interface ClientOption {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  type: string;
+  preferred_location: string;
+}
+
 export interface Client {
   id: string;
   name?: string;

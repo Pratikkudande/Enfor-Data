@@ -77,6 +77,32 @@ func (h *PropertyHandler) GetAnyProperty(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{Message: "Property retrieved successfully", Data: property})
 }
 
+// GetPropertyOptions handles GET /api/properties/options - lightweight list for dropdowns
+func (h *PropertyHandler) GetPropertyOptions(c *gin.Context) {
+	brokerID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "Authentication required",
+		})
+		return
+	}
+
+	options, err := h.propertyService.GetBrokerPropertyOptions(brokerID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Internal server error",
+			Message: "Failed to retrieve property options",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Property options retrieved successfully",
+		Data:    options,
+	})
+}
+
 // GetProperties handles GET /api/properties - retrieves all properties for authenticated broker
 func (h *PropertyHandler) GetProperties(c *gin.Context) {
 	// Extract broker_id from context (set by auth middleware)

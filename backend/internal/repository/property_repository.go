@@ -69,6 +69,31 @@ func (r *PropertyRepository) Create(property *models.Property) error {
 
 // GetByBrokerID retrieves all properties for a specific broker
 // Uses optimized composite index (broker_id, created_at DESC) for fast retrieval
+// GetOptionsByBrokerID returns lightweight property options (id, title, location,
+// type) for the broker — used to populate dropdowns without full records.
+func (r *PropertyRepository) GetOptionsByBrokerID(brokerID string) ([]models.PropertyOption, error) {
+	query := `SELECT id, title, location, COALESCE(city, ''), type FROM properties
+		WHERE broker_id = $1 AND deleted_at IS NULL ORDER BY title`
+	rows, err := r.db.Query(query, brokerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query property options: %w", err)
+	}
+	defer rows.Close()
+
+	options := []models.PropertyOption{}
+	for rows.Next() {
+		var o models.PropertyOption
+		if err := rows.Scan(&o.ID, &o.Title, &o.Location, &o.City, &o.Type); err != nil {
+			return nil, fmt.Errorf("failed to scan property option: %w", err)
+		}
+		options = append(options, o)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return options, nil
+}
+
 func (r *PropertyRepository) GetByBrokerID(brokerID string) ([]models.Property, error) {
 	query := `
 		SELECT 
