@@ -5,8 +5,10 @@ import {
   Menu, X, Phone, Mail, MapPin, TrendingUp,
   Bell, Clock, DollarSign, ChevronRight,
   Home, Handshake, FolderOpen, Network, MessageSquare,
+  Send, MessageCircle,
 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import { ENV } from '../../config/env';
 
 /* ── Animated Counter ─────────────────────────────────────── */
 const useCounter = (target: number, duration = 2000, start = false) => {
@@ -41,7 +43,13 @@ const useInView = (threshold = 0.2) => {
 };
 
 /* ── Data ─────────────────────────────────────────────────── */
-const NAV_LINKS = ['Features', 'Pricing', 'Resources', 'About Us', 'Contact'];
+const NAV_LINKS: { label: string; href: string; external?: boolean }[] = [
+  { label: 'Features',   href: '#features'      },
+  { label: 'Pricing',    href: '/pricing', external: true },
+  { label: 'Resources',  href: '#testimonials'  },
+  { label: 'About Us',   href: '#about'         },
+  { label: 'Contact',    href: '#contact-form'  },
+];
 
 const STATS = [
   { icon: '🏢', value: 1500, suffix: '+', label: 'Properties Managed' },
@@ -119,6 +127,199 @@ const glass = {
   border: '1px solid rgba(255,255,255,0.10)',
 } as React.CSSProperties;
 
+/* ── Contact Section ──────────────────────────────────────── */
+const ContactSection: React.FC = () => {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('loading');
+    try {
+      const res = await fetch(`${ENV.API_URL}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      setStatus(res.ok ? 'success' : 'error');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  const inputCls = `w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all`;
+  const inputStyle = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: '#fff',
+  };
+
+  return (
+    <section id="contact-form" className="py-24 px-4 sm:px-6 lg:px-8"
+      style={{ background: 'linear-gradient(180deg,#030B24 0%,#050F2E 100%)' }}>
+      <div className="max-w-6xl mx-auto">
+
+        {/* Heading */}
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 border border-blue-500/30"
+            style={{ background: 'rgba(59,130,246,0.1)', color: '#93C5FD' }}>
+            GET IN TOUCH
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            We'd Love to Hear From You
+          </h2>
+          <p className="mt-3 text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>
+            Have a question or want to see a demo? Send us a message and we'll get back to you within 24 hours.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-10">
+
+          {/* Contact info — left */}
+          <div className="lg:col-span-2 flex flex-col gap-5">
+            {[
+              {
+                icon: Mail,
+                label: 'Email Us',
+                value: 'info@enfordata.com',
+                sub: 'We reply within 24 hours',
+                color: '#3B82F6',
+              },
+              {
+                icon: Phone,
+                label: 'Call Us',
+                value: '+91 88060 04191',
+                sub: 'Mon–Sat, 10 AM – 7 PM IST',
+                color: '#8B5CF6',
+              },
+              {
+                icon: MessageCircle,
+                label: 'WhatsApp',
+                value: '+91 88060 04191',
+                sub: 'Quick replies on WhatsApp',
+                color: '#10B981',
+              },
+              {
+                icon: MapPin,
+                label: 'Office',
+                value: 'Pimple Saudagar, Pune',
+                sub: 'Sai Vision Society A/28, 411027',
+                color: '#F59E0B',
+              },
+            ].map(({ icon: Icon, label, value, sub, color }) => (
+              <div key={label}
+                className="flex items-start gap-4 p-5 rounded-2xl border border-white/8 transition-all duration-200 hover:border-white/15"
+                style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${color}18`, border: `1px solid ${color}33` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color }} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>{label}</p>
+                  <p className="text-sm font-semibold text-white">{value}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(100,116,139,0.8)' }}>{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Form — right */}
+          <div className="lg:col-span-3 rounded-2xl p-7 border border-white/8"
+            style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(12px)' }}>
+
+            {status === 'success' ? (
+              <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                  <CheckCircle className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Message Sent!</h3>
+                <p className="text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  Thanks for reaching out. Our team will respond within 24 hours.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Full Name *</label>
+                    <input
+                      type="text" required maxLength={100}
+                      value={form.name} onChange={set('name')}
+                      placeholder="Rajesh Patel"
+                      className={inputCls} style={inputStyle}
+                      onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Phone Number</label>
+                    <input
+                      type="tel" maxLength={10}
+                      value={form.phone} onChange={set('phone')}
+                      placeholder="Enter phone number"
+                      className={inputCls} style={inputStyle}
+                      onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Email Address *</label>
+                  <input
+                    type="email" required
+                    value={form.email} onChange={set('email')}
+                    placeholder="rajesh@example.com"
+                    className={inputCls} style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Message *</label>
+                  <textarea
+                    required rows={5} maxLength={1000}
+                    value={form.message} onChange={set('message')}
+                    placeholder="Tell us how we can help you…"
+                    className={`${inputCls} resize-none`} style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                  <p className="mt-1 text-xs text-right" style={{ color: 'rgba(100,116,139,0.6)' }}>
+                    {form.message.length}/1000
+                  </p>
+                </div>
+
+                {status === 'error' && (
+                  <p className="text-xs text-red-400 text-center">
+                    Something went wrong. Please try again or email us at info@enfordata.com
+                  </p>
+                )}
+
+                <button
+                  type="submit" disabled={status === 'loading'}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white py-3 rounded-xl transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(99,102,241,0.35)' }}>
+                  {status === 'loading' ? (
+                    <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Sending…</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Send Message</>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 /* ══════════════════════════════════════════════════════════ */
 const LandingPage: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -153,11 +354,11 @@ const LandingPage: React.FC = () => {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-7">
-            {NAV_LINKS.map(l => (
-              l === 'Pricing' ? (
-                <Link key={l} to="/pricing" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</Link>
+            {NAV_LINKS.map(({ label, href, external }) => (
+              external ? (
+                <Link key={label} to={href} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{label}</Link>
               ) : (
-                <a key={l} href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{l}</a>
+                <a key={label} href={href} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">{label}</a>
               )
             ))}
           </nav>
@@ -182,13 +383,13 @@ const LandingPage: React.FC = () => {
         {menuOpen && (
           <div className="lg:hidden border-t px-4 py-4 space-y-3"
             style={{ background: 'rgba(3,11,36,0.97)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255,255,255,0.07)' }}>
-            {NAV_LINKS.map(l => (
-              l === 'Pricing' ? (
-                <Link key={l} to="/pricing" onClick={() => setMenuOpen(false)}
-                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</Link>
+            {NAV_LINKS.map(({ label, href, external }) => (
+              external ? (
+                <Link key={label} to={href} onClick={() => setMenuOpen(false)}
+                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{label}</Link>
               ) : (
-                <a key={l} href="#" onClick={() => setMenuOpen(false)}
-                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{l}</a>
+                <a key={label} href={href} onClick={() => setMenuOpen(false)}
+                  className="block text-sm font-medium text-gray-300 hover:text-white py-2">{label}</a>
               )
             ))}
             <div className="pt-2 flex flex-col gap-2">
@@ -422,7 +623,7 @@ const LandingPage: React.FC = () => {
           the left column — from the heading to the last row.
           Strategy: grid items-stretch + right col h-full + image absolute inset-0
       ══════════════════════════════════════════════════════ */}
-      <section className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
+      <section id="about" className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
         <div className="max-w-7xl mx-auto">
           {/* items-stretch makes both columns the same height */}
           <div className="grid lg:grid-cols-2 gap-16 items-stretch">
@@ -622,54 +823,100 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ══ FOOTER ════════════════════════════════════════════ */}
-      <footer className="border-t border-white/8 py-14 px-4 sm:px-6 lg:px-8"
-        style={{ backgroundColor: '#020918' }}>
-        <div className="max-w-7xl mx-auto">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
-            <div className="lg:col-span-2">
-              <div className="mb-5">
-                <img src={logoImg} alt="EnforData" className="h-24 w-auto object-contain" />
-              </div>
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
+      {/* ══ CONTACT FORM ══════════════════════════════════════ */}
+      <ContactSection />
+
+      {/* Gradient rule — mirrors the blue-purple accent used on every section badge */}
+      <div className="h-px w-full" style={{ background: 'linear-gradient(90deg,transparent,#3B82F6 30%,#8B5CF6 70%,transparent)' }} />
+
+      <footer id="contact" className="py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+        style={{ background: 'linear-gradient(180deg,#030B24 0%,#020914 100%)' }}>
+
+        {/* Ambient glow — matches hero / CTA radial glows */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 80% 100% at 50% 100%,rgba(59,130,246,0.08) 0%,transparent 70%)' }} />
+
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 mb-8">
+
+            {/* Brand */}
+            <div className="max-w-xs">
+              <img src={logoImg} alt="EnforData" className="h-16 w-auto object-contain mb-3" />
+              <p className="text-xs leading-relaxed" style={{ color: 'rgba(148,163,184,0.7)' }}>
                 The all-in-one CRM platform built specifically for Indian real estate brokers, property consultants, and channel partners.
               </p>
-              <div className="flex gap-3 mt-5">
+              <div className="flex gap-2 mt-4">
                 {['T', 'L', 'I'].map(s => (
                   <a key={s} href="#"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/30 transition-all">
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs transition-all duration-200"
+                    style={{ color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(99,102,241,0.5)';
+                      (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(99,102,241,0.12)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(148,163,184,0.6)';
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                      (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.03)';
+                    }}>
                     {s}
                   </a>
                 ))}
               </div>
             </div>
-            {[
-              { title: 'Product', links: ['Features', 'Pricing', 'Changelog', 'Roadmap'] },
-              { title: 'Company', links: ['About Us', 'Blog', 'Careers', 'Press'] },
-              { title: 'Support', links: ['Help Center', 'Contact', 'Privacy Policy', 'Terms'] },
-            ].map(col => (
-              <div key={col.title}>
-                <p className="text-white font-semibold mb-4 text-sm">{col.title}</p>
-                <ul className="space-y-2.5">
-                  {col.links.map(l => (
-                    <li key={l}>
-                      <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+
+            {/* Link columns */}
+            <div className="flex gap-12 sm:gap-16">
+              {[
+                { title: 'Product', links: [
+                  { label: 'Features',   href: '#features'     },
+                  { label: 'Pricing',    href: '/pricing'      },
+                ]},
+                { title: 'Company', links: [
+                  { label: 'About Us',   href: '#about'        },
+                  { label: 'Blog',       href: '#testimonials' },
+                ]},
+                { title: 'Support', links: [
+                  { label: 'Help Center', href: '/faq'          },
+                  { label: 'Contact',     href: '#contact-form' },
+                ]},
+              ].map(col => (
+                <div key={col.title}>
+                  <p className="text-sm font-semibold text-white mb-3 tracking-wide">{col.title}</p>
+                  <ul className="space-y-2">
+                    {col.links.map(({ label, href }) => (
+                      <li key={label}>
+                        {href.startsWith('/') && !href.startsWith('/#') ? (
+                          <Link to={href} className="text-xs transition-colors duration-200 hover:text-blue-400"
+                            style={{ color: 'rgba(148,163,184,0.65)' }}>{label}</Link>
+                        ) : (
+                          <a href={href} className="text-xs transition-colors duration-200 hover:text-blue-400"
+                            style={{ color: 'rgba(148,163,184,0.65)' }}>{label}</a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-gray-600">© {new Date().getFullYear()} EnforData. All rights reserved.</p>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+
+          {/* Bottom bar */}
+          <div className="pt-5 flex flex-col sm:flex-row items-center justify-between gap-3"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-xs" style={{ color: 'rgba(100,116,139,0.8)' }}>
+              © {new Date().getFullYear()} EnforData. All rights reserved.
+            </p>
+            <div className="flex flex-wrap items-center gap-4 text-xs" style={{ color: 'rgba(100,116,139,0.8)' }}>
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-blue-500" /> info@enfordata.com
+                <Mail className="w-3 h-3" style={{ color: '#60A5FA' }} /> info@enfordata.com
               </span>
               <span className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-blue-500" /> +91 88060 04191
+                <Phone className="w-3 h-3" style={{ color: '#60A5FA' }} /> +91 88060 04191
               </span>
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-blue-500" /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
+                <MapPin className="w-3 h-3" style={{ color: '#60A5FA' }} /> Sai Vision Society A/28, Pimple Saudagar, Pune 411027
               </span>
             </div>
           </div>

@@ -331,7 +331,7 @@ const ProfileView: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                 {isEditing
-                  ? <input type="tel" value={profileData.phone} onChange={e => handleInputChange('phone', e.target.value)} className={inputCls} placeholder="Enter phone number" />
+                  ? <input type="tel" value={profileData.phone} onChange={e => handleInputChange('phone', e.target.value)} maxLength={10} className={inputCls} placeholder="Enter phone number" />
                   : <div className={readCls}><Phone className="w-4 h-4 text-gray-400" /><span className="text-gray-900">{profileData.phone || 'Not provided'}</span></div>
                 }
               </div>

@@ -68,7 +68,7 @@ const BuildingForm: React.FC<BuildingFormProps> = ({
                 onChange={onInputChange}
                 disabled={isViewOnly}
                 className={inputCls(isViewOnly)}
-                placeholder="+91 9876543210"
+                placeholder="Enter phone number"
                 required
               />
             </div>

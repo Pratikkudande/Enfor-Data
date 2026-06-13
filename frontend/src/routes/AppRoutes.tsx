@@ -10,6 +10,7 @@ import AdminLayout from '../layouts/AdminLayout';
 
 // Direct Imports for smaller bundles
 import LandingPage from '../pages/Landing/LandingPage';
+import FAQPage from '../pages/FAQ/FAQPage';
 import LoginForm from '../pages/Auth/LoginForm';
 import RegisterForm from '../pages/Auth/RegisterForm';
 import ForgotPasswordForm from '../pages/Auth/ForgotPasswordForm';
@@ -68,7 +69,8 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Routes */}
       <Route path={ROUTES.HOME} element={<PublicRoute><LandingPage /></PublicRoute>} />
-      
+      <Route path={ROUTES.FAQ} element={<FAQPage />} />
+
       {/* Public Pricing Page */}
       <Route path={ROUTES.PRICING} element={
         <Suspense fallback={<PageLoader />}>

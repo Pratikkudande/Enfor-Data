@@ -127,12 +127,12 @@ const ClientForm: React.FC<ClientFormProps> = ({
               <div>
                 {label('First Name', true)}
                 <input type="text" name="firstName" value={formData.firstName} onChange={onInputChange}
-                  disabled={isViewOnly} className={inputCls(isViewOnly)} required />
+                  disabled={isViewOnly} maxLength={50} className={inputCls(isViewOnly)} required />
               </div>
               <div>
                 {label('Last Name', true)}
                 <input type="text" name="lastName" value={formData.lastName} onChange={onInputChange}
-                  disabled={isViewOnly} className={inputCls(isViewOnly)} required />
+                  disabled={isViewOnly} maxLength={50} className={inputCls(isViewOnly)} required />
               </div>
             </div>
 
@@ -141,7 +141,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
               <div>
                 {label('Contact No', true)}
                 <input type="tel" name="contactNo" value={formData.contactNo} onChange={onInputChange}
-                  disabled={isViewOnly} className={inputCls(isViewOnly)} placeholder="+91 9876543210" required />
+                  disabled={isViewOnly} maxLength={10} className={inputCls(isViewOnly)} placeholder="Enter phone number" required />
               </div>
               <div>
                 {label('Email ID')}
@@ -196,7 +196,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
               <div>
                 {label('Postal Code')}
                 <input type="text" name="postalCode" value={formData.postalCode} onChange={onInputChange}
-                  disabled={isViewOnly} className={inputCls(isViewOnly)} placeholder="400001" />
+                  disabled={isViewOnly} maxLength={6} className={inputCls(isViewOnly)} placeholder="400001" />
               </div>
             </div>
 
