@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Edit2 } from 'lucide-react';
 import { CreateAppointmentRequest, ClientOption } from '../../services/api';
 import { apiClient } from '../../services/api';
 import { PropertyOption } from '../../types';
 
 type AppointmentMode = 'create' | 'edit' | 'view';
+type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 
 const CLIENT_TYPE_LABELS: Record<string, string> = {
   buyer:                  'Buyer',
@@ -27,9 +29,17 @@ interface AppointmentFormProps {
     property_id?: string;
     type: 'site_visit' | 'meeting' | 'call';
   };
-  onSubmit: (data: CreateAppointmentRequest) => void;
+  initialStatus?: AppointmentStatus;
+  onSwitchToEdit?: () => void;
+  onSubmit: (data: CreateAppointmentRequest, status?: AppointmentStatus) => void;
   onCancel: () => void;
 }
+
+const STATUS_OPTIONS: { value: AppointmentStatus; label: string; active: string; inactive: string }[] = [
+  { value: 'scheduled', label: 'Scheduled', active: 'border-blue-500 bg-blue-50 text-blue-700',   inactive: 'border-gray-200 hover:border-blue-300' },
+  { value: 'completed', label: 'Completed', active: 'border-green-500 bg-green-50 text-green-700', inactive: 'border-gray-200 hover:border-green-300' },
+  { value: 'cancelled', label: 'Cancelled', active: 'border-red-500 bg-red-50 text-red-700',       inactive: 'border-gray-200 hover:border-red-300' },
+];
 
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   clients,
@@ -38,10 +48,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   submitError,
   mode = 'create',
   initialData,
+  initialStatus,
+  onSwitchToEdit,
   onSubmit,
   onCancel,
 }) => {
   const isViewOnly = mode === 'view';
+
   const formatLocalDate = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -56,22 +69,38 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     time: initialData?.time || '',
     clientId: initialData?.client_id || '',
     propertyId: initialData?.property_id || '',
-    type: (initialData?.type || 'site_visit') as 'site_visit' | 'meeting' | 'call'
+    type: (initialData?.type || 'site_visit') as 'site_visit' | 'meeting' | 'call',
   });
 
+  const [editStatus, setEditStatus] = useState<AppointmentStatus>(initialStatus || 'scheduled');
   const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Re-sync when the modal is reused for a different appointment (switch view→edit)
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        date: initialData.date || '',
+        time: initialData.time || '',
+        clientId: initialData.client_id || '',
+        propertyId: initialData.property_id || '',
+        type: initialData.type || 'site_visit',
+      });
+    }
+    if (initialStatus) setEditStatus(initialStatus);
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        // Lightweight options endpoint (id, title, location, type) for the dropdown.
         const response = await apiClient.getPropertyOptions();
         setProperties(response.data || []);
       } catch {
-        // non-critical, property selection is optional
+        // non-critical
       } finally {
         setLoadingProperties(false);
       }
@@ -90,32 +119,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     e.preventDefault();
     setFormError(null);
 
-    if (!formData.clientId) {
-      setFormError('Please select a client');
-      return;
-    }
-    if (!formData.title.trim() || formData.title.trim().length < 5) {
-      setFormError('Title must be at least 5 characters');
-      return;
-    }
-    if (!formData.date) {
-      setFormError('Please select a date');
-      return;
-    }
-    if (!formData.time) {
-      setFormError('Please select a time');
-      return;
-    }
+    if (!formData.clientId) { setFormError('Please select a client'); return; }
+    if (!formData.title.trim() || formData.title.trim().length < 5) { setFormError('Title must be at least 5 characters'); return; }
+    if (!formData.date) { setFormError('Please select a date'); return; }
+    if (!formData.time) { setFormError('Please select a time'); return; }
 
     const selectedDateTime = new Date(`${formData.date}T${formData.time}`);
-    if (isNaN(selectedDateTime.getTime())) {
-      setFormError('Please provide a valid date and time');
-      return;
-    }
-    if (selectedDateTime < new Date()) {
-      setFormError('Appointment cannot be scheduled in the past');
-      return;
-    }
+    if (isNaN(selectedDateTime.getTime())) { setFormError('Please provide a valid date and time'); return; }
+    if (mode === 'create' && selectedDateTime < new Date()) { setFormError('Appointment cannot be scheduled in the past'); return; }
 
     const payload: CreateAppointmentRequest = {
       title: formData.title.trim(),
@@ -124,28 +135,20 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       type: formData.type,
       client_id: formData.clientId,
     };
+    if (formData.description.trim()) payload.description = formData.description.trim();
+    if (formData.propertyId) payload.property_id = formData.propertyId;
 
-    // Only include description if non-empty
-    if (formData.description.trim()) {
-      payload.description = formData.description.trim();
-    }
-
-    // Only include property_id if a valid selection was made
-    if (formData.propertyId) {
-      payload.property_id = formData.propertyId;
-    }
-
-    onSubmit(payload);
+    onSubmit(payload, mode === 'edit' ? editStatus : undefined);
   };
+
+  const modeTitle = mode === 'view' ? 'View Appointment' : mode === 'edit' ? 'Edit / Reschedule Appointment' : 'Add New Appointment';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {mode === 'view' ? 'View Appointment' : mode === 'edit' ? 'Edit Appointment' : 'Add New Appointment'}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">{modeTitle}</h2>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -154,6 +157,41 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Status — edit mode only */}
+            {mode === 'edit' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Appointment Status</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {STATUS_OPTIONS.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setEditStatus(s.value)}
+                      className={`p-3 border-2 rounded-lg text-center text-sm font-medium transition-all ${
+                        editStatus === s.value ? s.active : s.inactive
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Status badge — view mode */}
+            {mode === 'view' && initialStatus && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-500">Status:</span>
+                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                  initialStatus === 'completed' ? 'bg-green-100 text-green-700' :
+                  initialStatus === 'cancelled' ? 'bg-red-100 text-red-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1)}
+                </span>
+              </div>
+            )}
+
             {/* Appointment Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -161,18 +199,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               </label>
               {isViewOnly ? (
                 <div className="p-3 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-center font-medium">
-                  {formData.type === 'site_visit'
-                    ? 'Site Visit'
-                    : formData.type === 'meeting'
-                      ? 'Meeting'
-                      : 'Call'}
+                  {formData.type === 'site_visit' ? 'Site Visit' : formData.type === 'meeting' ? 'Meeting' : 'Call'}
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { value: 'site_visit', label: 'Site Visit' },
-                    { value: 'meeting', label: 'Meeting' },
-                    { value: 'call', label: 'Call' }
+                    { value: 'meeting',    label: 'Meeting'   },
+                    { value: 'call',       label: 'Call'      },
                   ].map((type) => (
                     <button
                       key={type.value}
@@ -192,18 +226,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               )}
             </div>
 
-            {/* Appointment Title */}
+            {/* Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                 Appointment Title <span className="text-red-500">*</span>
               </label>
               <input
-                type="text"
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                disabled={isViewOnly}
+                type="text" id="title" name="title"
+                value={formData.title} onChange={handleInputChange} disabled={isViewOnly}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Property viewing for 3BHK apartment"
                 required
@@ -212,34 +242,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
             {/* Description */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                disabled={isViewOnly}
+                id="description" name="description"
+                value={formData.description} onChange={handleInputChange} disabled={isViewOnly}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Additional details about the appointment..."
               />
             </div>
 
-            {/* Date and Time */}
+            {/* Date & Time */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
                   Date <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="date"
-                  id="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  min={formatLocalDate(new Date())}
+                  type="date" id="date" name="date"
+                  value={formData.date} onChange={handleInputChange}
+                  min={mode === 'create' ? formatLocalDate(new Date()) : undefined}
                   disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
@@ -250,34 +272,25 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   Time <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="time"
-                  id="time"
-                  name="time"
-                  value={formData.time}
-                  onChange={handleInputChange}
-                  disabled={isViewOnly}
+                  type="time" id="time" name="time"
+                  value={formData.time} onChange={handleInputChange} disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
-            {/* Client Selection */}
+            {/* Client */}
             <div>
               <label htmlFor="clientId" className="block text-sm font-medium text-gray-700 mb-1">
                 Select Client <span className="text-red-500">*</span>
               </label>
               {loadingClients ? (
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
-                  Loading clients...
-                </div>
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">Loading clients...</div>
               ) : (
                 <select
-                  id="clientId"
-                  name="clientId"
-                  value={formData.clientId}
-                  onChange={handleInputChange}
-                  disabled={isViewOnly}
+                  id="clientId" name="clientId"
+                  value={formData.clientId} onChange={handleInputChange} disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
@@ -290,28 +303,21 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 </select>
               )}
               {clients.length === 0 && !loadingClients && (
-                <p className="text-xs text-orange-600 mt-1">
-                  No clients found. Please add clients first in the Clients section.
-                </p>
+                <p className="text-xs text-orange-600 mt-1">No clients found. Please add clients first.</p>
               )}
             </div>
 
-            {/* Property Selection — dropdown from broker's own properties */}
+            {/* Property */}
             <div>
               <label htmlFor="propertyId" className="block text-sm font-medium text-gray-700 mb-1">
                 Property <span className="text-gray-400 font-normal">(Optional)</span>
               </label>
               {loadingProperties ? (
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
-                  Loading properties...
-                </div>
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">Loading properties...</div>
               ) : (
                 <select
-                  id="propertyId"
-                  name="propertyId"
-                  value={formData.propertyId}
-                  onChange={handleInputChange}
-                  disabled={isViewOnly}
+                  id="propertyId" name="propertyId"
+                  value={formData.propertyId} onChange={handleInputChange} disabled={isViewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">-- No property linked --</option>
@@ -325,32 +331,45 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               <p className="text-xs text-gray-500 mt-1">Link this appointment to one of your properties</p>
             </div>
 
-            {/* Error — local validation or server error from parent */}
+            {/* Errors */}
             {(formError || submitError) && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-700">{formError || submitError}</p>
               </div>
             )}
 
-            {/* Form Actions */}
+            {/* Footer actions */}
             <div className="flex space-x-4 pt-6 border-t border-gray-200">
+              {/* View mode: Edit / Reschedule button */}
+              {isViewOnly && onSwitchToEdit && (
+                <button
+                  type="button"
+                  onClick={onSwitchToEdit}
+                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Edit / Reschedule
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={onCancel}
                 disabled={submitting}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
                 {isViewOnly ? 'Close' : 'Cancel'}
               </button>
+
               {!isViewOnly && (
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center"
                 >
                   {submitting ? (
                     <>
-                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                       {mode === 'edit' ? 'Updating...' : 'Adding...'}
                     </>
                   ) : (

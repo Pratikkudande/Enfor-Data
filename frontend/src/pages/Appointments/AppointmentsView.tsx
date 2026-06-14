@@ -155,12 +155,21 @@ const AppointmentsView: React.FC = () => {
     });
   }, [appointments, searchTerm, filterStatus, filterDate]);
 
-  const handleFormSubmit = async (appointmentData: CreateAppointmentRequest) => {
+  const handleFormSubmit = async (appointmentData: CreateAppointmentRequest, status?: 'scheduled' | 'completed' | 'cancelled') => {
     try {
       setSubmitting(true);
       setSubmitError(null);
       const response = selectedAppointment && modalMode === 'edit'
-        ? await apiClient.updateAppointment(selectedAppointment.id, appointmentData)
+        ? await apiClient.updateAppointment(selectedAppointment.id, {
+            title: appointmentData.title,
+            description: appointmentData.description,
+            date: appointmentData.date,
+            time: appointmentData.time,
+            type: appointmentData.type,
+            client_id: appointmentData.client_id,
+            property_id: appointmentData.property_id,
+            ...(status && { status }),
+          })
         : await apiClient.createAppointment(appointmentData);
 
       if (response.data) {
@@ -405,6 +414,11 @@ const AppointmentsView: React.FC = () => {
             client_id: selectedAppointment.client_id,
             property_id: selectedAppointment.property_id,
             type: selectedAppointment.type,
+          } : undefined}
+          initialStatus={selectedAppointment?.status}
+          onSwitchToEdit={selectedAppointment ? () => {
+            setModalMode('edit');
+            fetchClients();
           } : undefined}
           onSubmit={handleFormSubmit}
           onCancel={() => {

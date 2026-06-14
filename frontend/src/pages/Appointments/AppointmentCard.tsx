@@ -73,7 +73,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           className="flex-1 bg-gray-50 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
         >
           <Edit className="h-4 w-4 mr-2" />
-          Edit
+          Edit / Reschedule
         </button>
         <button
           onClick={() => onDelete(appointment)}
