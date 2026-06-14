@@ -360,7 +360,11 @@ const BuildingDataView: React.FC = () => {
           isViewOnly={isViewMode}
           submitting={submitting}
           formError={formError}
-          onInputChange={e => setFormData({ ...formData, [e.target.name]: e.target.value })}
+          onInputChange={e => {
+            const phoneFields = ['mobileNumber'];
+            const value = phoneFields.includes(e.target.name) ? e.target.value.replace(/\D/g, '') : e.target.value;
+            setFormData({ ...formData, [e.target.name]: value });
+          }}
           onSubmit={handleSubmit}
           onCancel={closeModal}
         />

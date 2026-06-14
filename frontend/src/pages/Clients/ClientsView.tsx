@@ -404,7 +404,11 @@ const ClientsView: React.FC = () => {
           isViewOnly={isViewMode}
           submitting={submitting}
           formError={formError}
-          onInputChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })}
+          onInputChange={(e) => {
+            const phoneFields = ['contactNo'];
+            const value = phoneFields.includes(e.target.name) ? e.target.value.replace(/\D/g, '') : e.target.value;
+            setFormData({ ...formData, [e.target.name]: value });
+          }}
           onTypeChange={setSelectedClientType}
           onSubmit={handleFormSubmit}
           onCancel={closeModal}

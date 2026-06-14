@@ -197,9 +197,11 @@ const RegisterForm: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name } = e.target;
     let { value } = e.target;
-    // Postal codes are numeric only, capped at the longest global length (10 digits).
     if (name === 'postalCode') {
       value = value.replace(/\D/g, '').slice(0, 10);
+    }
+    if (name === 'whatsappNumber' || name === 'alternativeNumber') {
+      value = value.replace(/\D/g, '');
     }
     setFormData({ ...formData, [name]: value });
     if (fieldErrors[name]) {
