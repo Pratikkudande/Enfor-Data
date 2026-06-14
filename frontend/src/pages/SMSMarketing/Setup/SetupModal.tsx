@@ -101,7 +101,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, cu
           <form onSubmit={handleConnect} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Account SID
+                Account SID <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -115,7 +115,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, cu
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Auth Token
+                Auth Token <span className="text-red-500">*</span>
               </label>
               <input
                 type="password"
@@ -129,7 +129,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, cu
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
+                Phone Number <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"

@@ -105,7 +105,7 @@ const ForgotPasswordForm: React.FC = () => {
       {!otpSent && (
         <form onSubmit={handleSendOtp} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address <span className="text-red-500">*</span></label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               className={inputClass} {...focus}
               placeholder="Enter your registered email" required />
@@ -130,7 +130,7 @@ const ForgotPasswordForm: React.FC = () => {
 
           {/* OTP */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Enter OTP</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Enter OTP <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={otp}
@@ -154,7 +154,7 @@ const ForgotPasswordForm: React.FC = () => {
 
           {/* New password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password <span className="text-red-500">*</span></label>
             <div className="relative">
               <input type={showPassword ? 'text' : 'password'} value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
@@ -169,7 +169,7 @@ const ForgotPasswordForm: React.FC = () => {
 
           {/* Confirm password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password <span className="text-red-500">*</span></label>
             <div className="relative">
               <input type={showConfirm ? 'text' : 'password'} value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
