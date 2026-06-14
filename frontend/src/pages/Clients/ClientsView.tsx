@@ -192,10 +192,12 @@ const ClientsView: React.FC = () => {
         email: formData.email.trim() || undefined,
         phone: formData.contactNo,
         type: editingClientType === 'owner' ? 'owner' : selectedClientType,
-        preferred_location: formData.location,
-        address: formData.address,
-        city: formData.city, state: formData.state,
-        postal_code: formData.postalCode, requirements: formData.enquiry,
+        preferred_location: formData.location.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        city: formData.city.trim() || undefined,
+        state: formData.state.trim() || undefined,
+        postal_code: formData.postalCode.trim() || undefined,
+        requirements: formData.enquiry.trim() || undefined,
       };
 
       if (isExpectedAmountType(selectedClientType)) {

@@ -387,12 +387,12 @@ export interface CreateClientRequest {
   email?: string;
   phone: string;
   type: 'buyer' | 'seller' | 'tenant' | 'owner' | 'list_property_for_rent';
-  preferred_location: string;
+  preferred_location?: string;
   address?: string;
-  city: string;
+  city?: string;
   state?: string;
   postal_code?: string;
-  requirements: string;
+  requirements?: string;
   budget_min?: number;
   budget_max?: number;
   expected_amount?: number;

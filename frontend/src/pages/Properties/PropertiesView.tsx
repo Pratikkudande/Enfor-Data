@@ -148,7 +148,7 @@ const PropertiesView: React.FC = () => {
       city: formData.city.trim(), state: formData.state,
       description: formData.description.trim(), amenities: selectedAmenities,
     };
-    propertyData.client_id = formData.clientId || '';
+    propertyData.client_id = formData.clientId || undefined;
     if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
     if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
     return propertyData;
