@@ -88,6 +88,7 @@ type UserSubscription struct {
 	CurrentAppointmentsCount      int       `json:"current_appointments_count" db:"current_appointments_count"`
 	CurrentWhatsappMessagesCount  int       `json:"current_whatsapp_messages_count" db:"current_whatsapp_messages_count"`
 	CurrentSmsMessagesCount       int       `json:"current_sms_messages_count" db:"current_sms_messages_count"`
+	SmsTopupCredits               int       `json:"sms_topup_credits" db:"sms_topup_credits"`
 	CurrentBusinessPostsCount     int       `json:"current_business_posts_count" db:"current_business_posts_count"`
 	UsageResetAt                  time.Time `json:"usage_reset_at" db:"usage_reset_at"`
 	

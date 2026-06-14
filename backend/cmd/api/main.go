@@ -495,6 +495,10 @@ func main() {
 				payments.POST("/create-order", paymentHandler.CreateSubscriptionOrder)
 				payments.POST("/verify", paymentHandler.VerifyPayment)
 				payments.GET("/history", paymentHandler.GetPaymentHistory)
+				// SMS top-ups
+				payments.GET("/sms-topup/price", paymentHandler.PreviewSmsTopupPrice)
+				payments.POST("/sms-topup/create-order", paymentHandler.CreateSmsTopupOrder)
+				payments.POST("/sms-topup/verify", paymentHandler.VerifySmsTopup)
 			}
 
 			// Role-specific routes

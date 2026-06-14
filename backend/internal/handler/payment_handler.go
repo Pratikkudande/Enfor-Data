@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -95,6 +96,59 @@ func (h *PaymentHandler) VerifyPayment(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{
 		Message: "Payment verified and subscription activated",
 		Data:    subscription,
+	})
+}
+
+// PreviewSmsTopupPrice returns the calculated price for an SMS top-up count.
+// GET /api/payments/sms-topup/price?count=12000
+func (h *PaymentHandler) PreviewSmsTopupPrice(c *gin.Context) {
+	var count int
+	if _, err := fmt.Sscanf(c.Query("count"), "%d", &count); err != nil || count <= 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid count", Message: "count must be a positive integer"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "ok",
+		Data:    gin.H{"sms_count": count, "amount": service.CalcTopupAmount(count)},
+	})
+}
+
+// CreateSmsTopupOrder creates a Razorpay order for an SMS top-up.
+// POST /api/payments/sms-topup/create-order
+func (h *PaymentHandler) CreateSmsTopupOrder(c *gin.Context) {
+	userID := c.GetString("user_id")
+	var req struct {
+		SmsCount int `json:"sms_count" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request", Message: err.Error()})
+		return
+	}
+	order, err := h.paymentService.CreateSmsTopupOrder(userID, req.SmsCount)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Failed to create order", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, SuccessResponse{Message: "Order created successfully", Data: order})
+}
+
+// VerifySmsTopup verifies a top-up payment and credits the SMS.
+// POST /api/payments/sms-topup/verify
+func (h *PaymentHandler) VerifySmsTopup(c *gin.Context) {
+	userID := c.GetString("user_id")
+	var req models.PaymentVerificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request", Message: err.Error()})
+		return
+	}
+	credited, err := h.paymentService.VerifyAndAddTopup(userID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Payment verification failed", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Top-up successful",
+		Data:    gin.H{"credited_sms": credited},
 	})
 }
 

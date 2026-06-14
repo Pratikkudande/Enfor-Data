@@ -1,20 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentSubscription, cancelSubscription, SubscriptionDetails } from '../../services/subscriptionApi';
+import {
+  getCurrentSubscription,
+  cancelSubscription,
+  getPaymentHistory,
+  createSmsTopupOrder,
+  verifySmsTopup,
+  calcTopupPrice,
+  SubscriptionDetails,
+} from '../../services/subscriptionApi';
+import { loadRazorpayScript } from '../../utils/razorpay';
 
 // Using SubscriptionDetails type from subscriptionApi
 
 const SubscriptionDashboard: React.FC = () => {
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  // SMS top-up modal
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupCount, setTopupCount] = useState('');
+  const [topupProcessing, setTopupProcessing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchSubscription();
+    fetchPayments();
   }, []);
+
+  const fetchPayments = async () => {
+    try {
+      const history = await getPaymentHistory();
+      setPayments(Array.isArray(history) ? history : []);
+    } catch (error) {
+      console.error('Failed to fetch payment history:', error);
+    }
+  };
 
   const fetchSubscription = async () => {
     try {
@@ -50,6 +74,56 @@ const SubscriptionDashboard: React.FC = () => {
       showToast('error', error.response?.data?.message || 'Failed to cancel subscription.');
     } finally {
       setCanceling(false);
+    }
+  };
+
+  const handleTopupPay = async () => {
+    const count = parseInt(topupCount, 10);
+    if (!count || count <= 0) {
+      showToast('error', 'Enter a valid number of SMS.');
+      return;
+    }
+    setTopupProcessing(true);
+    try {
+      const ready = await loadRazorpayScript();
+      if (!ready) {
+        showToast('error', 'Failed to load the payment gateway. Please try again.');
+        setTopupProcessing(false);
+        return;
+      }
+      const order = await createSmsTopupOrder(count);
+      const options = {
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'EnforData',
+        description: order.plan_name,
+        order_id: order.order_id,
+        handler: async (response: any) => {
+          try {
+            await verifySmsTopup({
+              order_id: response.razorpay_order_id,
+              payment_id: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            });
+            setShowTopupModal(false);
+            showToast('success', `${count.toLocaleString('en-IN')} SMS credits added successfully.`);
+            fetchSubscription();
+            fetchPayments();
+          } catch {
+            showToast('error', 'Payment verification failed.');
+          } finally {
+            setTopupProcessing(false);
+          }
+        },
+        theme: { color: '#2563eb' },
+        modal: { ondismiss: () => setTopupProcessing(false) },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      showToast('error', err?.response?.data?.message || 'Failed to start payment.');
+      setTopupProcessing(false);
     }
   };
 
@@ -118,7 +192,9 @@ const SubscriptionDashboard: React.FC = () => {
                   {subscription.plan.display_name}
                 </h3>
                 <p className="text-gray-600">
-                  {subscription.subscription.is_trial ? 'Free Trial' : `₹${subscription.plan.monthly_price}/month`}
+                  {subscription.subscription.is_trial
+                    ? 'Free Trial'
+                    : `₹${Number(subscription.plan.annual_price).toLocaleString('en-IN')}/year`}
                 </p>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -141,6 +217,56 @@ const SubscriptionDashboard: React.FC = () => {
                 Days remaining: <span className="font-semibold text-gray-900">{subscription.days_left}</span>
               </p>
             </div>
+
+            {/* SMS Credits — plan credits + purchased top-ups, and how many remain */}
+            {(subscription.plan.sms_credits > 0 || (subscription.subscription.sms_topup_credits || 0) > 0) && (() => {
+              const planCredits = subscription.plan.sms_credits || 0;
+              const topup = subscription.subscription.sms_topup_credits || 0;
+              const total = planCredits + topup;
+              const used = subscription.usage.sms_messages || 0;
+              const remaining = Math.max(total - used, 0);
+              const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+              return (
+                <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="flex items-end justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">SMS Credits</p>
+                      <p className="text-xs text-blue-700">
+                        {used.toLocaleString()} used of {total.toLocaleString()} total
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-700">{remaining.toLocaleString()}</p>
+                      <p className="text-xs text-blue-700">remaining</p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-blue-100 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full bg-blue-600"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+
+                  {/* Breakdown: subscription (plan) credits vs purchased top-ups */}
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-white border border-blue-100 px-3 py-2">
+                      <p className="text-xs text-gray-500">Subscription SMS</p>
+                      <p className="text-base font-semibold text-blue-900">{planCredits.toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-blue-100 px-3 py-2">
+                      <p className="text-xs text-gray-500">Top-up SMS</p>
+                      <p className="text-base font-semibold text-blue-900">{topup.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setTopupCount(''); setShowTopupModal(true); }}
+                    className="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"
+                  >
+                    Top up SMS
+                  </button>
+                </div>
+              );
+            })()}
 
             <div className="mt-6 flex space-x-4">
               {subscription.subscription.is_trial ? (
@@ -194,7 +320,7 @@ const SubscriptionDashboard: React.FC = () => {
               <UsageStat
                 label="SMS Messages"
                 current={subscription.usage.sms_messages}
-                limit={50}
+                limit={(subscription.plan.sms_credits || 0) + (subscription.subscription.sms_topup_credits || 0) || 50}
               />
             </div>
           </div>
@@ -205,9 +331,117 @@ const SubscriptionDashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Payment History
           </h2>
-          <p className="text-gray-600">No payment history available</p>
+          {payments.length === 0 ? (
+            <p className="text-gray-600">No payment history available</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold text-gray-500 uppercase border-b">
+                    <th className="py-2 pr-4">Date</th>
+                    <th className="py-2 pr-4">Description</th>
+                    <th className="py-2 pr-4">Amount</th>
+                    <th className="py-2 pr-4">Billing</th>
+                    <th className="py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {payments.map((p) => (
+                    <tr key={p.id}>
+                      <td className="py-3 pr-4 text-gray-700">{formatDate(p.paid_at || p.created_at)}</td>
+                      <td className="py-3 pr-4 text-gray-700">
+                        {p.payment_type === 'sms_topup'
+                          ? `SMS Top-up${p.sms_count ? ` (${Number(p.sms_count).toLocaleString('en-IN')} credits)` : ''}`
+                          : 'Subscription'}
+                      </td>
+                      <td className="py-3 pr-4 font-medium text-gray-900">
+                        ₹{Number(p.amount).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 pr-4 capitalize text-gray-600">{p.billing_cycle || '—'}</td>
+                      <td className="py-3">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          p.status === 'success'
+                            ? 'bg-green-100 text-green-800'
+                            : p.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* SMS Top-up modal */}
+      {showTopupModal && (() => {
+        const count = parseInt(topupCount, 10) || 0;
+        const price = calcTopupPrice(count);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Top up SMS Credits</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Enter how many SMS credits you want to purchase. Pricing is tiered — the more you buy, the lower the per-SMS rate.
+              </p>
+
+              <label className="block text-sm font-medium text-gray-700 mb-1">Number of SMS</label>
+              <input
+                type="number"
+                min={1}
+                value={topupCount}
+                onChange={(e) => setTopupCount(e.target.value.replace(/[^\d]/g, ''))}
+                placeholder="e.g. 12000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+
+              {/* Rate tiers reference */}
+              <div className="mt-3 text-xs text-gray-500 space-y-0.5">
+                <p>1–5,000: ₹0.40 · 5,001–10,000: ₹0.35 · 10,001–15,000: ₹0.30</p>
+                <p>15,001–25,000: ₹0.27 · 25,000+: ₹0.25</p>
+              </div>
+
+              {count > 0 && (
+                <div className="mt-4 rounded-lg bg-blue-50 border border-blue-100 p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-blue-900 font-medium">{count.toLocaleString('en-IN')} SMS credits</p>
+                    <p className="text-xs text-blue-700">Effective ₹{(price / count).toFixed(3)} / SMS</p>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-700">
+                    ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowTopupModal(false)}
+                  disabled={topupProcessing}
+                  className="px-4 py-2 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleTopupPay}
+                  disabled={topupProcessing || count <= 0}
+                  className="px-5 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {topupProcessing
+                    ? 'Processing…'
+                    : count > 0
+                    ? `Pay ₹${price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : 'Pay'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Cancel confirmation modal */}
       {showCancelModal && (

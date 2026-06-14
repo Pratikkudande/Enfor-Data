@@ -189,6 +189,130 @@ func (s *PaymentService) GetUserPayments(userID string) ([]models.Payment, error
 	return s.paymentRepo.GetUserPayments(userID)
 }
 
+// CalcTopupAmount computes the price for an SMS top-up using marginal tiered rates:
+//   1–5,000      ₹0.40/sms
+//   5,001–10,000 ₹0.35/sms
+//   10,001–15,000 ₹0.30/sms
+//   15,001–25,000 ₹0.27/sms
+//   25,001+      ₹0.25/sms
+func CalcTopupAmount(count int) float64 {
+	if count <= 0 {
+		return 0
+	}
+	tiers := []struct {
+		upTo int
+		rate float64
+	}{
+		{5000, 0.40},
+		{10000, 0.35},
+		{15000, 0.30},
+		{25000, 0.27},
+		{int(^uint(0) >> 1), 0.25},
+	}
+	remaining := count
+	prev := 0
+	total := 0.0
+	for _, t := range tiers {
+		if remaining <= 0 {
+			break
+		}
+		band := t.upTo - prev
+		take := remaining
+		if take > band {
+			take = band
+		}
+		total += float64(take) * t.rate
+		remaining -= take
+		prev = t.upTo
+	}
+	return total
+}
+
+// CreateSmsTopupOrder creates a Razorpay order for an SMS top-up purchase.
+func (s *PaymentService) CreateSmsTopupOrder(userID string, smsCount int) (*models.PaymentOrder, error) {
+	if smsCount <= 0 {
+		return nil, fmt.Errorf("sms count must be greater than zero")
+	}
+
+	// The user must have an active subscription to top up (and to anchor the
+	// payment's plan_id FK).
+	sub, err := s.subscriptionRepo.GetUserSubscription(userID)
+	if err != nil || sub == nil {
+		return nil, fmt.Errorf("an active subscription is required to buy SMS top-ups")
+	}
+	plan, err := s.subscriptionRepo.GetPlanByID(sub.PlanID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get plan: %w", err)
+	}
+
+	amount := CalcTopupAmount(smsCount)
+	desc := fmt.Sprintf("SMS Top-up: %d credits", smsCount)
+	count := smsCount
+
+	payment := &models.Payment{
+		UserID:       userID,
+		PlanID:       sub.PlanID,
+		Amount:       amount,
+		Currency:     plan.Currency,
+		Status:       models.PaymentStatusPending,
+		BillingCycle: "topup",
+		PaymentType:  "sms_topup",
+		SmsCount:     &count,
+		Description:  &desc,
+	}
+	if err := s.paymentRepo.CreatePayment(payment); err != nil {
+		return nil, fmt.Errorf("failed to create payment: %w", err)
+	}
+
+	razorpayOrder, err := s.createRazorpayOrder(payment, plan)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Razorpay order: %w", err)
+	}
+
+	payment.RazorpayOrderID = &razorpayOrder.ID
+	if err := s.paymentRepo.UpdatePayment(payment); err != nil {
+		return nil, fmt.Errorf("failed to update payment with order ID: %w", err)
+	}
+
+	return &models.PaymentOrder{
+		OrderID:  razorpayOrder.ID,
+		Amount:   int(amount * 100), // paise
+		Currency: plan.Currency,
+		Key:      s.cfg.Razorpay.KeyID,
+		PlanName: desc,
+	}, nil
+}
+
+// VerifyAndAddTopup verifies a top-up payment and credits the SMS to the user.
+func (s *PaymentService) VerifyAndAddTopup(userID string, req *models.PaymentVerificationRequest) (int, error) {
+	if !s.verifyPaymentSignature(req.OrderID, req.PaymentID, req.Signature) {
+		return 0, fmt.Errorf("invalid payment signature")
+	}
+
+	payment, err := s.paymentRepo.GetPaymentByOrderID(req.OrderID)
+	if err != nil {
+		return 0, fmt.Errorf("payment not found: %w", err)
+	}
+	if payment.PaymentType != "sms_topup" || payment.SmsCount == nil {
+		return 0, fmt.Errorf("not a valid SMS top-up payment")
+	}
+
+	payment.RazorpayPaymentID = &req.PaymentID
+	payment.RazorpayOrderID = &req.OrderID
+	payment.RazorpaySignature = &req.Signature
+	payment.Status = models.PaymentStatusSuccess
+	payment.PaidAt = timePtr(time.Now())
+	if err := s.paymentRepo.UpdatePayment(payment); err != nil {
+		return 0, fmt.Errorf("failed to update payment: %w", err)
+	}
+
+	if err := s.subscriptionRepo.AddTopupCredits(userID, *payment.SmsCount); err != nil {
+		return 0, fmt.Errorf("failed to add credits: %w", err)
+	}
+
+	return *payment.SmsCount, nil
+}
+
 // VerifyWebhookSignature verifies Razorpay webhook signature
 func (s *PaymentService) VerifyWebhookSignature(body io.Reader, signature string) error {
 	// Read body

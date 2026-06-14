@@ -7,7 +7,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StatsCard from './StatsCard';
@@ -215,7 +216,7 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <StatsCard
           title="Active Properties"
-          value={stats?.activeProperties ?? stats?.totalProperties ?? 0}
+          value={loading ? <Loader2 className="w-6 h-6 animate-spin text-blue-600" /> : (stats?.activeProperties ?? stats?.totalProperties ?? 0)}
           icon={Building}
           color="blue"
           subtitle="Active listings (all brokers)"
@@ -223,7 +224,7 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
         />
         <StatsCard
           title="Your Clients"
-          value={stats?.userClientsCount ?? stats?.totalClients ?? 0}
+          value={loading ? <Loader2 className="w-6 h-6 animate-spin text-green-600" /> : (stats?.userClientsCount ?? stats?.totalClients ?? 0)}
           icon={Users}
           color="green"
           subtitle="Clients added by you"
@@ -231,7 +232,7 @@ const BrokerDashboard: React.FC<BrokerDashboardProps> = ({ stats: initialStats }
         />
         <StatsCard
           title="Appointments Today"
-          value={stats?.todaysAppointments ?? stats?.totalAppointments ?? 0}
+          value={loading ? <Loader2 className="w-6 h-6 animate-spin text-orange-600" /> : (stats?.todaysAppointments ?? stats?.totalAppointments ?? 0)}
           icon={Calendar}
           color="orange"
           subtitle="Scheduled meetings"

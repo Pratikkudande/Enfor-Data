@@ -222,6 +222,7 @@ func (r *SubscriptionRepository) GetUserSubscription(userID string) (*models.Use
 		       us.current_properties_count, us.current_clients_count,
 		       us.current_appointments_count, us.current_whatsapp_messages_count,
 		       us.current_sms_messages_count, us.current_business_posts_count,
+		       us.sms_topup_credits,
 		       us.usage_reset_at, us.metadata, us.created_at, us.updated_at
 		FROM user_subscriptions us
 		WHERE us.user_id = $1
@@ -255,6 +256,7 @@ func (r *SubscriptionRepository) GetUserSubscription(userID string) (*models.Use
 		&sub.CurrentWhatsappMessagesCount,
 		&sub.CurrentSmsMessagesCount,
 		&sub.CurrentBusinessPostsCount,
+		&sub.SmsTopupCredits,
 		&sub.UsageResetAt,
 		&sub.Metadata,
 		&sub.CreatedAt,
@@ -302,6 +304,23 @@ func (r *SubscriptionRepository) CreateUserSubscription(sub *models.UserSubscrip
 		return fmt.Errorf("failed to create subscription: %w", err)
 	}
 
+	return nil
+}
+
+// AddTopupCredits adds purchased SMS top-up credits to the user's active subscription.
+func (r *SubscriptionRepository) AddTopupCredits(userID string, count int) error {
+	result, err := r.db.Exec(`
+		UPDATE user_subscriptions
+		SET sms_topup_credits = sms_topup_credits + $1, updated_at = CURRENT_TIMESTAMP
+		WHERE user_id = $2 AND status IN ('active', 'trial')
+	`, count, userID)
+	if err != nil {
+		return fmt.Errorf("failed to add topup credits: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("no active subscription to credit")
+	}
 	return nil
 }
 

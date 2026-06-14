@@ -1723,6 +1723,11 @@ CREATE INDEX IF NOT EXISTS idx_subscription_events_user ON subscription_events(u
 ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sms_credits INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sms_rate DECIMAL(10, 4) NOT NULL DEFAULT 0;
 ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS target_role VARCHAR(20) NOT NULL DEFAULT 'broker';
+-- SMS top-up support
+ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS sms_topup_credits INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_type VARCHAR(20) NOT NULL DEFAULT 'subscription';
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS sms_count INTEGER;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS description TEXT;
 `
 	if _, err := db.Exec(alterSQL); err != nil {
 		return fmt.Errorf("failed to apply subscription schema upgrades: %w", err)

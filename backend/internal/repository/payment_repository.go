@@ -20,10 +20,15 @@ func NewPaymentRepository(db *database.DB) *PaymentRepository {
 
 // CreatePayment creates a new payment record
 func (r *PaymentRepository) CreatePayment(payment *models.Payment) error {
+	// Default to a subscription payment when type is not set.
+	if payment.PaymentType == "" {
+		payment.PaymentType = "subscription"
+	}
 	query := `
 		INSERT INTO payments (
-			user_id, plan_id, amount, currency, status, billing_cycle
-		) VALUES ($1, $2, $3, $4, $5, $6)
+			user_id, plan_id, amount, currency, status, billing_cycle,
+			payment_type, sms_count, description
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -35,6 +40,9 @@ func (r *PaymentRepository) CreatePayment(payment *models.Payment) error {
 		payment.Currency,
 		payment.Status,
 		payment.BillingCycle,
+		payment.PaymentType,
+		payment.SmsCount,
+		payment.Description,
 	).Scan(&payment.ID, &payment.CreatedAt, &payment.UpdatedAt)
 
 	if err != nil {
@@ -124,6 +132,7 @@ func (r *PaymentRepository) GetPaymentByID(paymentID string) (*models.Payment, e
 func (r *PaymentRepository) GetPaymentByOrderID(orderID string) (*models.Payment, error) {
 	query := `
 		SELECT id, user_id, plan_id, amount, currency, status, billing_cycle,
+		       payment_type, sms_count,
 		       razorpay_payment_id, razorpay_order_id, razorpay_signature,
 		       paid_at, created_at, updated_at
 		FROM payments
@@ -139,6 +148,8 @@ func (r *PaymentRepository) GetPaymentByOrderID(orderID string) (*models.Payment
 		&payment.Currency,
 		&payment.Status,
 		&payment.BillingCycle,
+		&payment.PaymentType,
+		&payment.SmsCount,
 		&payment.RazorpayPaymentID,
 		&payment.RazorpayOrderID,
 		&payment.RazorpaySignature,
@@ -158,6 +169,7 @@ func (r *PaymentRepository) GetPaymentByOrderID(orderID string) (*models.Payment
 func (r *PaymentRepository) GetUserPayments(userID string) ([]models.Payment, error) {
 	query := `
 		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.billing_cycle,
+		       p.payment_type, p.sms_count, p.description,
 		       p.razorpay_payment_id, p.razorpay_order_id, p.razorpay_signature,
 		       p.paid_at, p.created_at, p.updated_at,
 		       sp.display_name as plan_name
@@ -186,6 +198,9 @@ func (r *PaymentRepository) GetUserPayments(userID string) ([]models.Payment, er
 			&payment.Currency,
 			&payment.Status,
 			&payment.BillingCycle,
+			&payment.PaymentType,
+			&payment.SmsCount,
+			&payment.Description,
 			&payment.RazorpayPaymentID,
 			&payment.RazorpayOrderID,
 			&payment.RazorpaySignature,

@@ -2,7 +2,7 @@ import React from 'react';
 
 interface StatsCardProps {
   title: string;
-  value: string | number;
+  value: React.ReactNode;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'teal';
   subtitle?: string;

@@ -50,6 +50,7 @@ export interface UserSubscription {
   cancel_at_period_end: boolean;
   cancelled_at?: string;
   razorpay_subscription_id?: string;
+  sms_topup_credits?: number;
   created_at: string;
   updated_at: string;
 }
@@ -201,5 +202,43 @@ export const verifyPayment = async (verification: PaymentVerification): Promise<
 
 export const getPaymentHistory = async (): Promise<any[]> => {
   const response = await api.get('/payments/history');
+  return response.data;
+};
+
+// ============================================================
+// SMS Top-ups
+// ============================================================
+
+// Marginal tiered pricing — mirrors the backend CalcTopupAmount for live preview.
+export const calcTopupPrice = (count: number): number => {
+  if (!count || count <= 0) return 0;
+  const tiers: { upTo: number; rate: number }[] = [
+    { upTo: 5000, rate: 0.40 },
+    { upTo: 10000, rate: 0.35 },
+    { upTo: 15000, rate: 0.30 },
+    { upTo: 25000, rate: 0.27 },
+    { upTo: Infinity, rate: 0.25 },
+  ];
+  let remaining = count;
+  let prev = 0;
+  let total = 0;
+  for (const t of tiers) {
+    if (remaining <= 0) break;
+    const band = t.upTo - prev;
+    const take = Math.min(remaining, band);
+    total += take * t.rate;
+    remaining -= take;
+    prev = t.upTo;
+  }
+  return total;
+};
+
+export const createSmsTopupOrder = async (smsCount: number): Promise<PaymentOrder> => {
+  const response = await api.post('/payments/sms-topup/create-order', { sms_count: smsCount });
+  return response.data;
+};
+
+export const verifySmsTopup = async (verification: PaymentVerification): Promise<{ credited_sms: number }> => {
+  const response = await api.post('/payments/sms-topup/verify', verification);
   return response.data;
 };

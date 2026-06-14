@@ -207,48 +207,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(userData);
         localStorage.setItem('enfor_user', JSON.stringify(userData));
-        // Skip heavy broker prefetch for admin users — they go straight to admin dashboard
-        if (userData.role !== 'admin') {
-          try {
-            const [propsRes, clientsRes, apptRes, apptsRes] = await Promise.all([
-              apiClient.getAllProperties(),
-              apiClient.getClients(),
-              apiClient.getAppointmentStats(),
-              apiClient.getAppointments(),
-            ]);
-
-            const properties = propsRes?.data ?? [];
-            const clients = clientsRes?.data ?? [];
-            const apptStats = apptRes?.data ?? apptRes ?? {};
-            const appts = apptsRes?.data ?? apptsRes ?? [];
-
-            const derived: DashboardStats = {
-              totalProperties: Array.isArray(properties) ? properties.length : 0,
-              activeProperties: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-              totalClients: Array.isArray(clients) ? clients.length : 0,
-              userClientsCount: Array.isArray(clients) ? clients.length : 0,
-              totalAppointments: apptStats?.total ?? 0,
-              todaysAppointments: apptStats?.today ?? 0,
-              whatsappMessagesCount: 0,
-              remainingMessages: 0,
-              clientsByType: { buyers: 0, sellers: 0, tenants: 0, owners: 0 },
-              propertiesByStatus: {
-                available: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'available').length : 0,
-                sold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'sold').length : 0,
-                rented: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'rented').length : 0,
-                hold: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'hold').length : 0,
-                closed: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'closed').length : 0,
-                under_discussion: Array.isArray(properties) ? properties.filter((p: any) => p.status === 'under_discussion' || p.status === 'under_negotiation').length : 0,
-              },
-            };
-
-            setDashboardStats(derived);
-            setAppointments(Array.isArray(appts) ? appts : []);
-            setAppointmentStats(apptStats);
-          } catch (e) {
-            // ignore
-          }
-        }
+        // No eager dashboard prefetch — the dashboard fetches its own
+        // lightweight stats on mount, so login only signs the user in.
         return userData.role;
       }
       return 'broker';

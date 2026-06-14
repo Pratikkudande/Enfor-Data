@@ -23,6 +23,10 @@ type Payment struct {
 	RazorpayOrderID   *string `json:"razorpay_order_id" db:"razorpay_order_id"`
 	RazorpaySignature *string `json:"razorpay_signature" db:"razorpay_signature"`
 	
+	// Top-up support
+	PaymentType string `json:"payment_type" db:"payment_type"` // subscription, sms_topup
+	SmsCount    *int   `json:"sms_count" db:"sms_count"`
+
 	// Payment Metadata
 	Description   *string `json:"description" db:"description"`
 	InvoiceNumber *string `json:"invoice_number" db:"invoice_number"`
