@@ -189,7 +189,8 @@ const ClientsView: React.FC = () => {
       setSubmitting(true);
       const clientData: CreateClientRequest = {
         first_name: formData.firstName, last_name: formData.lastName,
-        email: formData.email, phone: formData.contactNo,
+        email: formData.email.trim() || undefined,
+        phone: formData.contactNo,
         type: editingClientType === 'owner' ? 'owner' : selectedClientType,
         preferred_location: formData.location,
         address: formData.address,

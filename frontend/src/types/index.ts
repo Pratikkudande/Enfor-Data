@@ -384,7 +384,7 @@ export interface UpdatePropertyRequest {
 export interface CreateClientRequest {
   first_name: string;
   last_name: string;
-  email: string;
+  email?: string;
   phone: string;
   type: 'buyer' | 'seller' | 'tenant' | 'owner' | 'list_property_for_rent';
   preferred_location: string;
