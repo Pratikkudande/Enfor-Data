@@ -213,7 +213,7 @@ const PricingPage: React.FC = () => {
                 <h3 className="text-xl font-bold text-white mb-1">{plan.display_name}</h3>
                 <p className="text-gray-400 text-sm mb-5 min-h-[40px]">{plan.description}</p>
 
-                <div className="mb-5">
+                <div className="mb-4">
                   <span className="text-4xl font-extrabold text-white">
                     {formatPrice(billingCycle === 'monthly' ? plan.monthly_price : plan.annual_price)}
                   </span>
@@ -221,6 +221,36 @@ const PricingPage: React.FC = () => {
                     /{billingCycle === 'monthly' ? 'month' : 'year'}
                   </span>
                 </div>
+
+                {/* Short price breakdown: SMS cost + platform fee + GST = total */}
+                {plan.sms_credits > 0 && (() => {
+                  const smsCost = plan.sms_credits * plan.sms_rate;
+                  const platformFee = 3600; // 12 months × ₹300
+                  const subtotal = smsCost + platformFee;
+                  const gst = subtotal * 0.18;
+                  const inr = (n: number) =>
+                    `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  return (
+                    <div className="mb-5 text-xs text-gray-400 space-y-1 border-y border-white/10 py-3">
+                      <div className="flex justify-between">
+                        <span>SMS ({plan.sms_credits.toLocaleString()} × ₹{plan.sms_rate.toFixed(2)})</span>
+                        <span className="text-gray-300">{inr(smsCost)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Platform fee</span>
+                        <span className="text-gray-300">{inr(platformFee)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>GST (18%)</span>
+                        <span className="text-gray-300">{inr(gst)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-white pt-1 border-t border-white/10">
+                        <span>Total</span>
+                        <span>{inr(subtotal + gst)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {plan.sms_credits > 0 && (
                   <div className="mb-5 rounded-xl px-4 py-3 text-center border border-blue-500/20"
