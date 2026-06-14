@@ -77,7 +77,9 @@ const ProjectFormModal: React.FC<Props> = ({ mode, project, onClose, onCreate, o
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const integerFields = ['total_units', 'available_units'];
+    const sanitized = integerFields.includes(name) ? value.replace(/\D/g, '') : value;
+    setForm((prev) => ({ ...prev, [name]: sanitized }));
     if (errors[name as keyof FormState]) setErrors((prev) => ({ ...prev, [name]: undefined }));
     setFormError(null);
   };
@@ -294,13 +296,13 @@ const ProjectFormModal: React.FC<Props> = ({ mode, project, onClose, onCreate, o
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Total Units <span className="text-red-500">*</span></label>
-                <input type="number" name="total_units" value={form.total_units} onChange={handleChange} min="1"
+                <input type="text" inputMode="numeric" name="total_units" value={form.total_units} onChange={handleChange}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.total_units ? 'border-red-400' : 'border-gray-300'}`} />
                 {errors.total_units && <p className="mt-1 text-xs text-red-600">{errors.total_units}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Available Units <span className="text-red-500">*</span></label>
-                <input type="number" name="available_units" value={form.available_units} onChange={handleChange} min="0"
+                <input type="text" inputMode="numeric" name="available_units" value={form.available_units} onChange={handleChange}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.available_units ? 'border-red-400' : 'border-gray-300'}`} />
                 {errors.available_units && <p className="mt-1 text-xs text-red-600">{errors.available_units}</p>}
               </div>
