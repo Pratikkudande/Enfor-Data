@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"enfor-data-backend/internal/database"
 	"enfor-data-backend/internal/models"
@@ -276,6 +277,117 @@ func (r *NetworkRepository) GetAllBrokers(userID string) ([]map[string]interface
 	}
 	if list == nil {
 		list = []map[string]interface{}{}
+	}
+	return list, rows.Err()
+}
+
+// ── Channel Partner follows ───────────────────────────────────────────────────
+
+// GetChannelPartnersForBroker lists channel partners with whether the broker follows each.
+func (r *NetworkRepository) GetChannelPartnersForBroker(brokerID string) ([]map[string]interface{}, error) {
+	rows, err := r.db.Query(`
+		SELECT u.id, u.first_name||' '||u.last_name AS name, COALESCE(u.city,''), COALESCE(u.state,''),
+		       COALESCE(u.firm_name,''), u.profile_image,
+		       COALESCE(u.years_experience, 0), COALESCE(u.deals_completed, 0),
+		       COALESCE(u.specializations, ''),
+		       COALESCE(u.whatsapp_number, ''), COALESCE(u.location, ''),
+		       COALESCE((SELECT COUNT(*) FROM projects WHERE channel_partner_id=u.id), 0) AS projects_count,
+		       EXISTS(SELECT 1 FROM partner_follows pf WHERE pf.broker_id=$1 AND pf.channel_partner_id=u.id) AS is_following
+		FROM users u
+		WHERE u.role='channel_partner' AND u.is_active=true
+		ORDER BY u.first_name, u.last_name`, brokerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := []map[string]interface{}{}
+	for rows.Next() {
+		var (
+			id, name, city, state, firm  string
+			image                        *string
+			yearsExp, dealsCompleted     int
+			specializationsStr           string
+			whatsappNumber, location     string
+			projectsCount                int
+			isFollowing                  bool
+		)
+		if err := rows.Scan(&id, &name, &city, &state, &firm, &image,
+			&yearsExp, &dealsCompleted, &specializationsStr,
+			&whatsappNumber, &location, &projectsCount, &isFollowing); err != nil {
+			return nil, err
+		}
+		var specializations []string
+		for _, s := range strings.Split(specializationsStr, ",") {
+			if t := strings.TrimSpace(s); t != "" {
+				specializations = append(specializations, t)
+			}
+		}
+		if specializations == nil {
+			specializations = []string{}
+		}
+		list = append(list, map[string]interface{}{
+			"id": id, "name": name, "city": city, "state": state,
+			"firm_name": firm, "profile_image": image,
+			"years_experience": yearsExp, "deals_completed": dealsCompleted,
+			"specializations": specializations, "projects_count": projectsCount,
+			"whatsapp_number": whatsappNumber, "location": location,
+			"is_following": isFollowing,
+		})
+	}
+	return list, rows.Err()
+}
+
+// FollowPartner records that a broker follows a channel partner (idempotent).
+func (r *NetworkRepository) FollowPartner(brokerID, partnerID string) error {
+	_, err := r.db.Exec(`
+		INSERT INTO partner_follows (broker_id, channel_partner_id)
+		VALUES ($1, $2) ON CONFLICT (broker_id, channel_partner_id) DO NOTHING`, brokerID, partnerID)
+	return err
+}
+
+// UnfollowPartner removes a broker's follow of a channel partner.
+func (r *NetworkRepository) UnfollowPartner(brokerID, partnerID string) error {
+	_, err := r.db.Exec(`DELETE FROM partner_follows WHERE broker_id=$1 AND channel_partner_id=$2`, brokerID, partnerID)
+	return err
+}
+
+// GetFollowersForPartner lists the brokers who follow the given channel partner.
+func (r *NetworkRepository) GetFollowersForPartner(partnerID string) ([]map[string]interface{}, error) {
+	rows, err := r.db.Query(`
+		SELECT u.id, u.first_name||' '||u.last_name AS name, COALESCE(u.city,''), COALESCE(u.state,''),
+		       COALESCE(u.firm_name,''), u.profile_image,
+		       COALESCE(u.whatsapp_number,''), COALESCE(u.location,''),
+		       COALESCE((SELECT COUNT(*) FROM properties WHERE broker_id=u.id AND deleted_at IS NULL), 0),
+		       pf.created_at
+		FROM partner_follows pf
+		JOIN users u ON u.id = pf.broker_id
+		WHERE pf.channel_partner_id=$1
+		ORDER BY pf.created_at DESC`, partnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := []map[string]interface{}{}
+	for rows.Next() {
+		var (
+			id, name, city, state, firm string
+			image                       *string
+			whatsappNumber, location    string
+			propertiesCount             int
+			followedAt                  time.Time
+		)
+		if err := rows.Scan(&id, &name, &city, &state, &firm, &image,
+			&whatsappNumber, &location, &propertiesCount, &followedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, map[string]interface{}{
+			"id": id, "name": name, "city": city, "state": state,
+			"firm_name": firm, "profile_image": image,
+			"whatsapp_number": whatsappNumber, "location": location,
+			"properties_count": propertiesCount, "followed_at": followedAt,
+		})
 	}
 	return list, rows.Err()
 }

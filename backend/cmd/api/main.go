@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"enfor-data-backend/internal/config"
 	"enfor-data-backend/internal/database"
@@ -66,6 +67,7 @@ func main() {
 	clientRepo := repository.NewClientRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
 	networkRepo := repository.NewNetworkRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
 	whatsappRepo := repository.NewWhatsAppRepository(db)
 	smsMarketingRepo := repository.NewSMSMarketingRepository(db)
 	otpRepo := repository.NewOTPRepository(db)
@@ -88,6 +90,7 @@ func main() {
 	clientService := service.NewClientService(clientRepo, userRepo)
 	appointmentService := service.NewAppointmentService(appointmentRepo, clientRepo, propertyRepo, userRepo, smsService)
 	networkService := service.NewNetworkService(networkRepo, userRepo)
+	notificationService := service.NewNotificationService(notificationRepo, networkRepo, userRepo)
 	whatsappService := service.NewWhatsAppService(whatsappRepo, clientRepo)
 	whatsappSetupService := service.NewMetaWhatsAppSetupService(whatsappRepo)
 	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, smsService)
@@ -112,7 +115,8 @@ func main() {
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, passwordResetService)
 	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService)
-	propertyHandler := handler.NewPropertyHandler(propertyService)
+	propertyHandler := handler.NewPropertyHandler(propertyService, notificationService)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
 	clientHandler := handler.NewClientHandler(clientService)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
 	networkHandler := handler.NewNetworkHandler(networkService, hub)
@@ -122,7 +126,7 @@ func main() {
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 	paymentHandler := handler.NewPaymentHandler(paymentService, subscriptionService)
 	agreementHandler := handler.NewAgreementHandler(agreementService)
-	projectHandler := handler.NewProjectHandler(projectService)
+	projectHandler := handler.NewProjectHandler(projectService, notificationService)
 	buildingHandler := handler.NewBuildingHandler(buildingService)
 	externalBrokerHandler := handler.NewExternalBrokerHandler(externalBrokerService)
 	businessPostHandler := handler.NewBusinessPostHandler(businessPostService)
@@ -178,6 +182,13 @@ func main() {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "name, email and message are required"})
 				return
 			}
+			// Persist the submission so admins can view it, then notify by email.
+			if _, err := db.Exec(
+				`INSERT INTO contact_messages (name, email, phone, message) VALUES ($1, $2, $3, $4)`,
+				body.Name, body.Email, body.Phone, body.Message,
+			); err != nil {
+				log.Printf("Failed to save contact message: %v", err)
+			}
 			go emailService.SendContactEmail(body.Name, body.Email, body.Phone, body.Message)
 			c.JSON(http.StatusOK, gin.H{"message": "Thank you! We'll be in touch shortly."})
 		})
@@ -212,8 +223,8 @@ func main() {
 				return map[string]interface{}{
 					"notifications": map[string]interface{}{
 						"emailNotifications": true, "smsNotifications": false, "pushNotifications": true,
-						"appointmentReminders": true, "propertyUpdates": true, "marketingEmails": false,
-						"weeklyReports": true,
+						"appointmentReminders": true, "propertyUpdates": true, "projectUpdates": true,
+						"marketingEmails": false, "weeklyReports": true,
 					},
 					"privacy": map[string]interface{}{
 						"profileVisibility": "network", "showEmail": false, "showPhone": true,
@@ -317,6 +328,13 @@ func main() {
 			protected.POST("/upload/property-photos/:id", uploadHandler.UploadPropertyPhotos)
 			protected.DELETE("/upload/property-photos/:id/:filename", uploadHandler.DeletePropertyPhoto)
 
+			// Notification routes
+			protected.GET("/notifications", notificationHandler.List)
+			protected.GET("/notifications/stats", notificationHandler.Stats)
+			protected.PUT("/notifications/read-all", notificationHandler.MarkAllRead)
+			protected.PUT("/notifications/:id/read", notificationHandler.MarkRead)
+			protected.DELETE("/notifications/:id", notificationHandler.Delete)
+
 			// Property routes (accessible to all authenticated users)
 			protected.GET("/properties/all", propertyHandler.GetAllProperties)
 			protected.GET("/properties/options", propertyHandler.GetPropertyOptions)
@@ -394,6 +412,12 @@ func main() {
 				// Discovery
 				network.GET("/brokers", networkHandler.GetAllBrokers)
 				network.GET("/brokers/:id/connection-status", networkHandler.GetConnectionStatus)
+
+				// Channel Partner follows
+				network.GET("/channel-partners", networkHandler.GetChannelPartners)
+				network.POST("/channel-partners/:id/follow", networkHandler.FollowPartner)
+				network.DELETE("/channel-partners/:id/follow", networkHandler.UnfollowPartner)
+				network.GET("/followers", networkHandler.GetFollowers)
 
 				// Connections
 				network.POST("/connect/send", networkHandler.SendRequest)
@@ -541,6 +565,31 @@ func main() {
 				admin.POST("/announcements/:id/send", adminHandler.SendAnnouncement)
 				admin.GET("/feedback", adminHandler.GetFeedback)
 				admin.PUT("/feedback/:id", adminHandler.UpdateFeedback)
+
+				// Contact form submissions from the public landing page
+				admin.GET("/contact-messages", func(c *gin.Context) {
+					rows, err := db.Query(`SELECT id, name, email, COALESCE(phone,''), message, is_read, created_at
+						FROM contact_messages ORDER BY created_at DESC`)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load contact messages"})
+						return
+					}
+					defer rows.Close()
+					messages := []gin.H{}
+					for rows.Next() {
+						var id, name, email, phone, message string
+						var isRead bool
+						var createdAt time.Time
+						if err := rows.Scan(&id, &name, &email, &phone, &message, &isRead, &createdAt); err != nil {
+							continue
+						}
+						messages = append(messages, gin.H{
+							"id": id, "name": name, "email": email, "phone": phone,
+							"message": message, "is_read": isRead, "created_at": createdAt,
+						})
+					}
+					c.JSON(http.StatusOK, gin.H{"message": "ok", "data": messages})
+				})
 				admin.GET("/renewals", adminHandler.GetRenewals)
 				admin.GET("/activity", adminHandler.GetActivity)
 				admin.GET("/storage", adminHandler.GetStorage)

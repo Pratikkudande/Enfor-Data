@@ -12,14 +12,16 @@ import (
 )
 
 type ProjectHandler struct {
-	projectService *service.ProjectService
-	validator      *validator.Validate
+	projectService      *service.ProjectService
+	notificationService *service.NotificationService
+	validator           *validator.Validate
 }
 
-func NewProjectHandler(projectService *service.ProjectService) *ProjectHandler {
+func NewProjectHandler(projectService *service.ProjectService, notificationService *service.NotificationService) *ProjectHandler {
 	return &ProjectHandler{
-		projectService: projectService,
-		validator:      validator.New(),
+		projectService:      projectService,
+		notificationService: notificationService,
+		validator:           validator.New(),
 	}
 }
 
@@ -48,6 +50,11 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal server error", Message: "Failed to create project"})
 		return
 	}
+	// Notify the partner's connections (preference-gated) in the background.
+	if h.notificationService != nil {
+		go h.notificationService.NotifyProjectAdded(partnerID.(string), project.ID, project.Name)
+	}
+
 	c.JSON(http.StatusCreated, SuccessResponse{Message: "Project created successfully", Data: project})
 }
 

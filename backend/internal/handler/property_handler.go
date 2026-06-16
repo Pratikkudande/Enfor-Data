@@ -13,15 +13,17 @@ import (
 
 // PropertyHandler handles HTTP requests for property operations
 type PropertyHandler struct {
-	propertyService *service.PropertyService
-	validator       *validator.Validate
+	propertyService     *service.PropertyService
+	notificationService *service.NotificationService
+	validator           *validator.Validate
 }
 
 // NewPropertyHandler creates a new PropertyHandler instance
-func NewPropertyHandler(propertyService *service.PropertyService) *PropertyHandler {
+func NewPropertyHandler(propertyService *service.PropertyService, notificationService *service.NotificationService) *PropertyHandler {
 	return &PropertyHandler{
-		propertyService: propertyService,
-		validator:       validator.New(),
+		propertyService:     propertyService,
+		notificationService: notificationService,
+		validator:           validator.New(),
 	}
 }
 
@@ -193,6 +195,11 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 			Message: "Failed to create property",
 		})
 		return
+	}
+
+	// Notify the broker's connections (preference-gated) in the background.
+	if h.notificationService != nil {
+		go h.notificationService.NotifyPropertyAdded(brokerID.(string), property.ID, property.Title)
 	}
 
 	c.JSON(http.StatusCreated, SuccessResponse{

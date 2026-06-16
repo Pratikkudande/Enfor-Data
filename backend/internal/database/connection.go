@@ -973,6 +973,41 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_verified BOOLEAN DEFAULT FALSE
 ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_verified_at TIMESTAMP WITH TIME ZONE;
 -- Per-user app settings (notifications/privacy/preferences) stored as JSON
 ALTER TABLE users ADD COLUMN IF NOT EXISTS settings JSONB;
+-- Contact form submissions from the public landing page (visible to admins)
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name    VARCHAR(255) NOT NULL,
+    email   VARCHAR(255) NOT NULL,
+    phone   VARCHAR(50),
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC);
+-- In-app notifications (e.g. a connected broker added a property)
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type       VARCHAR(50) NOT NULL,
+    title      VARCHAR(255) NOT NULL,
+    message    TEXT NOT NULL,
+    action_url VARCHAR(500),
+    metadata   JSONB,
+    is_read    BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE is_read = FALSE;
+-- Broker → Channel Partner follow relationships (one-directional)
+CREATE TABLE IF NOT EXISTS partner_follows (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    broker_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel_partner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_partner_follow UNIQUE (broker_id, channel_partner_id)
+);
+CREATE INDEX IF NOT EXISTS idx_partner_follows_partner ON partner_follows(channel_partner_id);
+CREATE INDEX IF NOT EXISTS idx_partner_follows_broker ON partner_follows(broker_id);
 `
 	_, err = db.Exec(bioMigration)
 	if err != nil {

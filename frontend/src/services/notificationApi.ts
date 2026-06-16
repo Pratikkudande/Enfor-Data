@@ -1,18 +1,18 @@
 import { apiClient } from './apiClient';
 import { ApiResponse } from '../types';
-import { mockNotifications, mockNotificationStats } from './mockNotificationData';
 
 export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'appointment' | 'property' | 'client' | 'payment' | 'system' | 'marketing';
-  priority: 'low' | 'medium' | 'high';
+  type: 'appointment' | 'property' | 'project' | 'client' | 'payment' | 'system' | 'marketing';
+  priority?: 'low' | 'medium' | 'high';
   read: boolean;
   created_at: string;
   action_url?: string;
   metadata?: {
     property_id?: string;
+    project_id?: string;
     client_id?: string;
     appointment_id?: string;
     amount?: number;
@@ -26,6 +26,7 @@ export interface NotificationStats {
   by_type: {
     appointment: number;
     property: number;
+    project: number;
     client: number;
     payment: number;
     system: number;
@@ -33,145 +34,71 @@ export interface NotificationStats {
   };
 }
 
-// Mock data storage for development
-let mockNotificationData = [...mockNotifications];
+type Paginated = {
+  notifications: Notification[];
+  pagination: { page: number; limit: number; total: number; total_pages: number };
+};
+
+// The backend responds with { message, data }. apiClient.request throws on
+// non-2xx, so any returned value means success — we normalise to { success, data }.
+const ok = <T>(data: T): ApiResponse<T> => ({ success: true, data });
 
 class NotificationApiService {
-  // Get all notifications
-  async getNotifications(page = 1, limit = 20): Promise<ApiResponse<{
-    notifications: Notification[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      total_pages: number;
-    };
-  }>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedNotifications = mockNotificationData.slice(startIndex, endIndex);
-      
-      return Promise.resolve({
-        success: true,
-        data: {
-          notifications: paginatedNotifications,
-          pagination: {
-            page,
-            limit,
-            total: mockNotificationData.length,
-            total_pages: Math.ceil(mockNotificationData.length / limit)
-          }
-        }
-      });
-    }
-
-    return apiClient.request<ApiResponse<{
-      notifications: Notification[];
-      pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        total_pages: number;
-      };
-    }>>(`/notifications?page=${page}&limit=${limit}`);
+  async getNotifications(page = 1, limit = 20): Promise<ApiResponse<Paginated>> {
+    const res = await apiClient.request<{ data: Paginated }>(`/notifications?page=${page}&limit=${limit}`);
+    return ok(res.data);
   }
 
-  // Get unread notifications
+  // No dedicated unread endpoint — fetch the latest page and filter unread.
   async getUnreadNotifications(): Promise<ApiResponse<Notification[]>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      const unreadNotifications = mockNotificationData.filter(n => !n.read);
-      return Promise.resolve({
-        success: true,
-        data: unreadNotifications
-      });
-    }
-
-    return apiClient.request<ApiResponse<Notification[]>>('/notifications/unread');
+    const res = await apiClient.request<{ data: Paginated }>(`/notifications?page=1&limit=50`);
+    const unread = (res.data?.notifications || []).filter((n) => !n.read);
+    return ok(unread);
   }
 
-  // Get notification stats
   async getNotificationStats(): Promise<ApiResponse<NotificationStats>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      const stats: NotificationStats = {
-        total: mockNotificationData.length,
-        unread: mockNotificationData.filter(n => !n.read).length,
-        by_type: {
-          appointment: mockNotificationData.filter(n => n.type === 'appointment').length,
-          property: mockNotificationData.filter(n => n.type === 'property').length,
-          client: mockNotificationData.filter(n => n.type === 'client').length,
-          payment: mockNotificationData.filter(n => n.type === 'payment').length,
-          system: mockNotificationData.filter(n => n.type === 'system').length,
-          marketing: mockNotificationData.filter(n => n.type === 'marketing').length,
-        }
-      };
-      
-      return Promise.resolve({
-        success: true,
-        data: stats
-      });
-    }
-
-    return apiClient.request<ApiResponse<NotificationStats>>('/notifications/stats');
+    const res = await apiClient.request<{ data: { total: number; unread: number; by_type: Record<string, number> } }>(
+      '/notifications/stats',
+    );
+    const bt = res.data?.by_type || {};
+    const stats: NotificationStats = {
+      total: res.data?.total || 0,
+      unread: res.data?.unread || 0,
+      by_type: {
+        appointment: bt.appointment || 0,
+        property: bt.property || 0,
+        project: bt.project || 0,
+        client: bt.client || 0,
+        payment: bt.payment || 0,
+        system: bt.system || 0,
+        marketing: bt.marketing || 0,
+      },
+    };
+    return ok(stats);
   }
 
-  // Mark notification as read
   async markAsRead(notificationId: string): Promise<ApiResponse<void>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      const notificationIndex = mockNotificationData.findIndex(n => n.id === notificationId);
-      if (notificationIndex !== -1) {
-        mockNotificationData[notificationIndex].read = true;
-      }
-      return Promise.resolve({ success: true });
-    }
-
-    return apiClient.request<ApiResponse<void>>(`/notifications/${notificationId}/read`, {
-      method: 'PUT',
-    });
+    await apiClient.request(`/notifications/${notificationId}/read`, { method: 'PUT' });
+    return { success: true };
   }
 
-  // Mark all notifications as read
   async markAllAsRead(): Promise<ApiResponse<void>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      mockNotificationData = mockNotificationData.map(n => ({ ...n, read: true }));
-      return Promise.resolve({ success: true });
-    }
-
-    return apiClient.request<ApiResponse<void>>('/notifications/mark-all-read', {
-      method: 'PUT',
-    });
+    await apiClient.request('/notifications/read-all', { method: 'PUT' });
+    return { success: true };
   }
 
-  // Delete notification
   async deleteNotification(notificationId: string): Promise<ApiResponse<void>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      mockNotificationData = mockNotificationData.filter(n => n.id !== notificationId);
-      return Promise.resolve({ success: true });
-    }
-
-    return apiClient.request<ApiResponse<void>>(`/notifications/${notificationId}`, {
-      method: 'DELETE',
-    });
+    await apiClient.request(`/notifications/${notificationId}`, { method: 'DELETE' });
+    return { success: true };
   }
 
-  // Delete all read notifications
   async deleteAllRead(): Promise<ApiResponse<void>> {
-    // For development, use mock data
-    if (process.env.NODE_ENV === 'development') {
-      mockNotificationData = mockNotificationData.filter(n => !n.read);
-      return Promise.resolve({ success: true });
-    }
-
-    return apiClient.request<ApiResponse<void>>('/notifications/delete-read', {
-      method: 'DELETE',
-    });
+    const res = await apiClient.request<{ data: Paginated }>(`/notifications?page=1&limit=100`);
+    const readOnes = (res.data?.notifications || []).filter((n) => n.read);
+    await Promise.all(readOnes.map((n) => apiClient.request(`/notifications/${n.id}`, { method: 'DELETE' })));
+    return { success: true };
   }
 }
 
 export const notificationApi = new NotificationApiService();
+export default notificationApi;

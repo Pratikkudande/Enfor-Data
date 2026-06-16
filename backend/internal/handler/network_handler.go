@@ -132,6 +132,50 @@ func (h *NetworkHandler) GetConnectionStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{Message: "ok", Data: status})
 }
 
+// ── Channel Partner follows ──────────────────────────────────────────────────
+
+// GET /api/network/channel-partners — brokers discover channel partners
+func (h *NetworkHandler) GetChannelPartners(c *gin.Context) {
+	userID := c.GetString("user_id")
+	list, err := h.svc.GetChannelPartners(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to get channel partners"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "ok", Data: list})
+}
+
+// POST /api/network/channel-partners/:id/follow
+func (h *NetworkHandler) FollowPartner(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if err := h.svc.FollowPartner(userID, c.Param("id")); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to follow"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "Following channel partner"})
+}
+
+// DELETE /api/network/channel-partners/:id/follow
+func (h *NetworkHandler) UnfollowPartner(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if err := h.svc.UnfollowPartner(userID, c.Param("id")); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to unfollow"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "Unfollowed channel partner"})
+}
+
+// GET /api/network/followers — channel partner sees brokers who follow them
+func (h *NetworkHandler) GetFollowers(c *gin.Context) {
+	userID := c.GetString("user_id")
+	list, err := h.svc.GetFollowers(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to get followers"})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "ok", Data: list})
+}
+
 // ── Messaging endpoints ───────────────────────────────────────────────────────
 
 // POST /api/network/conversations/ensure  — get or create the conversation with a connected peer

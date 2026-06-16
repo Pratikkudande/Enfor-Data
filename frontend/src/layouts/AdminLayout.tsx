@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, MessageSquare, Download,
   Megaphone, MessageCircle, Activity, RefreshCw, ClipboardList,
-  HardDrive, Settings, Menu, X, LogOut, ChevronRight, Shield,
+  HardDrive, Settings, Menu, X, LogOut, ChevronRight, Shield, Mail,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../routes/routePaths';
@@ -16,6 +16,7 @@ const menuItems = [
   { id: 'admin/download', label: 'Data Download', icon: Download },
   { id: 'admin/announcements', label: 'Announcement Center', icon: Megaphone },
   { id: 'admin/feedback', label: 'Feedback & Suggestions', icon: MessageCircle },
+  { id: 'admin/contact-messages', label: 'Contact Messages', icon: Mail },
   { id: 'admin/activity', label: 'Activity Monitoring', icon: Activity },
   { id: 'admin/renewals', label: 'Renewal Monitoring', icon: RefreshCw },
   { id: 'admin/audit-logs', label: 'Audit Logs', icon: ClipboardList },

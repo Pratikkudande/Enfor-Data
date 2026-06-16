@@ -22,6 +22,7 @@ export interface NotificationSettings {
   pushNotifications: boolean;
   appointmentReminders: boolean;
   propertyUpdates: boolean;
+  projectUpdates: boolean;
   marketingEmails: boolean;
   weeklyReports: boolean;
 }

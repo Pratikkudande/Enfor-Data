@@ -7,10 +7,54 @@ import {
 
 const BASE = '/network';
 
+// Channel partner the broker can discover & follow
+export interface ChannelPartnerProfile {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  firm_name: string;
+  profile_image?: string | null;
+  years_experience?: number;
+  deals_completed?: number;
+  specializations?: string[];
+  projects_count?: number;
+  whatsapp_number?: string;
+  location?: string;
+  is_following: boolean;
+}
+
+// Broker who follows a channel partner
+export interface FollowerProfile {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  firm_name: string;
+  profile_image?: string | null;
+  whatsapp_number?: string;
+  location?: string;
+  properties_count?: number;
+  followed_at: string;
+}
+
 export const networkApi = {
   // Discovery
   getBrokers: () =>
     apiClient.request<ApiResponse<BrokerProfile[]>>(`${BASE}/brokers`),
+
+  // ── Channel Partner follows ──
+  getChannelPartners: () =>
+    apiClient.request<ApiResponse<ChannelPartnerProfile[]>>(`${BASE}/channel-partners`),
+
+  followPartner: (partnerId: string) =>
+    apiClient.request<ApiResponse<null>>(`${BASE}/channel-partners/${partnerId}/follow`, { method: 'POST' }),
+
+  unfollowPartner: (partnerId: string) =>
+    apiClient.request<ApiResponse<null>>(`${BASE}/channel-partners/${partnerId}/follow`, { method: 'DELETE' }),
+
+  getFollowers: () =>
+    apiClient.request<ApiResponse<FollowerProfile[]>>(`${BASE}/followers`),
 
   // Lightweight connection status for a single broker (used by property cards)
   getConnectionStatus: (brokerId: string) =>

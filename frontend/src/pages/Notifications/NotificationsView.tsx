@@ -7,6 +7,7 @@ import {
   Trash2,
   Calendar,
   Home,
+  Briefcase,
   Users,
   CreditCard,
   Settings,
@@ -169,6 +170,8 @@ const NotificationsView: React.FC = () => {
         return <Calendar className="w-5 h-5 text-blue-500" />;
       case 'property':
         return <Home className="w-5 h-5 text-green-500" />;
+      case 'project':
+        return <Briefcase className="w-5 h-5 text-indigo-500" />;
       case 'client':
         return <Users className="w-5 h-5 text-purple-500" />;
       case 'payment':
@@ -217,6 +220,7 @@ const NotificationsView: React.FC = () => {
     { value: 'unread', label: 'Unread', count: stats?.unread || 0 },
     { value: 'appointment', label: 'Appointments', count: stats?.by_type.appointment || 0 },
     { value: 'property', label: 'Properties', count: stats?.by_type.property || 0 },
+    { value: 'project', label: 'Projects', count: stats?.by_type.project || 0 },
     { value: 'client', label: 'Clients', count: stats?.by_type.client || 0 },
     { value: 'payment', label: 'Payments', count: stats?.by_type.payment || 0 },
     { value: 'system', label: 'System', count: stats?.by_type.system || 0 },

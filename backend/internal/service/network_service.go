@@ -111,6 +111,24 @@ func (s *NetworkService) GetConnectionStatus(userID, brokerID string) (map[strin
 	return s.repo.GetConnectionStatus(userID, brokerID)
 }
 
+// ── Channel Partner follows ──────────────────────────────────────────────────
+
+func (s *NetworkService) GetChannelPartners(brokerID string) ([]map[string]interface{}, error) {
+	return s.repo.GetChannelPartnersForBroker(brokerID)
+}
+
+func (s *NetworkService) FollowPartner(brokerID, partnerID string) error {
+	return s.repo.FollowPartner(brokerID, partnerID)
+}
+
+func (s *NetworkService) UnfollowPartner(brokerID, partnerID string) error {
+	return s.repo.UnfollowPartner(brokerID, partnerID)
+}
+
+func (s *NetworkService) GetFollowers(partnerID string) ([]map[string]interface{}, error) {
+	return s.repo.GetFollowersForPartner(partnerID)
+}
+
 // ── Messaging ─────────────────────────────────────────────────────────────────
 
 // EnsureConversation gets or creates a conversation with a peer (must be connected).

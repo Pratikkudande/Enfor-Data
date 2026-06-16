@@ -48,9 +48,13 @@ export class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
+    // For FormData (file uploads) the browser must set the multipart
+    // Content-Type (with boundary) itself — forcing application/json breaks it.
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...options.headers,
       },
       ...options,

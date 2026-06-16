@@ -169,7 +169,7 @@ const CheckoutPage: React.FC = () => {
                 <FeatureItem text={`${plan.max_clients || 'Unlimited'} Clients`} />
                 <FeatureItem text={`${plan.max_appointments_per_month || 'Unlimited'} Appointments/month`} />
                 <FeatureItem text={`${plan.max_sms_messages_per_month || 0} SMS/month`} />
-                <FeatureItem text={`${plan.max_whatsapp_messages_per_month || 0} WhatsApp/month`} />
+                {/* <FeatureItem text={`${plan.max_whatsapp_messages_per_month || 0} WhatsApp/month`} /> */}
                 {plan.has_analytics && <FeatureItem text="Analytics Dashboard" />}
                 {plan.has_advanced_analytics && <FeatureItem text="Advanced Analytics" />}
                 {plan.has_priority_support && <FeatureItem text="Priority Support" />}
