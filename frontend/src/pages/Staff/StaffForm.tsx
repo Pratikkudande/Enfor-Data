@@ -206,7 +206,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => onInputChange('phone', e.target.value)}
+                      onChange={(e) => onInputChange('phone', e.target.value.replace(/\D/g, ''))}
                       placeholder="Enter phone number"
                       maxLength={10}
                       className={`${inputCls()} pl-9`}

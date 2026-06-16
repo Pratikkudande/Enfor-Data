@@ -134,7 +134,7 @@ const ContactSection: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm(prev => ({ ...prev, [k]: e.target.value }));
+    setForm(prev => ({ ...prev, [k]: k === 'phone' ? e.target.value.replace(/\D/g, '') : e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

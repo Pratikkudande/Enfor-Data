@@ -285,9 +285,9 @@ const ClientForm: React.FC<ClientFormProps> = ({
             {/* Expected Amount — Property for Rent */}
             {showExpected && (
               <div>
-                {label('Expected Amount')}
+                {label('Expected Amount', true)}
                 <input type="number" name="expectedAmount" value={formData.expectedAmount} onChange={onInputChange}
-                  disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 2500000" />
+                  disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 2500000" required />
               </div>
             )}
 

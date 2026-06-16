@@ -189,12 +189,15 @@ const ClientsView: React.FC = () => {
       setSubmitting(true);
       const clientData: CreateClientRequest = {
         first_name: formData.firstName, last_name: formData.lastName,
-        email: formData.email, phone: formData.contactNo,
+        email: formData.email.trim() || undefined,
+        phone: formData.contactNo,
         type: editingClientType === 'owner' ? 'owner' : selectedClientType,
-        preferred_location: formData.location,
-        address: formData.address,
-        city: formData.city, state: formData.state,
-        postal_code: formData.postalCode, requirements: formData.enquiry,
+        preferred_location: formData.location.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        city: formData.city.trim() || undefined,
+        state: formData.state.trim() || undefined,
+        postal_code: formData.postalCode.trim() || undefined,
+        requirements: formData.enquiry.trim() || undefined,
       };
 
       if (isExpectedAmountType(selectedClientType)) {
@@ -404,7 +407,11 @@ const ClientsView: React.FC = () => {
           isViewOnly={isViewMode}
           submitting={submitting}
           formError={formError}
-          onInputChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })}
+          onInputChange={(e) => {
+            const phoneFields = ['contactNo'];
+            const value = phoneFields.includes(e.target.name) ? e.target.value.replace(/\D/g, '') : e.target.value;
+            setFormData({ ...formData, [e.target.name]: value });
+          }}
           onTypeChange={setSelectedClientType}
           onSubmit={handleFormSubmit}
           onCancel={closeModal}

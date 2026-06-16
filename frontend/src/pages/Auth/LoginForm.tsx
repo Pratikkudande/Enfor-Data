@@ -63,7 +63,7 @@ const LoginForm: React.FC = () => {
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Email Address
+            Email Address <span className="text-red-500">*</span>
           </label>
           <input
             type="email"
@@ -81,7 +81,7 @@ const LoginForm: React.FC = () => {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Password
+            Password <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input

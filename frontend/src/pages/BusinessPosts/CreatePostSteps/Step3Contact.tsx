@@ -143,7 +143,7 @@ const Step3Contact: React.FC<Step3Props> = ({
                 <input
                   type="tel"
                   value={formData.contactPhone}
-                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                  onChange={(e) => handleInputChange('contactPhone', e.target.value.replace(/\D/g, ''))}
                   placeholder="Enter phone number"
                   className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                     errors.contactPhone ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'

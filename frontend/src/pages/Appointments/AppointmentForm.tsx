@@ -5,6 +5,13 @@ import { PropertyOption } from '../../types';
 
 type AppointmentMode = 'create' | 'edit' | 'view';
 
+const CLIENT_TYPE_LABELS: Record<string, string> = {
+  buyer:                  'Buyer',
+  seller:                 'Seller',
+  tenant:                 'Tenant',
+  list_property_for_rent: 'Property Owner',
+};
+
 interface AppointmentFormProps {
   clients: ClientOption[];
   loadingClients: boolean;
@@ -277,7 +284,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   <option value="">-- Select a client --</option>
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name} ({client.type}) - {client.preferred_location}
+                      {client.first_name} {client.last_name} ({CLIENT_TYPE_LABELS[client.type] ?? client.type}) - {client.preferred_location}
                     </option>
                   ))}
                 </select>
