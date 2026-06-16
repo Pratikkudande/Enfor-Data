@@ -357,7 +357,7 @@ export const dashboardHelp: Record<LangCode, HelpModule> = {
     ],
     fields: [
       { name: 'Active Properties',    desc: 'ਸਾਰੇ ਬ੍ਰੋਕਰਾਂ ਦੀ ਕੁੱਲ ਸਰਗਰਮ ਜਾਇਦਾਦ ਸੂਚੀ।' },
-      { name: 'Your Clients',         desc: 'ਤੁਸੀਂ ਨਿੱਜੀ ਤੌਰ 'ਤੇ ਜੋੜੇ ਗਾਹਕ।' },
+      { name: 'Your Clients',         desc: 'ਤੁਸੀਂ ਖੁਦ ਜੋੜੇ ਗਾਹਕ।' },
       { name: 'Appointments Today',   desc: 'ਅੱਜ ਲਈ ਤਹਿ ਕੀਤੀਆਂ ਮੀਟਿੰਗਾਂ।' },
       { name: 'Clients by Type',      desc: '4 ਕਿਸਮਾਂ ਵਿੱਚ ਗਾਹਕ ਵੰਡ।' },
       { name: 'Properties by Status', desc: '6 ਸਥਿਤੀ ਸ਼੍ਰੇਣੀਆਂ।' },
@@ -367,7 +367,7 @@ export const dashboardHelp: Record<LangCode, HelpModule> = {
     tips: [
       'ਕੰਮ ਸ਼ੁਰੂ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਹਰ ਸਵੇਰੇ ਡੈਸ਼ਬੋਰਡ ਜਾਂਚੋ।',
       '+12% ਹਰਾ ਸੰਕੇਤ ਪਿਛਲੇ ਮਹੀਨੇ ਨਾਲੋਂ ਵਾਧਾ ਦਿਖਾਉਂਦਾ ਹੈ।',
-      'ਕਿਸੇ ਵੀ ਸੰਖੇਪ ਕਾਰਡ ਨੰਬਰ 'ਤੇ ਕਲਿੱਕ ਕਰਕੇ ਉਸ ਮੌਡਿਊਲ ਦੀ ਸੂਚੀ ਵੇਖੋ।',
+      'ਕਿਸੇ ਵੀ ਸੰਖੇਪ ਕਾਰਡ ਉੱਤੇ ਕਲਿੱਕ ਕਰਕੇ ਉਸ ਮੌਡਿਊਲ ਦੀ ਸੂਚੀ ਵੇਖੋ।',
       "Today's Appointments ਨਾਲ ਦਿਨ ਦੀ ਯੋਜਨਾ ਬਣਾਓ।",
     ],
     mistakes: [
