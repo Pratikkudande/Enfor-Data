@@ -8,6 +8,7 @@ import {
   Send, MessageCircle,
 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import PricingSection from './PricingSection';
 import { ENV } from '../../config/env';
 
 /* ── Animated Counter ─────────────────────────────────────── */
@@ -45,7 +46,7 @@ const useInView = (threshold = 0.2) => {
 /* ── Data ─────────────────────────────────────────────────── */
 const NAV_LINKS: { label: string; href: string; external?: boolean }[] = [
   { label: 'Features',   href: '#features'      },
-  { label: 'Pricing',    href: '/pricing', external: true },
+  { label: 'Pricing',    href: '#pricing'       },
   { label: 'Resources',  href: '#testimonials'  },
   { label: 'About Us',   href: '#about'         },
   { label: 'Contact',    href: '#contact-form'  },
@@ -822,7 +823,9 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ══ FOOTER ════════════════════════════════════════════ */}
+      {/* ══ PRICING ═══════════════════════════════════════════ */}
+      <PricingSection />
+
       {/* ══ CONTACT FORM ══════════════════════════════════════ */}
       <ContactSection />
 
@@ -871,7 +874,7 @@ const LandingPage: React.FC = () => {
               {[
                 { title: 'Product', links: [
                   { label: 'Features',   href: '#features'     },
-                  { label: 'Pricing',    href: '/pricing'      },
+                  { label: 'Pricing',    href: '#pricing'      },
                 ]},
                 { title: 'Company', links: [
                   { label: 'About Us',   href: '#about'        },

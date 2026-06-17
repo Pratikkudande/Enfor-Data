@@ -22,6 +22,8 @@ const SMSMarketingView = lazy(() => import('../pages/SMSMarketing/SMSMarketingVi
 const ClientsView = lazy(() => import('../pages/Clients/ClientsView'));
 const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsView'));
 const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
+const ChannelPartnersView = lazy(() => import('../pages/ChannelPartners/ChannelPartnersView'));
+const BrokerFollowersView = lazy(() => import('../pages/ChannelPartners/BrokerFollowersView'));
 const BusinessPostsView = lazy(() => import('../pages/BusinessPosts/BusinessPostsView'));
 const StaffView = lazy(() => import('../pages/Staff/StaffView'));
 const AgreementsView = lazy(() => import('../pages/Agreements/AgreementsView'));
@@ -49,6 +51,7 @@ const SMSManagement = lazy(() => import('../pages/Admin/SMSManagement'));
 const DataDownload = lazy(() => import('../pages/Admin/DataDownload'));
 const AnnouncementCenter = lazy(() => import('../pages/Admin/AnnouncementCenter'));
 const FeedbackManagement = lazy(() => import('../pages/Admin/FeedbackManagement'));
+const ContactMessages = lazy(() => import('../pages/Admin/ContactMessages'));
 const ActivityMonitoring = lazy(() => import('../pages/Admin/ActivityMonitoring'));
 const RenewalMonitoring = lazy(() => import('../pages/Admin/RenewalMonitoring'));
 const AuditLogs = lazy(() => import('../pages/Admin/AuditLogs'));
@@ -133,6 +136,16 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.NETWORK} element={
           <Suspense fallback={<PageLoader />}>
             <BrokerNetworkView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.CHANNEL_PARTNERS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ChannelPartnersView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.BROKERS} element={
+          <Suspense fallback={<PageLoader />}>
+            <BrokerFollowersView />
           </Suspense>
         } />
         <Route path={ROUTES.BUSINESS_POSTS} element={
@@ -237,6 +250,9 @@ export const AppRoutes: React.FC = () => {
         } />
         <Route path={ROUTES.ADMIN_FEEDBACK} element={
           <Suspense fallback={<PageLoader />}><FeedbackManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_CONTACT} element={
+          <Suspense fallback={<PageLoader />}><ContactMessages /></Suspense>
         } />
         <Route path={ROUTES.ADMIN_ACTIVITY} element={
           <Suspense fallback={<PageLoader />}><ActivityMonitoring /></Suspense>

@@ -7,6 +7,7 @@ import {
   Trash2,
   Calendar,
   Home,
+  Briefcase,
   Users,
   CreditCard,
   Settings,
@@ -135,6 +136,8 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         return <Calendar className="w-4 h-4 text-blue-500" />;
       case 'property':
         return <Home className="w-4 h-4 text-green-500" />;
+      case 'project':
+        return <Briefcase className="w-4 h-4 text-indigo-500" />;
       case 'client':
         return <Users className="w-4 h-4 text-purple-500" />;
       case 'payment':

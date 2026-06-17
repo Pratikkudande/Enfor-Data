@@ -21,6 +21,20 @@ async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T
 export const getDashboard = () =>
   adminFetch<any>('/admin/dashboard');
 
+// --- Contact Messages (from the public landing-page form) ---
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export const getContactMessages = () =>
+  adminFetch<{ data: ContactMessage[] }>('/admin/contact-messages');
+
 // --- Users ---
 export const getUsers = (params?: { search?: string; status?: string; page?: number; limit?: number }) => {
   const qs = new URLSearchParams();

@@ -268,10 +268,6 @@ const PricingPage: React.FC = () => {
                   <Feature text={`${formatLimit(plan.max_properties)} Properties`} included={true} />
                   <Feature text={`${formatLimit(plan.max_clients)} Clients`} included={true} />
                   <Feature text={`${formatLimit(plan.max_appointments_per_month)} Appointments/month`} included={true} />
-                  <Feature
-                    text={`${formatLimit(plan.max_whatsapp_messages_per_month)} WhatsApp/month`}
-                    included={plan.max_whatsapp_messages_per_month !== null && plan.max_whatsapp_messages_per_month > 0}
-                  />
                   <Feature text="Basic Analytics" included={plan.has_analytics} />
                   <Feature text="Advanced Analytics" included={plan.has_advanced_analytics} />
                   <Feature text="Priority Support" included={plan.has_priority_support} />
@@ -293,7 +289,7 @@ const PricingPage: React.FC = () => {
           ))}
         </div>
 
-        {/* FAQ Section */}
+        {/* FAQ Section — hidden for now
         <div className="mt-20 text-center">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-6">
             Frequently Asked Questions
@@ -313,6 +309,7 @@ const PricingPage: React.FC = () => {
             />
           </div>
         </div>
+        */}
       </div>
 
       {/* Modals */}
