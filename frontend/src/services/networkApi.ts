@@ -91,8 +91,10 @@ export const networkApi = {
       body: JSON.stringify({ peer_id: peerId }),
     }),
 
-  getConversations: () =>
-    apiClient.request<ApiResponse<Conversation[]>>(`${BASE}/conversations`),
+  getConversations: (peerRole?: 'broker' | 'channel_partner') =>
+    apiClient.request<ApiResponse<Conversation[]>>(
+      `${BASE}/conversations${peerRole ? `?peer_role=${peerRole}` : ''}`
+    ),
 
   getMessages: (convId: string, limit = 50, offset = 0) =>
     apiClient.request<ApiResponse<Message[]>>(
