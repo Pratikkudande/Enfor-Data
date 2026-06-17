@@ -268,7 +268,7 @@ const SubscriptionDashboard: React.FC = () => {
               );
             })()}
 
-            <div className="mt-6 flex space-x-4">
+            {/* <div className="mt-6 flex space-x-4">
               {subscription.subscription.is_trial ? (
                 <button
                   onClick={() => navigate('/pricing')}
@@ -292,7 +292,7 @@ const SubscriptionDashboard: React.FC = () => {
                   </button>
                 </>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/* Usage Stats */}
