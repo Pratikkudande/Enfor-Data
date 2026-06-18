@@ -131,21 +131,28 @@ func (s *NetworkService) GetFollowers(partnerID string) ([]map[string]interface{
 
 // ── Messaging ─────────────────────────────────────────────────────────────────
 
-// EnsureConversation gets or creates a conversation with a peer (must be connected).
+// EnsureConversation gets or creates a conversation with a peer. Allowed when the
+// two users are connected brokers OR have a broker→channel-partner follow link.
 func (s *NetworkService) EnsureConversation(userID, peerID string) (*models.Conversation, error) {
 	connected, err := s.repo.AreConnected(userID, peerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify connection: %w", err)
 	}
 	if !connected {
-		return nil, fmt.Errorf("you must be connected to start a conversation")
+		following, ferr := s.repo.HasFollowRelationship(userID, peerID)
+		if ferr != nil {
+			return nil, fmt.Errorf("failed to verify relationship: %w", ferr)
+		}
+		if !following {
+			return nil, fmt.Errorf("you must be connected or following to start a conversation")
+		}
 	}
 	return s.repo.EnsureConversationWithPeer(userID, peerID)
 }
 
-// GetConversations returns all conversations for a user.
-func (s *NetworkService) GetConversations(userID string) ([]models.Conversation, error) {
-	return s.repo.GetUserConversations(userID)
+// GetConversations returns a user's conversations, optionally filtered by peer role.
+func (s *NetworkService) GetConversations(userID, peerRole string) ([]models.Conversation, error) {
+	return s.repo.GetUserConversations(userID, peerRole)
 }
 
 // GetMessages returns paginated messages for a conversation.
@@ -185,13 +192,19 @@ func (s *NetworkService) SendMessage(convID, senderID, body string) (*models.Mes
 		return nil, fmt.Errorf("access denied")
 	}
 
-	// Verify they are still connected
+	// Allowed if the two users are connected brokers OR have a follow link.
 	connected, err := s.repo.AreConnected(senderID, otherID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify connection: %w", err)
 	}
 	if !connected {
-		return nil, fmt.Errorf("you must be connected to send messages")
+		following, ferr := s.repo.HasFollowRelationship(senderID, otherID)
+		if ferr != nil {
+			return nil, fmt.Errorf("failed to verify relationship: %w", ferr)
+		}
+		if !following {
+			return nil, fmt.Errorf("you must be connected or following to send messages")
+		}
 	}
 
 	return s.repo.CreateMessage(convID, senderID, body)

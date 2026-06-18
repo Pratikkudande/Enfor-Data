@@ -370,7 +370,7 @@ const BrokerNetworkView: React.FC = () => {
   };
 
   const loadConversations = async () => {
-    try { const r = await networkApi.getConversations(); setConversations(r.data || []); } catch { /* */ }
+    try { const r = await networkApi.getConversations('broker'); setConversations(r.data || []); } catch { /* */ }
   };
 
   // Opens the conversation with a peer — gets or creates one if not yet in local state

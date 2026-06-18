@@ -199,7 +199,8 @@ func (h *NetworkHandler) EnsureConversation(c *gin.Context) {
 // GET /api/network/conversations
 func (h *NetworkHandler) GetConversations(c *gin.Context) {
 	userID := c.GetString("user_id")
-	list, err := h.svc.GetConversations(userID)
+	peerRole := c.Query("peer_role") // optional: broker | channel_partner
+	list, err := h.svc.GetConversations(userID, peerRole)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to get conversations"})
 		return

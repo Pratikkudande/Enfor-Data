@@ -338,6 +338,19 @@ func (r *NetworkRepository) GetChannelPartnersForBroker(brokerID string) ([]map[
 	return list, rows.Err()
 }
 
+// HasFollowRelationship reports whether a follow link exists between two users
+// in either direction (broker follows channel partner).
+func (r *NetworkRepository) HasFollowRelationship(a, b string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM partner_follows
+			WHERE (broker_id=$1 AND channel_partner_id=$2)
+			   OR (broker_id=$2 AND channel_partner_id=$1)
+		)`, a, b).Scan(&exists)
+	return exists, err
+}
+
 // FollowPartner records that a broker follows a channel partner (idempotent).
 func (r *NetworkRepository) FollowPartner(brokerID, partnerID string) error {
 	_, err := r.db.Exec(`
@@ -490,8 +503,17 @@ func (r *NetworkRepository) GetConversationByID(id string) (*models.Conversation
 	return conv, err
 }
 
-// GetUserConversations returns all conversations for a user with peer info + last message.
-func (r *NetworkRepository) GetUserConversations(userID string) ([]models.Conversation, error) {
+// GetUserConversations returns conversations for a user with peer info + last
+// message. When peerRole is non-empty, only conversations whose peer has that
+// role are returned (e.g. "broker" for Broker Network, "channel_partner" for the
+// Channel Partners page) so the two surfaces stay separate.
+func (r *NetworkRepository) GetUserConversations(userID, peerRole string) ([]models.Conversation, error) {
+	roleFilter := ""
+	args := []interface{}{userID}
+	if peerRole != "" {
+		roleFilter = " AND u.role = $2"
+		args = append(args, peerRole)
+	}
 	rows, err := r.db.Query(`
 		SELECT c.id, c.broker_a, c.broker_b, c.last_message_at, c.created_at,
 		       u.id, u.first_name||' '||u.last_name, u.profile_image,
@@ -499,8 +521,8 @@ func (r *NetworkRepository) GetUserConversations(userID string) ([]models.Conver
 		       (SELECT COUNT(*) FROM messages WHERE conversation_id=c.id AND is_read=false AND sender_id<>$1)
 		FROM conversations c
 		JOIN users u ON u.id = CASE WHEN c.broker_a=$1 THEN c.broker_b ELSE c.broker_a END
-		WHERE c.broker_a=$1 OR c.broker_b=$1
-		ORDER BY c.last_message_at DESC`, userID)
+		WHERE (c.broker_a=$1 OR c.broker_b=$1)`+roleFilter+`
+		ORDER BY c.last_message_at DESC`, args...)
 	if err != nil {
 		return nil, err
 	}
