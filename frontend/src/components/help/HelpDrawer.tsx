@@ -1,14 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, Lightbulb, AlertTriangle, BookOpen, List, LayoutGrid, Monitor } from 'lucide-react';
-import { HELP_LANGS, LangCode, dashboardHelp } from './helpData';
+import { useLocation } from 'react-router-dom';
+import { HELP_LANGS, LangCode, helpContent } from './helpData';
 
 interface HelpDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+// Maps sidebar route segments → display label used in the screen-reference footer
+const PAGE_LABELS: Record<string, string> = {
+  dashboard:         'Dashboard',
+  properties:        'Properties',
+  clients:           'Clients',
+  'building-data':   'Building Data',
+  appointments:      'Appointments',
+  'sms-marketing':   'SMS Marketing',
+  network:           'Broker Network',
+  'channel-partners':'Channel Partners',
+  projects:          'New Projects',
+  agreements:        'Agreements',
+  'business-posts':  'Business Posts',
+  staff:             'Staff',
+  profile:           'My Profile',
+  settings:          'Settings',
+  subscription:      'My Subscription',
+};
+
 const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose }) => {
   const [lang, setLang] = useState<LangCode>('en');
+  const location = useLocation();
+
+  // Derive page key from the URL path segment
+  const segment = location.pathname.split('/')[1] || 'dashboard';
+  const pageEntry = helpContent[segment] || helpContent['dashboard'];
+
+  // Only show language pills for pages that have multilingual content
+  const availableLangs = HELP_LANGS.filter(l => pageEntry[l.code] !== undefined);
+  const effectiveLang: LangCode = pageEntry[lang] ? lang : 'en';
+  const d = pageEntry[effectiveLang] ?? pageEntry['en'];
+
+  const pageLabel = PAGE_LABELS[segment] || PAGE_LABELS['dashboard'];
+
+  // When the page changes reset to English if current lang is unavailable
+  useEffect(() => {
+    if (!pageEntry[lang]) setLang('en');
+  }, [segment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close on Escape
   useEffect(() => {
@@ -22,8 +59,6 @@ const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose }) => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
-
-  const d = dashboardHelp[lang];
 
   return (
     <>
@@ -51,7 +86,7 @@ const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose }) => {
               <BookOpen className="h-4 w-4 text-blue-200" />
             </div>
             <div>
-              <p className="text-xs font-medium" style={{ color: '#93c5fd' }}>SOP Guide</p>
+              <p className="text-xs font-medium" style={{ color: '#93c5fd' }}>SOP Guide — {pageLabel}</p>
               <p className="text-sm font-semibold text-white leading-none mt-0.5">Help & Instructions</p>
             </div>
           </div>
@@ -63,24 +98,26 @@ const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Language pills */}
-        <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-white">
-          <div className="flex flex-wrap gap-2">
-            {HELP_LANGS.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => setLang(l.code)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                  lang === l.code
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-700'
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
+        {/* Language pills — only shown when multiple langs available */}
+        {availableLangs.length > 1 && (
+          <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-white">
+            <div className="flex flex-wrap gap-2">
+              {availableLangs.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => setLang(l.code)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                    effectiveLang === l.code
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-700'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">
@@ -160,7 +197,7 @@ const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose }) => {
             <div className="rounded-lg p-3 text-xs text-gray-500 leading-relaxed border-l-4 border-blue-500"
               style={{ background: '#f1f5f9' }}>
               <span className="font-semibold text-gray-700">Screen reference: </span>
-              Dashboard – enfordata.com (after login) | Sections: top banner, summary cards, charts, today's appointments, recent activity
+              {pageLabel} — enfordata.com (after login)
             </div>
           </div>
         </div>
