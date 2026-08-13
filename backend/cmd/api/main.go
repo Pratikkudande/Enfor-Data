@@ -93,7 +93,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo, networkRepo, userRepo)
 	whatsappService := service.NewWhatsAppService(whatsappRepo, clientRepo)
 	whatsappSetupService := service.NewMetaWhatsAppSetupService(whatsappRepo)
-	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, smsService)
+	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, smsService, cfg)
 	otpService := service.NewOTPService(otpRepo, userRepo, smsService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo, userRepo)
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)

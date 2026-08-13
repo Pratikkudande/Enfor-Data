@@ -37,7 +37,7 @@ const SystemConfiguration: React.FC = () => {
   };
 
   const CONFIG_LABELS: Record<string, { label: string; desc: string }> = {
-    sms_provider: { label: 'SMS Provider', desc: 'SMS gateway provider (msg91, twilio, etc.)' },
+    sms_provider: { label: 'SMS Provider', desc: 'SMS gateway provider (MSG91, Twilio, etc.)' },
     email_provider: { label: 'Email Provider', desc: 'Email service provider (resend, sendgrid, etc.)' },
     razorpay_enabled: { label: 'Razorpay Enabled', desc: 'Enable/disable Razorpay payment gateway (true/false)' },
     renewal_reminder_days: { label: 'Renewal Reminder Days', desc: 'Comma-separated days before expiry to send reminders' },

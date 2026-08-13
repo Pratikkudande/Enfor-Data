@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"enfor-data-backend/internal/config"
 	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/repository"
 )
@@ -12,17 +13,20 @@ type SMSMarketingService struct {
 	repo       *repository.SMSMarketingRepository
 	clientRepo *repository.ClientRepository
 	smsService *SMSService
+	config     *config.Config
 }
 
 func NewSMSMarketingService(
 	repo *repository.SMSMarketingRepository,
 	clientRepo *repository.ClientRepository,
 	smsService *SMSService,
+	config *config.Config,
 ) *SMSMarketingService {
 	return &SMSMarketingService{
 		repo:       repo,
 		clientRepo: clientRepo,
 		smsService: smsService,
+		config:     config,
 	}
 }
 
@@ -37,6 +41,20 @@ func (s *SMSMarketingService) GetAccountStatus(userID string) (*models.SMSAccoun
 	}
 
 	return account, nil
+}
+
+func (s *SMSMarketingService) ConnectAccountWithServerConfig(userID string) error {
+	// Check if MSG91 is enabled and configured
+	if !s.config.MSG91.Enabled {
+		return fmt.Errorf("MSG91 SMS service is not enabled")
+	}
+	
+	if s.config.MSG91.AuthKey == "" || s.config.MSG91.SenderID == "" {
+		return fmt.Errorf("MSG91 credentials not configured on server")
+	}
+
+	// Use server-configured credentials
+	return s.ConnectAccount(userID, s.config.MSG91.AuthKey, s.config.MSG91.SenderID)
 }
 
 func (s *SMSMarketingService) ConnectAccount(userID, authKey, senderID string) error {

@@ -68,6 +68,12 @@ func (s *SMSService) SendSMS(to, message string) error {
 	data.Set("route", s.config.MSG91.Route)
 	data.Set("response", "json")
 
+	// DLT_TE_ID is mandatory in India (TRAI regulation since 2021).
+	// Without this, MSG91 accepts the message but telecom operators silently block delivery.
+	if s.config.MSG91.TemplateID != "" {
+		data.Set("DLT_TE_ID", s.config.MSG91.TemplateID)
+	}
+
 	// Create request
 	req, err := http.NewRequest("POST", apiURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -95,6 +101,7 @@ func (s *SMSService) SendSMS(to, message string) error {
 	fmt.Printf("To: %s\n", to)
 	fmt.Printf("Message: %s\n", message)
 	fmt.Printf("Route: %s\n", s.config.MSG91.Route)
+	fmt.Printf("DLT_TE_ID: %s\n", s.config.MSG91.TemplateID)
 	fmt.Printf("Time: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	// Parse response
@@ -102,6 +109,7 @@ func (s *SMSService) SendSMS(to, message string) error {
 	if err := json.Unmarshal(body, &msg91Resp); err != nil {
 		// If JSON parsing fails, check if it's a simple success response
 		bodyStr := string(body)
+		fmt.Printf("Raw Response: %s\n", bodyStr)
 		if resp.StatusCode == 200 && (strings.Contains(bodyStr, "success") || strings.Contains(bodyStr, "sent")) {
 			fmt.Printf("Status: SUCCESS ✓\n")
 			fmt.Printf("Response: %s\n", bodyStr)

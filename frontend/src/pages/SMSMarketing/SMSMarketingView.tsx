@@ -81,14 +81,14 @@ const SMSMarketingView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">SMS Marketing</h1>
             <p className="text-sm text-gray-600 mt-1">
-              Send SMS campaigns to your clients using Twilio
+              Send SMS campaigns to your clients using MSG91
             </p>
           </div>
           <div className="flex items-center gap-4">
             {isConnected && account && (
               <div className="text-right">
-                <div className="text-sm text-gray-600">Connected Number</div>
-                <div className="font-semibold text-gray-900">{account.twilio_phone_number}</div>
+                <div className="text-sm text-gray-600">Sender ID</div>
+                <div className="font-semibold text-gray-900">{account.msg91_sender_id || 'MSG91 Connected'}</div>
               </div>
             )}
             <button
@@ -109,7 +109,7 @@ const SMSMarketingView: React.FC = () => {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
               <span className="text-sm text-yellow-800">
-                SMS account not connected. Connect your Twilio account to start sending messages.
+                SMS account not connected. Connect your MSG91 account to start sending messages.
               </span>
             </div>
             <button

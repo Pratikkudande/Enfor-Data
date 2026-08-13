@@ -7,8 +7,7 @@ import { api } from './apiClient';
 export interface SMSAccount {
   id: string;
   user_id: string;
-  twilio_account_sid?: string;
-  twilio_phone_number: string;
+  msg91_sender_id?: string;
   status: 'connected' | 'not_connected' | 'suspended';
   connection_error?: string;
   message_limit: number;
@@ -101,12 +100,8 @@ export const getSMSAccount = async () => {
   return response;
 };
 
-export const connectSMSAccount = async (data: {
-  account_sid: string;
-  auth_token: string;
-  phone_number: string;
-}) => {
-  const response = await api.post('/sms-marketing/connect', data);
+export const connectSMSAccount = async (data?: {}) => {
+  const response = await api.post('/sms-marketing/connect', data || {});
   return response.data;
 };
 

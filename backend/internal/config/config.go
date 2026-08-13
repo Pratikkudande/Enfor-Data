@@ -51,10 +51,11 @@ type UploadConfig struct {
 }
 
 type MSG91Config struct {
-	AuthKey  string
-	SenderID string
-	Route    string
-	Enabled  bool
+	AuthKey    string
+	SenderID   string
+	Route      string
+	TemplateID string
+	Enabled    bool
 }
 
 type RazorpayConfig struct {
@@ -125,10 +126,11 @@ func Load() *Config {
 			MaxFileSize: maxFileSize,
 		},
 		MSG91: MSG91Config{
-			AuthKey:  getEnv("MSG91_AUTH_KEY", ""),
-			SenderID: getEnv("MSG91_SENDER_ID", ""),
-			Route:    getEnv("MSG91_ROUTE", "4"),
-			Enabled:  getEnv("MSG91_ENABLED", "false") == "true",
+			AuthKey:    getEnv("MSG91_AUTH_KEY", ""),
+			SenderID:   getEnv("MSG91_SENDER_ID", ""),
+			Route:      getEnv("MSG91_ROUTE", "4"),
+			TemplateID: getEnv("MSG91_TEMPLATE_ID", ""),
+			Enabled:    getEnv("MSG91_ENABLED", "false") == "true",
 		},
 		Razorpay: RazorpayConfig{
 			KeyID:         getEnv("RAZORPAY_KEY_ID", ""),

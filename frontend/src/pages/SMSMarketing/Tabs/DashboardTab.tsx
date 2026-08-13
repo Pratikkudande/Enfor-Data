@@ -46,7 +46,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ account, isConnected }) => 
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to SMS Marketing</h2>
           <p className="text-gray-600 mb-6">
-            Connect your Twilio account to start sending SMS campaigns to your clients.
+            Connect your MSG91 account to start sending SMS campaigns to your clients.
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left">
             <h3 className="font-semibold text-gray-900 mb-3">What you can do:</h3>
