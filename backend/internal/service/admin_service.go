@@ -9,6 +9,7 @@ type AdminService struct {
 	adminRepo          *repository.AdminRepository
 	userRepo           *repository.UserRepository
 	smsMarketingRepo   *repository.SMSMarketingRepository
+	smsMarketingService *SMSMarketingService
 	authService        *AuthService
 }
 
@@ -24,6 +25,11 @@ func NewAdminService(adminRepo *repository.AdminRepository, userRepo *repository
 // SetSMSMarketingRepo sets the SMS marketing repository (for DLT template management)
 func (s *AdminService) SetSMSMarketingRepo(repo *repository.SMSMarketingRepository) {
 	s.smsMarketingRepo = repo
+}
+
+// SetSMSMarketingService sets the SMS marketing service (for provider info)
+func (s *AdminService) SetSMSMarketingService(service *SMSMarketingService) {
+	s.smsMarketingService = service
 }
 
 func (s *AdminService) GetDashboardStats() (*models.AdminDashboardStats, error) {
@@ -80,6 +86,18 @@ func (s *AdminService) GetSubscriptions(page, limit int) ([]models.SubscriptionR
 
 func (s *AdminService) GetSMSStats() (*models.SMSStats, error) {
 	return s.adminRepo.GetSMSStats()
+}
+
+func (s *AdminService) GetSMSProviderInfo() map[string]interface{} {
+	if s.smsMarketingService == nil {
+		return map[string]interface{}{
+			"provider":    "Unknown",
+			"enabled":     false,
+			"initialized": false,
+			"connected":   false,
+		}
+	}
+	return s.smsMarketingService.GetProviderInfo()
 }
 
 func (s *AdminService) GetAuditLogs(page, limit int) ([]models.AuditLog, int, error) {

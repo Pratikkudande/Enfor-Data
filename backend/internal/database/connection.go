@@ -388,53 +388,8 @@ CREATE TRIGGER update_clients_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Function to sync broker information from users table to clients
-CREATE OR REPLACE FUNCTION sync_broker_info_to_clients()
-RETURNS TRIGGER AS $sync_clients$
-BEGIN
-    -- Update all clients for this broker when their name or city changes
-    UPDATE clients
-    SET 
-        broker_name = NEW.first_name || ' ' || NEW.last_name,
-        broker_city = NEW.city,
-        updated_at = NOW()
-    WHERE broker_id = NEW.id;
-    
-    RETURN NEW;
-END;
-$sync_clients$ LANGUAGE plpgsql;
-
--- Trigger to sync broker info when user profile changes
-DROP TRIGGER IF EXISTS sync_broker_info_to_clients_trigger ON users;
-CREATE TRIGGER sync_broker_info_to_clients_trigger
-    AFTER UPDATE OF first_name, last_name, city ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION sync_broker_info_to_clients();
-
--- Function to populate broker info on client insert
-CREATE OR REPLACE FUNCTION populate_client_broker_info()
-RETURNS TRIGGER AS $populate_client$
-BEGIN
-    -- Automatically populate broker_name and broker_city from users table
-    SELECT 
-        first_name || ' ' || last_name,
-        city
-    INTO 
-        NEW.broker_name,
-        NEW.broker_city
-    FROM users
-    WHERE id = NEW.broker_id;
-    
-    RETURN NEW;
-END;
-$populate_client$ LANGUAGE plpgsql;
-
--- Trigger to populate broker info on insert
-DROP TRIGGER IF EXISTS populate_client_broker_info_on_insert ON clients;
-CREATE TRIGGER populate_client_broker_info_on_insert
-    BEFORE INSERT ON clients
-    FOR EACH ROW
-    EXECUTE FUNCTION populate_client_broker_info();
+-- Note: broker_name and broker_city columns removed from clients table
+-- These denormalized fields are no longer needed as broker info can be fetched from users table
 `
 
 	_, err = db.Exec(clientsMigration)
@@ -449,23 +404,12 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS budget_max DECIMAL(15, 2);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS expected_amount DECIMAL(15, 2);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS preferred_location VARCHAR(255) NOT NULL DEFAULT '';
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) NOT NULL DEFAULT '';
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS broker_name VARCHAR(200);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS broker_city VARCHAR(100);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS min_price DECIMAL(15, 2);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS max_price DECIMAL(15, 2);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS property_address TEXT;
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS buildup_area DECIMAL(10, 2);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS carpet_area DECIMAL(10, 2);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS measurement_unit VARCHAR(20);
-ALTER TABLE clients ADD COLUMN IF NOT EXISTS deposit_budget DECIMAL(15, 2);
 
 -- Ensure all optional text columns have DEFAULT '' so NOT NULL is never violated by empty strings
-ALTER TABLE clients ALTER COLUMN address           SET DEFAULT '';
 ALTER TABLE clients ALTER COLUMN city              SET DEFAULT '';
 ALTER TABLE clients ALTER COLUMN state             SET DEFAULT '';
 ALTER TABLE clients ALTER COLUMN postal_code       SET DEFAULT '';
 ALTER TABLE clients ALTER COLUMN preferred_location SET DEFAULT '';
-ALTER TABLE clients ALTER COLUMN requirements      SET DEFAULT '';
 ALTER TABLE clients ALTER COLUMN email             SET DEFAULT '';
 `
 	_, err = db.Exec(clientsAlterMigration)

@@ -44,31 +44,37 @@ func (s *ClientService) CreateClient(req *dto.CreateClientRequest, brokerID stri
 		return nil, fmt.Errorf("failed to fetch broker information: %w", err)
 	}
 
+	// Determine types to use
+	var types []string
+	if len(req.Types) > 0 {
+		types = req.Types
+	} else if req.Type != "" {
+		types = []string{req.Type}
+	}
+
+	// Ensure at least one type is provided
+	if len(types) == 0 {
+		return nil, fmt.Errorf("at least one client type is required")
+	}
+
+	// Use the first type as the primary type
+	primaryType := types[0]
+
 	// Create Client model from CreateClientRequest
 	client := &models.Client{
 		FirstName:         req.FirstName,
 		LastName:          req.LastName,
 		Email:             req.Email,
 		Phone:             req.Phone,
-		Type:              req.Type,
+		Type:              primaryType,
+		Types:             types,
 		Status:            "active",
 		BudgetMin:         req.BudgetMin,
 		BudgetMax:         req.BudgetMax,
-		ExpectedAmount:    req.ExpectedAmount,
-		MinPrice:          req.MinPrice,
-		MaxPrice:          req.MaxPrice,
-		PropertyAddress:   strPtr(req.PropertyAddress),
-		BuildupArea:       req.BuildupArea,
-		CarpetArea:        req.CarpetArea,
-		MeasurementUnit:   strPtr(req.MeasurementUnit),
-		DepositBudget:     req.DepositBudget,
 		PreferredLocation: req.PreferredLocation,
-		Address:           req.Address,
 		City:              req.City,
 		State:             req.State,
 		PostalCode:        req.PostalCode,
-		Requirements:      req.Requirements,
-		Notes:             req.Notes,
 		BrokerID:          brokerID,
 	}
 
@@ -146,9 +152,6 @@ func (s *ClientService) UpdateClient(id string, req *dto.UpdateClientRequest, br
 	if req.Phone != nil {
 		client.Phone = *req.Phone
 	}
-	if req.Type != nil {
-		client.Type = *req.Type
-	}
 	if req.Status != nil {
 		client.Status = *req.Status
 	}
@@ -161,9 +164,6 @@ func (s *ClientService) UpdateClient(id string, req *dto.UpdateClientRequest, br
 	if req.PreferredLocation != nil {
 		client.PreferredLocation = *req.PreferredLocation
 	}
-	if req.Address != nil {
-		client.Address = *req.Address
-	}
 	if req.City != nil {
 		client.City = *req.City
 	}
@@ -173,35 +173,25 @@ func (s *ClientService) UpdateClient(id string, req *dto.UpdateClientRequest, br
 	if req.PostalCode != nil {
 		client.PostalCode = *req.PostalCode
 	}
-	if req.Requirements != nil {
-		client.Requirements = *req.Requirements
-	}
-	if req.Notes != nil {
-		client.Notes = req.Notes
-	}
-	if req.ExpectedAmount != nil {
-		client.ExpectedAmount = req.ExpectedAmount
-	}
-	if req.MinPrice != nil {
-		client.MinPrice = req.MinPrice
-	}
-	if req.MaxPrice != nil {
-		client.MaxPrice = req.MaxPrice
-	}
-	if req.PropertyAddress != nil {
-		client.PropertyAddress = req.PropertyAddress
-	}
-	if req.BuildupArea != nil {
-		client.BuildupArea = req.BuildupArea
-	}
-	if req.CarpetArea != nil {
-		client.CarpetArea = req.CarpetArea
-	}
-	if req.MeasurementUnit != nil {
-		client.MeasurementUnit = req.MeasurementUnit
-	}
-	if req.DepositBudget != nil {
-		client.DepositBudget = req.DepositBudget
+
+	// Handle type updates - support both single type and multiple types
+	if len(req.Types) > 0 {
+		client.Types = req.Types
+		// Set the last type as the primary type (most recent)
+		client.Type = req.Types[len(req.Types)-1]
+	} else if req.Type != nil {
+		// If single type provided, add it to types if not already present
+		typeExists := false
+		for _, t := range client.Types {
+			if t == *req.Type {
+				typeExists = true
+				break
+			}
+		}
+		if !typeExists {
+			client.Types = append(client.Types, *req.Type)
+		}
+		client.Type = *req.Type
 	}
 
 	// Call repository Update method
@@ -227,14 +217,6 @@ func (s *ClientService) DeleteClient(id, brokerID string) error {
 	}
 
 	return nil
-}
-
-// strPtr returns a pointer to a string, or nil if the string is empty
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
 }
 
 // validateBudgetRange validates that budget_min <= budget_max when both are provided

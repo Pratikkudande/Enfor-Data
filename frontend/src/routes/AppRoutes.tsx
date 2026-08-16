@@ -20,6 +20,7 @@ const BrokerDashboard = lazy(() => import('../pages/Dashboard/BrokerDashboard'))
 const PropertiesView = lazy(() => import('../pages/Properties/PropertiesView'));
 const SMSMarketingView = lazy(() => import('../pages/SMSMarketing/SMSMarketingView'));
 const ClientsView = lazy(() => import('../pages/Clients/ClientsView'));
+const ClientRequirementsView = lazy(() => import('../pages/ClientRequirements/ClientRequirementsView'));
 const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsView'));
 const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
 const ChannelPartnersView = lazy(() => import('../pages/ChannelPartners/ChannelPartnersView'));
@@ -127,6 +128,11 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.CLIENTS} element={
           <Suspense fallback={<PageLoader />}>
             <ClientsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.CLIENT_REQUIREMENTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ClientRequirementsView />
           </Suspense>
         } />
         <Route path={ROUTES.APPOINTMENTS} element={

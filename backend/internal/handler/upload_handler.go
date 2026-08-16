@@ -143,13 +143,9 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 		req.Phone = phone
 		req.Type = strings.ToLower(strings.TrimSpace(clientType))
 		req.PreferredLocation = get("preferred_location")
-		req.Address = get("address")
 		req.City = get("city")
 		req.State = get("state")
 		req.PostalCode = get("postal_code")
-		req.Requirements = get("requirements")
-		req.PropertyAddress = get("property_address")
-		req.MeasurementUnit = get("measurement_unit")
 
 		if v := get("budget_min"); v != "" {
 			if f64, err := strconv.ParseFloat(v, 64); err == nil {
@@ -159,36 +155,6 @@ func (h *UploadHandler) UploadClientsExcel(c *gin.Context) {
 		if v := get("budget_max"); v != "" {
 			if f64, err := strconv.ParseFloat(v, 64); err == nil {
 				req.BudgetMax = &f64
-			}
-		}
-		if v := get("expected_amount"); v != "" {
-			if f64, err := strconv.ParseFloat(v, 64); err == nil {
-				req.ExpectedAmount = &f64
-			}
-		}
-		if v := get("min_price"); v != "" {
-			if f64, err := strconv.ParseFloat(v, 64); err == nil {
-				req.MinPrice = &f64
-			}
-		}
-		if v := get("max_price"); v != "" {
-			if f64, err := strconv.ParseFloat(v, 64); err == nil {
-				req.MaxPrice = &f64
-			}
-		}
-		if v := get("buildup_area"); v != "" {
-			if f64, err := strconv.ParseFloat(v, 64); err == nil {
-				req.BuildupArea = &f64
-			}
-		}
-		if v := get("carpet_area"); v != "" {
-			if f64, err := strconv.ParseFloat(v, 64); err == nil {
-				req.CarpetArea = &f64
-			}
-		}
-		if v := get("deposit_budget"); v != "" {
-			if f64, err := strconv.ParseFloat(v, 64); err == nil {
-				req.DepositBudget = &f64
 			}
 		}
 

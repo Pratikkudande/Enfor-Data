@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, Users, FileText, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
 import { SMSDLTTemplate, sendDLTMessage } from '../../../services/smsMarketingApi';
 import { clientApi, Client } from '../../../services/clientApi';
+import { buildingApi, BuildingContact } from '../../../services/buildingApi';
 
 interface SendDLTMessageModalProps {
   isOpen: boolean;
@@ -23,15 +24,18 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
   onSuccess,
 }) => {
   const [clients, setClients] = useState<Client[]>([]);
+  const [buildingContacts, setBuildingContacts] = useState<BuildingContact[]>([]);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedBuildingContacts, setSelectedBuildingContacts] = useState<string[]>([]);
   const [messageTemplates, setMessageTemplates] = useState<MessageTemplate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent' | 'building_data'>('all');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       loadClients();
+      loadBuildingContacts();
       if (template) {
         // Initialize with one message template
         const vars: Record<string, string> = {};
@@ -44,6 +48,7 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
           showPreview: false
         }]);
         setSelectedClients([]);
+        setSelectedBuildingContacts([]);
       }
     }
   }, [isOpen, template]);
@@ -54,6 +59,15 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
       setClients(data.clients || []);
     } catch (error) {
       console.error('Failed to load clients:', error);
+    }
+  };
+
+  const loadBuildingContacts = async () => {
+    try {
+      const res = await buildingApi.getContacts();
+      setBuildingContacts(res.data || []);
+    } catch (error) {
+      console.error('Failed to load building contacts:', error);
     }
   };
 
@@ -169,18 +183,33 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
     return <div className="whitespace-pre-wrap">{parts}</div>;
   };
 
-  const filteredClients = clients.filter(
-    (client) => {
-      const matchesSearch = 
-        client.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone.includes(searchTerm);
-      
-      const matchesType = clientTypeFilter === 'all' || client.type === clientTypeFilter;
-      
-      return matchesSearch && matchesType;
-    }
-  );
+  const filteredClients = clientTypeFilter === 'building_data' 
+    ? [] 
+    : clients.filter(
+      (client) => {
+        const matchesSearch = 
+          client.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          client.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          client.phone.includes(searchTerm);
+        
+        const matchesType = clientTypeFilter === 'all' || client.type === clientTypeFilter;
+        
+        return matchesSearch && matchesType;
+      }
+    );
+
+  const filteredBuildingContacts = clientTypeFilter === 'building_data' || clientTypeFilter === 'all'
+    ? buildingContacts.filter(
+        (contact) => {
+          const matchesSearch = 
+            (contact.owner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+            contact.mobile_number.includes(searchTerm) ||
+            (contact.building_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+          
+          return matchesSearch;
+        }
+      )
+    : [];
 
   const handleSelectClient = (clientId: string) => {
     setSelectedClients((prev) =>
@@ -188,11 +217,27 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
     );
   };
 
+  const handleSelectBuildingContact = (contactId: string) => {
+    setSelectedBuildingContacts((prev) =>
+      prev.includes(contactId) ? prev.filter((id) => id !== contactId) : [...prev, contactId]
+    );
+  };
+
   const handleSelectAll = () => {
-    if (selectedClients.length === filteredClients.length) {
-      setSelectedClients([]);
+    if (clientTypeFilter === 'building_data') {
+      // Select all building contacts
+      if (selectedBuildingContacts.length === filteredBuildingContacts.length) {
+        setSelectedBuildingContacts([]);
+      } else {
+        setSelectedBuildingContacts(filteredBuildingContacts.map((c) => c.id));
+      }
     } else {
-      setSelectedClients(filteredClients.map((c) => c.id));
+      // Select all clients
+      if (selectedClients.length === filteredClients.length) {
+        setSelectedClients([]);
+      } else {
+        setSelectedClients(filteredClients.map((c) => c.id));
+      }
     }
   };
 
@@ -207,7 +252,8 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
   };
 
   const handleSend = async () => {
-    if (!template || selectedClients.length === 0) return;
+    const totalRecipients = selectedClients.length + selectedBuildingContacts.length;
+    if (!template || totalRecipients === 0) return;
 
     // Validate all message templates
     for (const mt of messageTemplates) {
@@ -229,6 +275,7 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
           template_id: template.id,
           variable_values: mt.variableValues,
           client_ids: selectedClients,
+          building_contact_ids: selectedBuildingContacts, // Add building contacts
         });
         
         totalSuccessful += result.data.successful;
@@ -273,7 +320,7 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
               <div className="p-4 border-b border-gray-200 bg-gray-50">
                 <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  Select Recipients ({selectedClients.length} selected)
+                  Select Recipients ({selectedClients.length + selectedBuildingContacts.length} selected)
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
                   All messages will be sent to these recipients
@@ -343,6 +390,16 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
                   >
                     Property Owner
                   </button>
+                  <button
+                    onClick={() => setClientTypeFilter('building_data')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      clientTypeFilter === 'building_data'
+                        ? 'bg-orange-600 text-white shadow-md'
+                        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                    }`}
+                  >
+                    Building Data
+                  </button>
                 </div>
               </div>
 
@@ -351,50 +408,93 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
                   onClick={handleSelectAll}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  {selectedClients.length === filteredClients.length ? 'Deselect All' : 'Select All'}
+                  {clientTypeFilter === 'building_data' 
+                    ? (selectedBuildingContacts.length === filteredBuildingContacts.length ? 'Deselect All' : 'Select All')
+                    : (selectedClients.length === filteredClients.length ? 'Deselect All' : 'Select All')
+                  }
                 </button>
               </div>
 
               <div className="max-h-[500px] overflow-y-auto">
-                {filteredClients.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">No clients found</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {clientTypeFilter !== 'all' ? `No ${getTypeLabel(clientTypeFilter).toLowerCase()}s available` : 'Try adjusting your search'}
-                    </p>
-                  </div>
-                ) : (
-                  filteredClients.map((client) => (
-                    <label
-                      key={client.id}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedClients.includes(client.id)}
-                        onChange={() => handleSelectClient(client.id)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium text-gray-900 text-sm">
-                            {client.first_name} {client.last_name}
+                {clientTypeFilter === 'building_data' ? (
+                  // Building Contacts List
+                  filteredBuildingContacts.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No building contacts found</p>
+                      <p className="text-xs text-gray-400 mt-1">Try adjusting your search</p>
+                    </div>
+                  ) : (
+                    filteredBuildingContacts.map((contact) => (
+                      <label
+                        key={contact.id}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedBuildingContacts.includes(contact.id)}
+                          onChange={() => handleSelectBuildingContact(contact.id)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-gray-900 text-sm">
+                              {contact.owner_name || contact.building_name || 'Unknown'}
+                            </div>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                              Building Data
+                            </span>
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            client.type === 'buyer' ? 'bg-blue-100 text-blue-700' :
-                            client.type === 'seller' ? 'bg-green-100 text-green-700' :
-                            client.type === 'tenant' ? 'bg-orange-100 text-orange-700' :
-                            client.type === 'list_property_for_rent' ? 'bg-purple-100 text-purple-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {getTypeLabel(client.type)}
-                          </span>
+                          <div className="text-xs text-gray-600">{contact.mobile_number}</div>
+                          {contact.area && (
+                            <div className="text-xs text-gray-500">{contact.area}</div>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-600">{client.phone}</div>
-                      </div>
-                    </label>
-                  ))
+                      </label>
+                    ))
+                  )
+                ) : (
+                  // Clients List
+                  filteredClients.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No clients found</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {clientTypeFilter !== 'all' ? `No ${getTypeLabel(clientTypeFilter).toLowerCase()}s available` : 'Try adjusting your search'}
+                      </p>
+                    </div>
+                  ) : (
+                    filteredClients.map((client) => (
+                      <label
+                        key={client.id}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClients.includes(client.id)}
+                          onChange={() => handleSelectClient(client.id)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-gray-900 text-sm">
+                              {client.first_name} {client.last_name}
+                            </div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              client.type === 'buyer' ? 'bg-blue-100 text-blue-700' :
+                              client.type === 'seller' ? 'bg-green-100 text-green-700' :
+                              client.type === 'tenant' ? 'bg-orange-100 text-orange-700' :
+                              client.type === 'list_property_for_rent' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {getTypeLabel(client.type)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600">{client.phone}</div>
+                        </div>
+                      </label>
+                    ))
+                  )
                 )}
               </div>
             </div>
@@ -500,7 +600,7 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
           </button>
           <button
             onClick={handleSend}
-            disabled={sending || selectedClients.length === 0 || messageTemplates.some(mt => Object.values(mt.variableValues).some(v => !v.trim()))}
+            disabled={sending || (selectedClients.length + selectedBuildingContacts.length) === 0 || messageTemplates.some(mt => Object.values(mt.variableValues).some(v => !v.trim()))}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {sending ? (
@@ -511,7 +611,7 @@ const SendDLTMessageModal: React.FC<SendDLTMessageModalProps> = ({
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                Send {messageTemplates.length} message(s) to {selectedClients.length} recipient(s)
+                Send {messageTemplates.length} message(s) to {selectedClients.length + selectedBuildingContacts.length} recipient(s)
               </>
             )}
           </button>

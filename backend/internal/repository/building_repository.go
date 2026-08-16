@@ -157,3 +157,33 @@ func (r *BuildingRepository) MobileExistsForBrokerExcluding(mobile, brokerID, ex
 	}
 	return count > 0, nil
 }
+
+// GetByIDs retrieves multiple building contacts by their IDs
+func (r *BuildingRepository) GetByIDs(ids []string) ([]models.BuildingContact, error) {
+	if len(ids) == 0 {
+		return []models.BuildingContact{}, nil
+	}
+
+	query := `SELECT ` + buildingSelectCols + ` FROM building_contacts WHERE id = ANY($1)`
+	rows, err := r.db.Query(query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query building contacts by IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var contacts []models.BuildingContact
+	for rows.Next() {
+		b, err := scanBuilding(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan building contact: %w", err)
+		}
+		contacts = append(contacts, b)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	if contacts == nil {
+		contacts = []models.BuildingContact{}
+	}
+	return contacts, nil
+}

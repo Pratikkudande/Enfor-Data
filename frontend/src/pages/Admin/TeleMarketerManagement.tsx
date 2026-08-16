@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2, Shield, Edit } from 'lucide-react';
-import { adminGetAllDLTTemplates, adminDeleteDLTTemplate, adminUpdateDLTTemplate } from '../../services/adminDLTApi';
+import { Search, Plus, Eye, Trash2, Shield, Edit, CheckCircle, XCircle } from 'lucide-react';
+import { adminGetAllDLTTemplates, adminDeleteDLTTemplate, adminUpdateDLTTemplate, adminGetSMSProviderStatus, SMSProviderStatus } from '../../services/adminDLTApi';
 import { SMSDLTTemplate, getAvailableHeadersByType, SMSHeader } from '../../services/smsMarketingApi';
 import AddDLTTemplateModal from '../SMSMarketing/Components/AddDLTTemplateModal';
 import SMSHeadersManagement from './Components/SMSHeadersManagement';
@@ -22,9 +22,11 @@ const TeleMarketerManagement: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<SMSDLTTemplate | null>(null);
   const [availableHeaders, setAvailableHeaders] = useState<SMSHeader[]>([]);
   const [loadingHeaders, setLoadingHeaders] = useState(false);
+  const [providerStatus, setProviderStatus] = useState<SMSProviderStatus | null>(null);
 
   useEffect(() => {
     loadTemplates();
+    loadProviderStatus();
   }, []);
 
   useEffect(() => {
@@ -40,6 +42,15 @@ const TeleMarketerManagement: React.FC = () => {
       console.error('Failed to load templates:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProviderStatus = async () => {
+    try {
+      const status = await adminGetSMSProviderStatus();
+      setProviderStatus(status);
+    } catch (error) {
+      console.error('Failed to load provider status:', error);
     }
   };
 
@@ -83,7 +94,13 @@ const TeleMarketerManagement: React.FC = () => {
   };
 
   const handleEdit = (template: SMSDLTTemplate) => {
-    setEditingTemplate(template);
+    // Ensure category has a default value if missing
+    const templateWithCategory = {
+      ...template,
+      category: template.category || 'SERVICES'
+    };
+    console.log('Editing template with category:', templateWithCategory.category);
+    setEditingTemplate(templateWithCategory);
     setShowEditModal(true);
     // Load headers for the template type
     loadAvailableHeaders(template.template_type);
@@ -113,13 +130,23 @@ const TeleMarketerManagement: React.FC = () => {
     e.preventDefault();
     if (!editingTemplate) return;
 
+    // Ensure category has a valid value
+    const category = editingTemplate.category || 'SERVICES';
+    
+    // Validate category is one of the allowed values
+    const validCategories = ['FOR_SALE', 'FOR_RENT', 'FOR_BUY', 'LIST_FOR_RENT', 'SERVICES'];
+    if (!validCategories.includes(category)) {
+      alert('Invalid category selected. Please select a valid category.');
+      return;
+    }
+
     try {
       await adminUpdateDLTTemplate(editingTemplate.id, {
         header: editingTemplate.header,
         template_id: editingTemplate.template_id,
         template_name: editingTemplate.template_name,
         template_type: editingTemplate.template_type,
-        category: editingTemplate.category,
+        category: category,
         provider: editingTemplate.provider,
         template_content: editingTemplate.template_content,
         sample_content: editingTemplate.sample_content || '',
@@ -132,6 +159,8 @@ const TeleMarketerManagement: React.FC = () => {
       loadTemplates();
     } catch (error: any) {
       alert('Failed to update template: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -169,12 +198,35 @@ const TeleMarketerManagement: React.FC = () => {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Shield className="w-7 h-7 text-blue-600" />
-          TeleMarketer Management
-        </h1>
-        <p className="text-gray-600 mt-1">Manage DLT SMS templates and headers across all users</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Shield className="w-7 h-7 text-blue-600" />
+            TeleMarketer Management
+          </h1>
+          <p className="text-gray-600 mt-1">Manage DLT SMS templates and headers across all users</p>
+        </div>
+        
+        {/* SMS Provider Status */}
+        {providerStatus && (
+          <div className="bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 min-w-[200px]">
+            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">SMS PROVIDER</div>
+            <div className="font-semibold text-gray-900 text-lg">{providerStatus.provider}</div>
+            <div className="flex items-center gap-1.5 mt-2">
+              {providerStatus.initialized || providerStatus.connected ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-xs text-green-600 font-medium">Connected</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-red-600" />
+                  <span className="text-xs text-red-600 font-medium">Disconnected</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -595,6 +647,26 @@ const TeleMarketerManagement: React.FC = () => {
                   >
                     <option value="Promotional">Promotional</option>
                     <option value="Service">Service</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={editingTemplate.category}
+                    onChange={(e) =>
+                      setEditingTemplate({ ...editingTemplate, category: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="FOR_SALE">For Sale</option>
+                    <option value="FOR_RENT">For Rent</option>
+                    <option value="FOR_BUY">For Buy</option>
+                    <option value="LIST_FOR_RENT">List For Rent</option>
+                    <option value="SERVICES">Services</option>
                   </select>
                 </div>
 

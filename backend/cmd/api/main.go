@@ -65,6 +65,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	propertyRepo := repository.NewPropertyRepository(db)
 	clientRepo := repository.NewClientRepository(db)
+	clientRequirementRepo := repository.NewClientRequirementRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
 	networkRepo := repository.NewNetworkRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
@@ -93,7 +94,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo, networkRepo, userRepo)
 	whatsappService := service.NewWhatsAppService(whatsappRepo, clientRepo)
 	whatsappSetupService := service.NewMetaWhatsAppSetupService(whatsappRepo)
-	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, smsService, cfg)
+	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, buildingRepo, smsService, cfg)
 	otpService := service.NewOTPService(otpRepo, userRepo, smsService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo, userRepo)
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
@@ -105,6 +106,7 @@ func main() {
 	staffService := service.NewStaffService(staffRepo)
 	adminService := service.NewAdminService(adminRepo, userRepo, authService)
 	adminService.SetSMSMarketingRepo(smsMarketingRepo) // Set SMS marketing repo for DLT template management
+	adminService.SetSMSMarketingService(smsMarketingService) // Set SMS marketing service for provider info
 	
 	// Initialize appointment reminder service
 	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
@@ -119,6 +121,7 @@ func main() {
 	propertyHandler := handler.NewPropertyHandler(propertyService, notificationService)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	clientHandler := handler.NewClientHandler(clientService)
+	clientRequirementHandler := handler.NewClientRequirementHandler(clientRequirementRepo)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
 	networkHandler := handler.NewNetworkHandler(networkService, hub)
 	whatsappHandler := handler.NewWhatsAppHandler(whatsappService, whatsappSetupService)
@@ -354,6 +357,14 @@ func main() {
 			protected.PUT("/clients/:id", clientHandler.UpdateClient)
 			protected.DELETE("/clients/:id", clientHandler.DeleteClient)
 
+			// Client Requirement routes
+			protected.GET("/client-requirements", clientRequirementHandler.GetRequirements)
+			protected.POST("/client-requirements", clientRequirementHandler.CreateRequirement)
+			protected.GET("/client-requirements/:id", clientRequirementHandler.GetRequirement)
+			protected.GET("/client-requirements/client/:clientId", clientRequirementHandler.GetRequirementsByClient)
+			protected.PUT("/client-requirements/:id", clientRequirementHandler.UpdateRequirement)
+			protected.DELETE("/client-requirements/:id", clientRequirementHandler.DeleteRequirement)
+
 			// Appointment routes (accessible to all authenticated users)
 			protected.POST("/appointments", appointmentHandler.CreateAppointment)
 			protected.GET("/appointments", appointmentHandler.GetAppointments)
@@ -572,6 +583,7 @@ func main() {
 				admin.POST("/users/:id/login-as", adminHandler.LoginAsBroker)
 				admin.GET("/revenue", adminHandler.GetRevenue)
 				admin.GET("/sms", adminHandler.GetSMS)
+				admin.GET("/sms/provider-status", adminHandler.GetSMSProviderStatus)
 				admin.GET("/audit-logs", adminHandler.GetAuditLogs)
 				admin.GET("/announcements", adminHandler.GetAnnouncements)
 				admin.POST("/announcements", adminHandler.CreateAnnouncement)

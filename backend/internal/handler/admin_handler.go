@@ -160,6 +160,12 @@ func (h *AdminHandler) GetSMS(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse{Data: stats})
 }
 
+// GET /admin/sms/provider-status
+func (h *AdminHandler) GetSMSProviderStatus(c *gin.Context) {
+	providerInfo := h.adminService.GetSMSProviderInfo()
+	c.JSON(http.StatusOK, providerInfo)
+}
+
 // GET /admin/audit-logs
 func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -464,6 +470,7 @@ func (h *AdminHandler) UpdateDLTTemplate(c *gin.Context) {
 		TemplateID      *string `json:"template_id"`
 		TemplateName    string  `json:"template_name" binding:"required"`
 		TemplateType    string  `json:"template_type" binding:"required"`
+		Category        string  `json:"category" binding:"required"`
 		Provider        *string `json:"provider"`
 		TemplateContent string  `json:"template_content" binding:"required"`
 		SampleContent   string  `json:"sample_content"`
@@ -502,6 +509,7 @@ func (h *AdminHandler) UpdateDLTTemplate(c *gin.Context) {
 		TemplateID:      req.TemplateID,
 		TemplateName:    req.TemplateName,
 		TemplateType:    req.TemplateType,
+		Category:        req.Category,
 		Provider:        req.Provider,
 		TemplateContent: req.TemplateContent,
 		SampleContent:   sampleContentPtr,

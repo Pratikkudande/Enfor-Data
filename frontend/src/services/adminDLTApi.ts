@@ -69,3 +69,18 @@ export const adminDeleteSMSHeader = async (headerId: string) => {
   const response = await api.delete(`/admin/sms-headers/${headerId}`);
   return response;
 };
+
+// Get SMS Provider Status
+export interface SMSProviderStatus {
+  provider: string;
+  enabled: boolean;
+  initialized: boolean;
+  connected?: boolean;
+  sender_id?: string;
+  auth_key_set?: boolean;
+}
+
+export const adminGetSMSProviderStatus = async (): Promise<SMSProviderStatus> => {
+  const response = await api.get<SMSProviderStatus>('/admin/sms/provider-status');
+  return response;
+};

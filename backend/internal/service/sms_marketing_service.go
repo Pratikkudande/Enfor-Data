@@ -10,23 +10,26 @@ import (
 )
 
 type SMSMarketingService struct {
-	repo       *repository.SMSMarketingRepository
-	clientRepo *repository.ClientRepository
-	smsService *SMSService
-	config     *config.Config
+	repo         *repository.SMSMarketingRepository
+	clientRepo   *repository.ClientRepository
+	buildingRepo *repository.BuildingRepository
+	smsService   *SMSService
+	config       *config.Config
 }
 
 func NewSMSMarketingService(
 	repo *repository.SMSMarketingRepository,
 	clientRepo *repository.ClientRepository,
+	buildingRepo *repository.BuildingRepository,
 	smsService *SMSService,
 	config *config.Config,
 ) *SMSMarketingService {
 	return &SMSMarketingService{
-		repo:       repo,
-		clientRepo: clientRepo,
-		smsService: smsService,
-		config:     config,
+		repo:         repo,
+		clientRepo:   clientRepo,
+		buildingRepo: buildingRepo,
+		smsService:   smsService,
+		config:       config,
 	}
 }
 
@@ -411,7 +414,7 @@ func (s *SMSMarketingService) DeleteDLTTemplate(templateID, userID string) error
 }
 
 // SendDLTMessage sends SMS using a DLT template with variable substitution
-func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variableValues map[string]string, clientIDs []string) (int, int, error) {
+func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variableValues map[string]string, clientIDs []string, buildingContactIDs []string) (int, int, error) {
 	// Get DLT template
 	template, err := s.repo.GetDLTTemplateByID(templateID, userID)
 	if err != nil {
@@ -429,6 +432,7 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 	successful := 0
 	failed := 0
 
+	// Send to clients
 	for _, clientID := range clientIDs {
 		// Get client details
 		client, err := s.clientRepo.GetByID(clientID)
@@ -471,6 +475,56 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 				MessageType:    "individual",
 				MessageText:    message,
 				RecipientPhone: client.Phone,
+				Status:         "sent",
+			}
+			s.repo.CreateMessageLog(log)
+		}
+
+		// Rate limiting: 1 message per second
+		time.Sleep(1 * time.Second)
+	}
+
+	// Send to building contacts
+	for _, contactID := range buildingContactIDs {
+		// Get building contact details
+		contact, err := s.buildingRepo.GetByID(contactID)
+		if err != nil || contact == nil {
+			failed++
+			continue
+		}
+
+		// Verify ownership
+		if contact.BrokerID != userID {
+			failed++
+			continue
+		}
+
+		// Build message from template by replacing variables
+		message := s.buildMessageFromTemplate(template.TemplateContent, variableValues)
+
+		// Send SMS
+		err = s.smsService.SendSMS(contact.MobileNumber, message)
+		if err != nil {
+			failed++
+			// Log failed message
+			errMsg := err.Error()
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: contact.MobileNumber,
+				Status:         "failed",
+				ErrorMessage:   &errMsg,
+			}
+			s.repo.CreateMessageLog(log)
+		} else {
+			successful++
+			// Log successful message
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: contact.MobileNumber,
 				Status:         "sent",
 			}
 			s.repo.CreateMessageLog(log)

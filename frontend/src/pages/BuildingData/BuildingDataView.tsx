@@ -310,7 +310,6 @@ const BuildingDataView: React.FC = () => {
                           <div className="font-semibold text-gray-900">
                             {contact.building_name || <span className="text-gray-400 italic">No Building Name</span>}
                           </div>
-                          <div className="text-xs text-gray-400 font-mono">ID: {contact.id.slice(0, 8)}…</div>
                         </div>
                       </div>
                     </td>

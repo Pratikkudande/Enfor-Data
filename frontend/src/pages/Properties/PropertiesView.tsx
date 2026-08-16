@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Building } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { Property } from '../../types';
 import { apiClient, ClientOption, CreatePropertyRequest, UpdatePropertyRequest } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const PropertiesView: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
   const currentUserId = user?.id ?? '';
 
@@ -56,7 +57,15 @@ const PropertiesView: React.FC = () => {
       nextParams.delete('openAdd');
       setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams]);
+    
+    // Check if we're coming from client card with pre-filled client info
+    const state = location.state as { openAdd?: boolean; clientId?: string; clientName?: string } | null;
+    if (state?.openAdd && state?.clientId) {
+      handleOpenCreateModalWithClient(state.clientId);
+      // Clear the state after using it
+      window.history.replaceState({}, document.title);
+    }
+  }, [searchParams, location.state]);
 
   const showTimedSuccessMessage = (message: string) => {
     setSuccessMessage(message);
@@ -219,6 +228,14 @@ const PropertiesView: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     fetchClients(); resetFormState(); setFormMode('create'); setShowFormModal(true);
+  };
+
+  const handleOpenCreateModalWithClient = async (clientId: string) => {
+    await fetchClients();
+    resetFormState();
+    setFormData((prev) => ({ ...prev, clientId }));
+    setFormMode('create');
+    setShowFormModal(true);
   };
 
   const handleViewProperty = async (propertyId: string) => {

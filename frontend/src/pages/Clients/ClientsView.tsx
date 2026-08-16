@@ -15,8 +15,10 @@ const ClientsView: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedClientType, setSelectedClientType] = useState<'buyer' | 'seller' | 'tenant' | 'list_property_for_rent'>('buyer');
+  const [selectedClientTypes, setSelectedClientTypes] = useState<string[]>(['buyer']); // Multiple types support
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editingClientType, setEditingClientType] = useState<ApiClient['type'] | null>(null);
+  const [originalFormData, setOriginalFormData] = useState<any>(null);
 
   const [realClients, setRealClients] = useState<ApiClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,6 @@ const ClientsView: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isExpectedAmountType = (type: string) => type !== 'buyer' && type !== 'tenant';
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -66,26 +67,22 @@ const ClientsView: React.FC = () => {
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', location: '', contactNo: '', email: '',
-    address: '', city: '', state: '', postalCode: '', enquiry: '',
-    budgetMin: '', budgetMax: '', expectedAmount: '',
-    minPrice: '', maxPrice: '', propertyAddress: '',
-    buildupArea: '', carpetArea: '', measurementUnit: '',
-    depositBudget: '',
+    city: '', state: '', postalCode: '',
+    budgetMin: '', budgetMax: '',
   });
 
   const resetFormState = () => {
     setFormData({
       firstName: '', lastName: '', location: '', contactNo: '', email: '',
-      address: '', city: '', state: '', postalCode: '', enquiry: '',
-      budgetMin: '', budgetMax: '', expectedAmount: '',
-      minPrice: '', maxPrice: '', propertyAddress: '',
-      buildupArea: '', carpetArea: '', measurementUnit: '',
-      depositBudget: '',
+      city: '', state: '', postalCode: '',
+      budgetMin: '', budgetMax: '',
     });
     setSelectedClientType('buyer');
+    setSelectedClientTypes(['buyer']); // Reset to single buyer type
     setEditingClientId(null);
     setEditingClientType(null);
     setIsViewMode(false);
+    setOriginalFormData(null);
   };
 
   const openAddModal = () => { resetFormState(); setIsViewMode(false); setShowAddModal(true); };
@@ -95,36 +92,52 @@ const ClientsView: React.FC = () => {
     setIsViewMode(false);
     setEditingClientId(client.id);
     setEditingClientType(client.type);
-    setSelectedClientType(
+    
+    // Handle multiple types if available
+    const clientTypes = (client as any).types || [client.type];
+    setSelectedClientTypes(clientTypes);
+    
+    const clientTypeForForm = 
       client.type === 'seller' || client.type === 'tenant' || client.type === 'list_property_for_rent'
         ? client.type
         : client.type === 'owner'
           ? 'seller'
-        : 'buyer'
-    );
+        : 'buyer';
+    
+    setSelectedClientType(clientTypeForForm);
 
-    setFormData({
+    const formDataObj = {
       firstName: client.first_name, lastName: client.last_name,
       location: client.preferred_location, contactNo: client.phone,
-      email: client.email, address: client.address ?? '', city: client.city ?? '',
-      state: client.state ?? '', postalCode: client.postal_code ?? '',
-      enquiry: client.requirements,
+      email: client.email, city: client.city ?? '', state: client.state ?? '',
+      postalCode: client.postal_code ?? '',
       budgetMin: client.budget_min ? client.budget_min.toString() : '',
       budgetMax: client.budget_max ? client.budget_max.toString() : '',
-      expectedAmount: client.expected_amount ? client.expected_amount.toString() : '',
-      minPrice: (client as any).min_price ? (client as any).min_price.toString() : '',
-      maxPrice: (client as any).max_price ? (client as any).max_price.toString() : '',
-      propertyAddress: (client as any).property_address ?? '',
-      buildupArea: (client as any).buildup_area ? (client as any).buildup_area.toString() : '',
-      carpetArea: (client as any).carpet_area ? (client as any).carpet_area.toString() : '',
-      measurementUnit: (client as any).measurement_unit ?? '',
-      depositBudget: (client as any).deposit_budget ? (client as any).deposit_budget.toString() : '',
-    });
+      types: clientTypes,
+    };
+    
+    setFormData(formDataObj);
+    setOriginalFormData({ data: formDataObj, type: clientTypeForForm, types: clientTypes });
     setShowAddModal(true);
   };
 
   const openViewModal = (client: ApiClient) => {
     openEditModal(client);
+    setIsViewMode(true);
+  };
+
+  const handleEditToggle = () => {
+    setIsViewMode(false);
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form data to original values
+    if (originalFormData) {
+      setFormData(originalFormData.data);
+      setSelectedClientType(originalFormData.type);
+      setSelectedClientTypes(originalFormData.types || [originalFormData.type]);
+    }
+    // Switch back to view mode
     setIsViewMode(true);
   };
 
@@ -192,57 +205,26 @@ const ClientsView: React.FC = () => {
         email: formData.email.trim() || undefined,
         phone: formData.contactNo,
         type: editingClientType === 'owner' ? 'owner' : selectedClientType,
+        types: selectedClientTypes.length > 0 ? selectedClientTypes : undefined, // Send multiple types
         preferred_location: formData.location.trim() || undefined,
-        address: formData.address.trim() || undefined,
         city: formData.city.trim() || undefined,
         state: formData.state.trim() || undefined,
         postal_code: formData.postalCode.trim() || undefined,
-        requirements: formData.enquiry.trim() || undefined,
       };
 
-      if (isExpectedAmountType(selectedClientType)) {
-        if (!formData.expectedAmount.trim()) {
-          setFormError('Expected Amount is required for this client type');
-          return;
-        }
-        const amount = parseFloat(formData.expectedAmount);
-        if (isNaN(amount) || amount <= 0) {
-          setFormError('Expected Amount must be a valid number greater than 0');
-          return;
-        }
-        clientData.expected_amount = amount;
-      } else {
-        if (formData.budgetMin.trim()) {
-          const min = parseFloat(formData.budgetMin);
-          if (isNaN(min) || min <= 0) { setFormError('Min Budget must be a valid number greater than 0'); return; }
-          clientData.budget_min = min;
-        }
-        if (formData.budgetMax.trim()) {
-          const max = parseFloat(formData.budgetMax);
-          if (isNaN(max) || max <= 0) { setFormError('Max Budget must be a valid number greater than 0'); return; }
-          clientData.budget_max = max;
-        }
-        if (clientData.budget_min && clientData.budget_max && clientData.budget_min > clientData.budget_max) {
-          setFormError('Min Budget cannot be greater than Max Budget');
-          return;
-        }
+      if (formData.budgetMin.trim()) {
+        const min = parseFloat(formData.budgetMin);
+        if (isNaN(min) || min <= 0) { setFormError('Min Budget must be a valid number greater than 0'); return; }
+        clientData.budget_min = min;
       }
-
-      // Sell Property fields
-      if (selectedClientType === 'seller') {
-        if (formData.minPrice.trim()) clientData.min_price = parseFloat(formData.minPrice);
-        if (formData.maxPrice.trim()) clientData.max_price = parseFloat(formData.maxPrice);
-        if (formData.propertyAddress.trim()) clientData.property_address = formData.propertyAddress.trim();
+      if (formData.budgetMax.trim()) {
+        const max = parseFloat(formData.budgetMax);
+        if (isNaN(max) || max <= 0) { setFormError('Max Budget must be a valid number greater than 0'); return; }
+        clientData.budget_max = max;
       }
-
-      // Area fields
-      if (formData.buildupArea.trim()) clientData.buildup_area = parseFloat(formData.buildupArea);
-      if (formData.carpetArea.trim()) clientData.carpet_area = parseFloat(formData.carpetArea);
-      if (formData.measurementUnit.trim()) clientData.measurement_unit = formData.measurementUnit;
-
-      // Deposit budget for tenant OR property-for-rent owner
-      if ((selectedClientType === 'tenant' || selectedClientType === 'list_property_for_rent') && formData.depositBudget.trim()) {
-        clientData.deposit_budget = parseFloat(formData.depositBudget);
+      if (clientData.budget_min && clientData.budget_max && clientData.budget_min > clientData.budget_max) {
+        setFormError('Min Budget cannot be greater than Max Budget');
+        return;
       }
 
       const response = editingClientId
@@ -252,11 +234,14 @@ const ClientsView: React.FC = () => {
       if (response.data) {
         if (editingClientId) {
           setRealClients(prev => prev.map(c => c.id === response.data!.id ? response.data! : c));
+          // After saving, switch back to view mode instead of closing
+          setIsViewMode(true);
+          showSuccess('Client updated successfully!');
         } else {
           setRealClients(prev => [response.data!, ...prev]);
+          showSuccess('Client added successfully!');
+          closeModal();
         }
-        showSuccess(editingClientId ? 'Client updated successfully!' : 'Client added successfully!');
-        closeModal();
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to save client';
@@ -380,7 +365,6 @@ const ClientsView: React.FC = () => {
               getStatusColor={getStatusColor}
               formatBudget={formatBudget}
               onView={openViewModal}
-              onEdit={openEditModal}
               onDelete={handleDeleteClient}
               isDeleting={deletingClientId === client.id}
             />
@@ -403,6 +387,7 @@ const ClientsView: React.FC = () => {
         <ClientForm
           formData={formData}
           selectedClientType={selectedClientType}
+          selectedClientTypes={selectedClientTypes}
           editingClientId={editingClientId}
           isViewOnly={isViewMode}
           submitting={submitting}
@@ -413,8 +398,11 @@ const ClientsView: React.FC = () => {
             setFormData({ ...formData, [e.target.name]: value });
           }}
           onTypeChange={setSelectedClientType}
+          onTypesChange={setSelectedClientTypes}
           onSubmit={handleFormSubmit}
           onCancel={closeModal}
+          onEditToggle={handleEditToggle}
+          onCancelEdit={handleCancelEdit}
         />
       )}
 

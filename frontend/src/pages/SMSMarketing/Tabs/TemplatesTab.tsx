@@ -83,6 +83,23 @@ const TemplatesTab: React.FC = () => {
     }
   };
 
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'FOR_SALE':
+        return 'For Sale';
+      case 'FOR_RENT':
+        return 'For Rent';
+      case 'FOR_BUY':
+        return 'For Buy';
+      case 'LIST_FOR_RENT':
+        return 'List For Rent';
+      case 'SERVICES':
+        return 'Services';
+      default:
+        return category;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -127,6 +144,11 @@ const TemplatesTab: React.FC = () => {
                     <span className="inline-block px-2 py-0.5 bg-purple-100 text-purple-800 text-xs font-medium rounded">
                       {template.template_type}
                     </span>
+                    {template.category && (
+                      <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-800 text-xs font-medium rounded">
+                        {getCategoryLabel(template.category)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 {canEditOrDelete(template) && (

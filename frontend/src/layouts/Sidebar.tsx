@@ -18,6 +18,7 @@ import {
   CreditCard,
   Bell,
   HardHat,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,6 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentSection, onSectionChan
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'properties', label: 'Properties', icon: Building },
     { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'client-requirements', label: 'Client Requirements', icon: ClipboardList },
     { id: 'building-data', label: 'Building Data', icon: Building2 },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'notifications', label: 'Notifications', icon: Bell },

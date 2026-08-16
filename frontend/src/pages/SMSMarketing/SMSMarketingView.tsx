@@ -133,56 +133,11 @@ const SMSMarketingView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">SMS Marketing</h1>
             <p className="text-sm text-gray-600 mt-1">
-              Send SMS campaigns to your clients using {providerInfo.provider}
+              Send SMS campaigns to your clients
             </p>
-          </div>
-          <div className="flex items-center gap-4">
-            {/* Display Provider Info */}
-            <div className="text-right bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
-              <div className="text-xs text-gray-500 uppercase tracking-wide">SMS Provider</div>
-              <div className="font-semibold text-gray-900 mt-0.5">{providerInfo.provider}</div>
-              {providerInfo.sender_id && (
-                <div className="text-xs text-gray-600 mt-1">
-                  Sender ID: {providerInfo.sender_id}
-                </div>
-              )}
-              {providerInfo.initialized && (
-                <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                  Connected
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => setShowSetup(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
           </div>
         </div>
       </div>
-
-      {/* Connection Status Banner - Only show if provider is not initialized */}
-      {!isConnected && !providerInfo.initialized && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span className="text-sm text-yellow-800">
-                SMS account not connected. Connect your {providerInfo.provider} account to start sending messages.
-              </span>
-            </div>
-            <button
-              onClick={() => setShowSetup(true)}
-              className="text-sm font-medium text-yellow-800 hover:text-yellow-900 underline"
-            >
-              Connect Now
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-6">

@@ -9,6 +9,7 @@ export const ROUTES = {
   PROPERTIES: '/properties',
   SMS_MARKETING: '/sms-marketing',
   CLIENTS: '/clients',
+  CLIENT_REQUIREMENTS: '/client-requirements',
   APPOINTMENTS: '/appointments',
   NETWORK: '/network',
   CHANNEL_PARTNERS: '/channel-partners',
