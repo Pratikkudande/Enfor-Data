@@ -34,6 +34,35 @@ func NewSMSMarketingService(
 // Account Management
 // ============================================================
 
+func (s *SMSMarketingService) GetProviderInfo() map[string]interface{} {
+	providerName := s.smsService.GetProviderName()
+	enabled := s.smsService.IsInitialized()
+	
+	// Get additional provider details
+	var senderID string
+	var authKeySet bool
+	
+	switch s.config.SMS.Provider {
+	case "fast2sms":
+		senderID = s.config.Fast2SMS.SenderID
+		authKeySet = s.config.Fast2SMS.AuthKey != ""
+	case "msg91":
+		senderID = s.config.MSG91.SenderID
+		authKeySet = s.config.MSG91.AuthKey != ""
+	default:
+		senderID = s.config.MSG91.SenderID
+		authKeySet = s.config.MSG91.AuthKey != ""
+	}
+	
+	return map[string]interface{}{
+		"provider":     providerName,
+		"enabled":      enabled,
+		"sender_id":    senderID,
+		"auth_key_set": authKeySet,
+		"initialized":  enabled,
+	}
+}
+
 func (s *SMSMarketingService) GetAccountStatus(userID string) (*models.SMSAccount, error) {
 	account, err := s.repo.GetAccountByUserID(userID)
 	if err != nil {
@@ -44,17 +73,32 @@ func (s *SMSMarketingService) GetAccountStatus(userID string) (*models.SMSAccoun
 }
 
 func (s *SMSMarketingService) ConnectAccountWithServerConfig(userID string) error {
-	// Check if MSG91 is enabled and configured
-	if !s.config.MSG91.Enabled {
-		return fmt.Errorf("MSG91 SMS service is not enabled")
+	// Check which provider is configured
+	switch s.config.SMS.Provider {
+	case "fast2sms":
+		// Check if Fast2SMS is enabled and configured
+		if !s.config.Fast2SMS.Enabled {
+			return fmt.Errorf("Fast2SMS SMS service is not enabled")
+		}
+		if s.config.Fast2SMS.AuthKey == "" || s.config.Fast2SMS.SenderID == "" {
+			return fmt.Errorf("Fast2SMS credentials not configured on server")
+		}
+		// Use server-configured Fast2SMS credentials
+		return s.ConnectAccount(userID, s.config.Fast2SMS.AuthKey, s.config.Fast2SMS.SenderID)
+		
+	case "msg91":
+		fallthrough
+	default:
+		// Check if MSG91 is enabled and configured
+		if !s.config.MSG91.Enabled {
+			return fmt.Errorf("MSG91 SMS service is not enabled")
+		}
+		if s.config.MSG91.AuthKey == "" || s.config.MSG91.SenderID == "" {
+			return fmt.Errorf("MSG91 credentials not configured on server")
+		}
+		// Use server-configured MSG91 credentials
+		return s.ConnectAccount(userID, s.config.MSG91.AuthKey, s.config.MSG91.SenderID)
 	}
-	
-	if s.config.MSG91.AuthKey == "" || s.config.MSG91.SenderID == "" {
-		return fmt.Errorf("MSG91 credentials not configured on server")
-	}
-
-	// Use server-configured credentials
-	return s.ConnectAccount(userID, s.config.MSG91.AuthKey, s.config.MSG91.SenderID)
 }
 
 func (s *SMSMarketingService) ConnectAccount(userID, authKey, senderID string) error {
@@ -336,28 +380,173 @@ func (s *SMSMarketingService) GetCampaignDetails(campaignID, userID string) (*mo
 }
 
 // ============================================================
-// Templates
+// DLT Templates
 // ============================================================
 
-func (s *SMSMarketingService) CreateTemplate(userID, name, category, text string, variables []string) error {
-	template := &models.SMSMessageTemplate{
-		UserID:       userID,
-		Name:         name,
-		Category:     category,
-		TemplateText: text,
-		Variables:    variables,
-		UsageCount:   0,
+func (s *SMSMarketingService) CreateDLTTemplate(userID string, template *models.SMSDLTTemplate) error {
+	template.UserID = userID
+	template.UpdatedBy = &userID // Set created by user
+	return s.repo.CreateDLTTemplate(template)
+}
+
+func (s *SMSMarketingService) GetDLTTemplates(userID string) ([]models.SMSDLTTemplate, error) {
+	return s.repo.GetDLTTemplatesByUserID(userID)
+}
+
+// GetAvailableTemplatesForSending gets active/approved templates created by admin or the broker for send message tab
+func (s *SMSMarketingService) GetAvailableTemplatesForSending(userID string) ([]models.SMSDLTTemplate, error) {
+	return s.repo.GetAvailableTemplatesForBroker(userID)
+}
+
+func (s *SMSMarketingService) GetDLTTemplateByID(templateID, userID string) (*models.SMSDLTTemplate, error) {
+	return s.repo.GetDLTTemplateByID(templateID, userID)
+}
+
+func (s *SMSMarketingService) UpdateDLTTemplate(template *models.SMSDLTTemplate) error {
+	return s.repo.UpdateDLTTemplate(template)
+}
+
+func (s *SMSMarketingService) DeleteDLTTemplate(templateID, userID string) error {
+	return s.repo.DeleteDLTTemplate(templateID, userID)
+}
+
+// SendDLTMessage sends SMS using a DLT template with variable substitution
+func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variableValues map[string]string, clientIDs []string) (int, int, error) {
+	// Get DLT template
+	template, err := s.repo.GetDLTTemplateByID(templateID, userID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get template: %w", err)
+	}
+	if template == nil {
+		return 0, 0, fmt.Errorf("template not found")
 	}
 
-	return s.repo.CreateTemplate(template)
+	// Check if template is active
+	if template.Status != "Active" && template.Status != "Approved" {
+		return 0, 0, fmt.Errorf("template is not active (status: %s)", template.Status)
+	}
+
+	successful := 0
+	failed := 0
+
+	for _, clientID := range clientIDs {
+		// Get client details
+		client, err := s.clientRepo.GetByID(clientID)
+		if err != nil || client == nil {
+			failed++
+			continue
+		}
+
+		// Verify ownership
+		if client.BrokerID != userID {
+			failed++
+			continue
+		}
+
+		// Build message from template by replacing variables
+		message := s.buildMessageFromTemplate(template.TemplateContent, variableValues)
+
+		// Send SMS
+		err = s.smsService.SendSMS(client.Phone, message)
+		if err != nil {
+			failed++
+			// Log failed message
+			errMsg := err.Error()
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				ClientID:       &clientID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: client.Phone,
+				Status:         "failed",
+				ErrorMessage:   &errMsg,
+			}
+			s.repo.CreateMessageLog(log)
+		} else {
+			successful++
+			// Log successful message
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				ClientID:       &clientID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: client.Phone,
+				Status:         "sent",
+			}
+			s.repo.CreateMessageLog(log)
+		}
+
+		// Rate limiting: 1 message per second
+		time.Sleep(1 * time.Second)
+	}
+
+	return successful, failed, nil
 }
 
-func (s *SMSMarketingService) GetTemplates(userID string) ([]models.SMSMessageTemplate, error) {
-	return s.repo.GetTemplatesByUserID(userID)
+// buildMessageFromTemplate replaces {#var#} or {#alp#} placeholders with actual values
+func (s *SMSMarketingService) buildMessageFromTemplate(templateContent string, variableValues map[string]string) string {
+	message := templateContent
+	
+	// Replace variables sequentially (var1, var2, var3, etc.)
+	// This works for both {#var#} and {#alp#} patterns
+	varIndex := 1
+	for {
+		varKey := fmt.Sprintf("var%d", varIndex)
+		value, exists := variableValues[varKey]
+		if !exists {
+			break
+		}
+		
+		// Try to replace {#alp#} first (most common in DLT templates)
+		if indexOf(message, "{#alp#}") != -1 {
+			message = replaceFirst(message, "{#alp#}", value)
+		} else if indexOf(message, "{#var#}") != -1 {
+			// Fallback to {#var#}
+			message = replaceFirst(message, "{#var#}", value)
+		} else {
+			// No more placeholders found
+			break
+		}
+		
+		varIndex++
+	}
+	
+	return message
 }
 
-func (s *SMSMarketingService) DeleteTemplate(templateID, userID string) error {
-	return s.repo.DeleteTemplate(templateID, userID)
+// Helper function to replace all occurrences
+func replaceAll(str, old, new string) string {
+	result := ""
+	remaining := str
+	for {
+		index := indexOf(remaining, old)
+		if index == -1 {
+			result += remaining
+			break
+		}
+		result += remaining[:index] + new
+		remaining = remaining[index+len(old):]
+	}
+	return result
+}
+
+// Helper function to replace first occurrence
+func replaceFirst(str, old, new string) string {
+	index := indexOf(str, old)
+	if index == -1 {
+		return str
+	}
+	return str[:index] + new + str[index+len(old):]
+}
+
+// Helper function to find index of substring
+func indexOf(str, substr string) int {
+	for i := 0; i <= len(str)-len(substr); i++ {
+		if str[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
 
 // ============================================================
@@ -417,4 +606,46 @@ func (s *SMSMarketingService) GetStats(userID string) (map[string]interface{}, e
 	}
 
 	return stats, nil
+}
+
+// ============================================================
+// SMS Header Management
+// ============================================================
+
+func (s *SMSMarketingService) CreateSMSHeader(userID string, header *models.SMSHeader) error {
+	header.UserID = userID
+	header.CreatedBy = userID
+	return s.repo.CreateSMSHeader(header)
+}
+
+func (s *SMSMarketingService) GetSMSHeaders(userID string) ([]models.SMSHeader, error) {
+	return s.repo.GetSMSHeadersByUserID(userID)
+}
+
+func (s *SMSMarketingService) GetSMSHeaderByID(headerID, userID string) (*models.SMSHeader, error) {
+	return s.repo.GetSMSHeaderByID(headerID, userID)
+}
+
+func (s *SMSMarketingService) UpdateSMSHeader(header *models.SMSHeader) error {
+	return s.repo.UpdateSMSHeader(header)
+}
+
+func (s *SMSMarketingService) DeleteSMSHeader(headerID, userID string) error {
+	return s.repo.DeleteSMSHeader(headerID, userID)
+}
+
+// Admin methods
+func (s *SMSMarketingService) GetAllSMSHeaders() ([]models.SMSHeader, error) {
+	return s.repo.GetAllSMSHeaders()
+}
+
+func (s *SMSMarketingService) GetSMSHeaderByIDAdmin(headerID string) (*models.SMSHeader, error) {
+	return s.repo.GetSMSHeaderByIDAdmin(headerID)
+}
+
+// GetAvailableHeadersByType gets available headers for dropdown based on template type
+// For admin: returns all active/approved headers
+// For broker: returns headers created by admin or that broker with active/approved status
+func (s *SMSMarketingService) GetAvailableHeadersByType(userID, userRole, headerType string) ([]models.SMSHeader, error) {
+	return s.repo.GetAvailableHeadersByType(userID, userRole, headerType)
 }

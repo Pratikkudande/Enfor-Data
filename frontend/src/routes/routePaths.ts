@@ -39,6 +39,7 @@ export const ROUTES = {
   ADMIN_USERS: '/admin/users',
   ADMIN_REVENUE: '/admin/revenue',
   ADMIN_SMS: '/admin/sms',
+  ADMIN_TELEMARKETER: '/admin/telemarketer',
   ADMIN_DOWNLOAD: '/admin/download',
   ADMIN_ANNOUNCEMENTS: '/admin/announcements',
   ADMIN_FEEDBACK: '/admin/feedback',

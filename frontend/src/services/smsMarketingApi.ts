@@ -19,6 +19,20 @@ export interface SMSAccount {
   updated_at: string;
 }
 
+export interface SMSProviderInfo {
+  provider: string;
+  enabled: boolean;
+  sender_id?: string;
+  auth_key_set?: boolean;
+  initialized?: boolean;
+}
+
+export interface SMSAccountResponse {
+  connected: boolean;
+  account: SMSAccount | null;
+  provider: SMSProviderInfo;
+}
+
 export interface SMSCampaign {
   id: string;
   user_id: string;
@@ -55,18 +69,7 @@ export interface SMSCampaignRecipient {
   updated_at: string;
 }
 
-export interface SMSMessageTemplate {
-  id: string;
-  user_id: string;
-  name: string;
-  category: string;
-  template_text: string;
-  variables?: string[];
-  usage_count: number;
-  last_used_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+
 
 export interface SMSMessageLog {
   id: string;
@@ -91,12 +94,118 @@ export interface SMSStats {
   message_limit: number;
 }
 
+export interface SMSDLTTemplate {
+  id: string;
+  user_id: string;
+  created_by_name?: string;
+  header: string;
+  template_id?: string;
+  template_name: string;
+  template_type: 'Promotional' | 'Service';
+  category: 'FOR_SALE' | 'FOR_RENT' | 'FOR_BUY' | 'LIST_FOR_RENT' | 'SERVICES';
+  provider?: string;
+  template_content: string;
+  sample_content?: string;
+  status: 'Registered' | 'Approved' | 'Active' | 'Inactive' | 'Rejected' | 'Created';
+  variable_count: number;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDLTTemplateRequest {
+  header: string;
+  template_id?: string;
+  template_name: string;
+  template_type: 'Promotional' | 'Service';
+  category: 'FOR_SALE' | 'FOR_RENT' | 'FOR_BUY' | 'LIST_FOR_RENT' | 'SERVICES';
+  provider?: string;
+  template_content: string;
+  sample_content?: string;
+  status: 'Registered' | 'Approved' | 'Active' | 'Inactive' | 'Rejected' | 'Created';
+  variable_count: number;
+}
+
+export interface SendDLTMessageRequest {
+  template_id: string;
+  variable_values: Record<string, string>;
+  client_ids: string[];
+}
+
+// ============================================================
+// SMS Headers
+// ============================================================
+
+export interface SMSHeader {
+  id: string;
+  user_id: string;
+  created_by_name?: string;
+  header: string;
+  provider?: string;
+  type: 'Promotional' | 'Service' | 'Implicit';
+  status: 'Created' | 'Approved' | 'Active' | 'Inactive' | 'Rejected';
+  created_by: string;
+  created_at: string;
+  updated_by?: string;
+  updated_at: string;
+}
+
+export interface CreateSMSHeaderRequest {
+  header: string;
+  provider?: string;
+  type: 'Promotional' | 'Service' | 'Implicit';
+  status: string;
+}
+
+export const getSMSHeaders = async (): Promise<{ headers: SMSHeader[] }> => {
+  try {
+    const response = await api.get<{ headers: SMSHeader[] }>('/sms-marketing/headers');
+    // api.get returns the parsed response directly
+    return response || { headers: [] };
+  } catch (error) {
+    console.error('getSMSHeaders error:', error);
+    return { headers: [] };
+  }
+};
+
+export const getSMSHeader = async (headerId: string): Promise<{ header: SMSHeader }> => {
+  const response = await api.get<{ header: SMSHeader }>(`/sms-marketing/headers/${headerId}`);
+  return response;
+};
+
+export const createSMSHeader = async (data: CreateSMSHeaderRequest) => {
+  const response = await api.post('/sms-marketing/headers', data);
+  return response;
+};
+
+export const updateSMSHeader = async (headerId: string, data: Partial<CreateSMSHeaderRequest>) => {
+  const response = await api.put(`/sms-marketing/headers/${headerId}`, data);
+  return response;
+};
+
+export const deleteSMSHeader = async (headerId: string) => {
+  const response = await api.delete(`/sms-marketing/headers/${headerId}`);
+  return response;
+};
+
+// Get available headers for dropdown by type (Promotional, Service, Implicit)
+export const getAvailableHeadersByType = async (type: 'Promotional' | 'Service' | 'Implicit'): Promise<{ headers: SMSHeader[] }> => {
+  try {
+    const response = await api.get<{ headers: SMSHeader[] }>(`/sms-marketing/headers/available/${type}`);
+    return response || { headers: [] };
+  } catch (error) {
+    console.error('getAvailableHeadersByType error:', error);
+    return { headers: [] };
+  }
+};
+
 // ============================================================
 // Account Management
 // ============================================================
 
-export const getSMSAccount = async () => {
-  const response = await api.get('/sms-marketing/account');
+export const getSMSAccount = async (): Promise<SMSAccountResponse> => {
+  const response = await api.get<SMSAccountResponse>('/sms-marketing/account');
+  // api.get already returns the parsed data directly
   return response;
 };
 
@@ -154,29 +263,7 @@ export const sendSMSCampaign = async (campaignId: string) => {
   return response.data;
 };
 
-// ============================================================
-// Templates
-// ============================================================
 
-export const getSMSTemplates = async (): Promise<{ templates: SMSMessageTemplate[] }> => {
-  const response = await api.get('/sms-marketing/templates');
-  return response.data;
-};
-
-export const createSMSTemplate = async (data: {
-  name: string;
-  category: string;
-  template_text: string;
-  variables?: string[];
-}) => {
-  const response = await api.post('/sms-marketing/templates', data);
-  return response.data;
-};
-
-export const deleteSMSTemplate = async (templateId: string) => {
-  const response = await api.delete(`/sms-marketing/templates/${templateId}`);
-  return response.data;
-};
 
 // ============================================================
 // Analytics
@@ -190,4 +277,58 @@ export const getSMSMessageLogs = async (): Promise<{ logs: SMSMessageLog[] }> =>
 export const getSMSStats = async (): Promise<{ stats: SMSStats }> => {
   const response = await api.get('/sms-marketing/stats');
   return response.data;
+};
+
+// ============================================================
+// DLT Templates (Regulatory Compliance)
+// ============================================================
+
+export const getDLTTemplates = async (): Promise<{ templates: SMSDLTTemplate[] }> => {
+  try {
+    const response = await api.get<{ templates: SMSDLTTemplate[] }>('/sms-marketing/dlt-templates');
+    // api.get returns the parsed response directly
+    return response;
+  } catch (error) {
+    console.error('getDLTTemplates error:', error);
+    // Return empty array on error
+    return { templates: [] };
+  }
+};
+
+// Get available templates (active/approved) created by admin or the broker - for Send Message tab
+export const getAvailableDLTTemplates = async (): Promise<{ templates: SMSDLTTemplate[] }> => {
+  try {
+    const response = await api.get<{ templates: SMSDLTTemplate[] }>('/sms-marketing/dlt-templates/available');
+    // api.get returns the parsed response directly
+    return response;
+  } catch (error) {
+    console.error('getAvailableDLTTemplates error:', error);
+    // Return empty array on error
+    return { templates: [] };
+  }
+};
+
+export const createDLTTemplate = async (data: CreateDLTTemplateRequest) => {
+  const response = await api.post('/sms-marketing/dlt-templates', data);
+  return response;
+};
+
+export const getDLTTemplate = async (templateId: string): Promise<{ template: SMSDLTTemplate }> => {
+  const response = await api.get<{ template: SMSDLTTemplate }>(`/sms-marketing/dlt-templates/${templateId}`);
+  return response;
+};
+
+export const updateDLTTemplate = async (templateId: string, data: Partial<CreateDLTTemplateRequest>) => {
+  const response = await api.put(`/sms-marketing/dlt-templates/${templateId}`, data);
+  return response;
+};
+
+export const deleteDLTTemplate = async (templateId: string) => {
+  const response = await api.delete(`/sms-marketing/dlt-templates/${templateId}`);
+  return response;
+};
+
+export const sendDLTMessage = async (data: SendDLTMessageRequest) => {
+  const response = await api.post('/sms-marketing/send-dlt', data);
+  return response;
 };

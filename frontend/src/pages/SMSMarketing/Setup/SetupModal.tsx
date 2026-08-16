@@ -1,26 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { connectSMSAccount, disconnectSMSAccount, SMSAccount } from '../../../services/smsMarketingApi';
+import { connectSMSAccount, disconnectSMSAccount, SMSAccount, getSMSAccount, SMSProviderInfo } from '../../../services/smsMarketingApi';
 
 interface SetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
   currentAccount: SMSAccount | null;
+  providerInfo?: SMSProviderInfo;
 }
 
-const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, currentAccount }) => {
+const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, currentAccount, providerInfo: providedProviderInfo }) => {
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [providerInfo, setProviderInfo] = useState<SMSProviderInfo>(providedProviderInfo || { provider: 'MSG91', enabled: false });
+
+  useEffect(() => {
+    console.log('🔍 SetupModal - Provider Info Prop:', providedProviderInfo);
+    // Update provider info if provided via props
+    if (providedProviderInfo) {
+      console.log('✅ SetupModal - Using provided provider info:', providedProviderInfo);
+      setProviderInfo(providedProviderInfo);
+    } else if (isOpen) {
+      console.log('⚠️ SetupModal - No provider info provided, loading from API');
+      // Only load if not provided
+      loadProviderInfo();
+    }
+  }, [isOpen, providedProviderInfo]);
+
+  const loadProviderInfo = async () => {
+    try {
+      const data = await getSMSAccount();
+      // Handle response - data is already the correct structure
+      if (data?.provider) {
+        setProviderInfo(data.provider);
+      }
+    } catch (error) {
+      console.error('Failed to load provider info:', error);
+      // Keep default provider info on error
+    }
+  };
 
   if (!isOpen) return null;
+
+  const providerName = providerInfo.provider;
 
   const handleConnect = async () => {
     try {
       setLoading(true);
       // Send empty object since credentials are configured server-side
       await connectSMSAccount({});
-      alert('MSG91 SMS account connected successfully!');
+      alert(`${providerName} SMS account connected successfully!`);
       onComplete();
     } catch (error: any) {
       alert('Failed to connect: ' + (error.response?.data?.message || error.message));
@@ -61,9 +91,9 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, cu
         <div className="p-6 space-y-6">
           {/* Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">MSG91 SMS Service</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">{providerName} SMS Service</h3>
             <p className="text-sm text-blue-800">
-              Your MSG91 SMS service is pre-configured by your administrator. 
+              Your {providerName} SMS service is pre-configured by your administrator. 
               Click the connect button below to enable SMS messaging for your account.
             </p>
           </div>
@@ -86,7 +116,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, cu
               disabled={loading}
               className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg transition-colors"
             >
-              {loading ? 'Connecting...' : 'Connect MSG91 Account'}
+              {loading ? 'Connecting...' : `Connect ${providerName} Account`}
             </button>
           </div>
         </div>

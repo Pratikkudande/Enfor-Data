@@ -260,49 +260,53 @@ func (r *SMSMarketingRepository) UpdateRecipientStatus(recipientID, status, mess
 }
 
 // ============================================================
-// Template Methods
+// DLT Template Methods
 // ============================================================
 
-func (r *SMSMarketingRepository) CreateTemplate(template *models.SMSMessageTemplate) error {
+func (r *SMSMarketingRepository) CreateDLTTemplate(template *models.SMSDLTTemplate) error {
 	query := `
-		INSERT INTO sms_message_templates (
-			user_id, name, category, template_text, variables, usage_count
-		) VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO sms_dlt_templates (
+			user_id, header, template_id, template_name, template_type, category,
+			provider, template_content, sample_content, status, variable_count, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at, updated_at
 	`
 
 	return r.db.QueryRow(
 		query,
-		template.UserID, template.Name, template.Category, template.TemplateText,
-		template.Variables, template.UsageCount,
+		template.UserID, template.Header, template.TemplateID, template.TemplateName,
+		template.TemplateType, template.Category, template.Provider, template.TemplateContent,
+		template.SampleContent, template.Status, template.VariableCount, template.UpdatedBy,
 	).Scan(&template.ID, &template.CreatedAt, &template.UpdatedAt)
 }
 
-func (r *SMSMarketingRepository) GetTemplatesByUserID(userID string) ([]models.SMSMessageTemplate, error) {
+func (r *SMSMarketingRepository) GetDLTTemplatesByUserID(userID string) ([]models.SMSDLTTemplate, error) {
 	query := `
-		SELECT id, user_id, name, category, template_text, variables, usage_count,
-			   last_used_at, created_at, updated_at
-		FROM sms_message_templates
+		SELECT id, user_id, header, template_id, template_name, template_type, category,
+			   provider, template_content, sample_content, status, variable_count,
+			   updated_by, created_at, updated_at
+		FROM sms_dlt_templates
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get templates: %w", err)
+		return nil, fmt.Errorf("failed to get DLT templates: %w", err)
 	}
 	defer rows.Close()
 
-	var templates []models.SMSMessageTemplate
+	var templates []models.SMSDLTTemplate
 	for rows.Next() {
-		var template models.SMSMessageTemplate
+		var template models.SMSDLTTemplate
 		err := rows.Scan(
-			&template.ID, &template.UserID, &template.Name, &template.Category,
-			&template.TemplateText, &template.Variables, &template.UsageCount,
-			&template.LastUsedAt, &template.CreatedAt, &template.UpdatedAt,
+			&template.ID, &template.UserID, &template.Header, &template.TemplateID,
+			&template.TemplateName, &template.TemplateType, &template.Category, &template.Provider,
+			&template.TemplateContent, &template.SampleContent, &template.Status,
+			&template.VariableCount, &template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan template: %w", err)
+			return nil, fmt.Errorf("failed to scan DLT template: %w", err)
 		}
 		templates = append(templates, template)
 	}
@@ -310,10 +314,261 @@ func (r *SMSMarketingRepository) GetTemplatesByUserID(userID string) ([]models.S
 	return templates, nil
 }
 
-func (r *SMSMarketingRepository) DeleteTemplate(templateID, userID string) error {
-	query := `DELETE FROM sms_message_templates WHERE id = $1 AND user_id = $2`
+// GetAvailableTemplatesForBroker gets active/approved templates created by admin or the broker
+func (r *SMSMarketingRepository) GetAvailableTemplatesForBroker(userID string) ([]models.SMSDLTTemplate, error) {
+	query := `
+		SELECT 
+			t.id, t.user_id, t.header, t.template_id, t.template_name, t.template_type, t.category,
+			t.provider, t.template_content, t.sample_content, t.status, t.variable_count,
+			t.updated_by, t.created_at, t.updated_at
+		FROM sms_dlt_templates t
+		LEFT JOIN users u ON t.user_id = u.id
+		WHERE (t.user_id = $1 OR u.role = 'admin')
+		  AND (t.status = 'Active' OR t.status = 'Approved')
+		ORDER BY t.created_at DESC
+	`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get available DLT templates: %w", err)
+	}
+	defer rows.Close()
+
+	var templates []models.SMSDLTTemplate
+	for rows.Next() {
+		var template models.SMSDLTTemplate
+		err := rows.Scan(
+			&template.ID, &template.UserID, &template.Header, &template.TemplateID,
+			&template.TemplateName, &template.TemplateType, &template.Category, &template.Provider,
+			&template.TemplateContent, &template.SampleContent, &template.Status,
+			&template.VariableCount, &template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan DLT template: %w", err)
+		}
+		templates = append(templates, template)
+	}
+
+	return templates, nil
+}
+
+func (r *SMSMarketingRepository) GetDLTTemplateByID(templateID, userID string) (*models.SMSDLTTemplate, error) {
+	template := &models.SMSDLTTemplate{}
+	query := `
+		SELECT id, user_id, header, template_id, template_name, template_type, category,
+			   provider, template_content, sample_content, status, variable_count,
+			   updated_by, created_at, updated_at
+		FROM sms_dlt_templates
+		WHERE id = $1 AND user_id = $2
+	`
+
+	err := r.db.QueryRow(query, templateID, userID).Scan(
+		&template.ID, &template.UserID, &template.Header, &template.TemplateID,
+		&template.TemplateName, &template.TemplateType, &template.Category, &template.Provider,
+		&template.TemplateContent, &template.SampleContent, &template.Status,
+		&template.VariableCount, &template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DLT template: %w", err)
+	}
+
+	return template, nil
+}
+
+func (r *SMSMarketingRepository) UpdateDLTTemplate(template *models.SMSDLTTemplate) error {
+	query := `
+		UPDATE sms_dlt_templates SET
+			header = $1, template_id = $2, template_name = $3, template_type = $4, category = $5,
+			provider = $6, template_content = $7, sample_content = $8, status = $9,
+			variable_count = $10, updated_by = $11, updated_at = NOW()
+		WHERE id = $12 AND user_id = $13
+	`
+
+	_, err := r.db.Exec(
+		query,
+		template.Header, template.TemplateID, template.TemplateName, template.TemplateType, template.Category,
+		template.Provider, template.TemplateContent, template.SampleContent, template.Status,
+		template.VariableCount, template.UpdatedBy, template.ID, template.UserID,
+	)
+
+	return err
+}
+
+func (r *SMSMarketingRepository) DeleteDLTTemplate(templateID, userID string) error {
+	query := `DELETE FROM sms_dlt_templates WHERE id = $1 AND user_id = $2`
 	_, err := r.db.Exec(query, templateID, userID)
 	return err
+}
+
+// Admin methods - Get all DLT templates across all users
+func (r *SMSMarketingRepository) GetAllDLTTemplates() ([]models.SMSDLTTemplate, error) {
+	query := `
+		SELECT 
+			t.id, t.user_id, 
+			COALESCE(u.first_name || ' ' || u.last_name, u.email) as created_by_name,
+			t.header, t.template_id, t.template_name, t.template_type, t.category,
+			t.provider, t.template_content, t.sample_content, t.status, t.variable_count,
+			t.updated_by, t.created_at, t.updated_at
+		FROM sms_dlt_templates t
+		LEFT JOIN users u ON t.user_id = u.id
+		ORDER BY t.created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all DLT templates: %w", err)
+	}
+	defer rows.Close()
+
+	var templates []models.SMSDLTTemplate
+	for rows.Next() {
+		var template models.SMSDLTTemplate
+		err := rows.Scan(
+			&template.ID, &template.UserID, &template.CreatedByName,
+			&template.Header, &template.TemplateID, &template.TemplateName, 
+			&template.TemplateType, &template.Category, &template.Provider, &template.TemplateContent, 
+			&template.SampleContent, &template.Status, &template.VariableCount, 
+			&template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan DLT template: %w", err)
+		}
+		templates = append(templates, template)
+	}
+
+	return templates, nil
+}
+
+// Admin method - Get DLT template by ID without user restriction
+func (r *SMSMarketingRepository) GetDLTTemplateByIDAdmin(templateID string) (*models.SMSDLTTemplate, error) {
+	template := &models.SMSDLTTemplate{}
+	query := `
+		SELECT 
+			t.id, t.user_id,
+			COALESCE(u.first_name || ' ' || u.last_name, u.email) as created_by_name,
+			t.header, t.template_id, t.template_name, t.template_type, t.category,
+			t.provider, t.template_content, t.sample_content, t.status, t.variable_count,
+			t.updated_by, t.created_at, t.updated_at
+		FROM sms_dlt_templates t
+		LEFT JOIN users u ON t.user_id = u.id
+		WHERE t.id = $1
+	`
+
+	err := r.db.QueryRow(query, templateID).Scan(
+		&template.ID, &template.UserID, &template.CreatedByName,
+		&template.Header, &template.TemplateID, &template.TemplateName, 
+		&template.TemplateType, &template.Category, &template.Provider, &template.TemplateContent, 
+		&template.SampleContent, &template.Status, &template.VariableCount, 
+		&template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DLT template: %w", err)
+	}
+
+	return template, nil
+}
+
+// Admin method - Delete DLT template without user restriction
+func (r *SMSMarketingRepository) DeleteDLTTemplateAdmin(templateID string) error {
+	query := `DELETE FROM sms_dlt_templates WHERE id = $1`
+	_, err := r.db.Exec(query, templateID)
+	return err
+}
+
+// Admin method - Update DLT template without user restriction
+func (r *SMSMarketingRepository) UpdateDLTTemplateAdmin(template *models.SMSDLTTemplate) error {
+	query := `
+		UPDATE sms_dlt_templates 
+		SET header = $1, template_id = $2, template_name = $3, template_type = $4, category = $5,
+		    provider = $6, template_content = $7, sample_content = $8, status = $9,
+		    variable_count = $10, updated_by = $11, updated_at = NOW()
+		WHERE id = $12
+	`
+	_, err := r.db.Exec(query,
+		template.Header,
+		template.TemplateID,
+		template.TemplateName,
+		template.TemplateType,
+		template.Category,
+		template.Provider,
+		template.TemplateContent,
+		template.SampleContent,
+		template.Status,
+		template.VariableCount,
+		template.UpdatedBy,
+		template.ID,
+	)
+	return err
+}
+
+// GetAvailableHeadersByType gets active/approved headers for a specific type
+// For admin: returns all headers of that type with Active/Approved status
+// For broker: returns headers created by admin or that broker with Active/Approved status
+func (r *SMSMarketingRepository) GetAvailableHeadersByType(userID, userRole, headerType string) ([]models.SMSHeader, error) {
+	var query string
+	var args []interface{}
+
+	if userRole == "admin" {
+		// Admin sees all active/approved headers of the specified type
+		query = `
+			SELECT 
+				h.id, h.user_id, h.header, h.provider, h.type, h.status,
+				h.created_by, h.created_at, h.updated_by, h.updated_at,
+				COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.email) as created_by_name
+			FROM sms_headers h
+			LEFT JOIN users u ON h.created_by = u.id
+			WHERE h.type = $1
+			  AND (h.status = 'Active' OR h.status = 'Approved')
+			ORDER BY h.created_at DESC
+		`
+		args = []interface{}{headerType}
+	} else {
+		// Broker sees headers created by admin or themselves with active/approved status
+		query = `
+			SELECT 
+				h.id, h.user_id, h.header, h.provider, h.type, h.status,
+				h.created_by, h.created_at, h.updated_by, h.updated_at,
+				COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.email) as created_by_name
+			FROM sms_headers h
+			LEFT JOIN users u ON h.created_by = u.id
+			LEFT JOIN users creator ON h.created_by = creator.id
+			WHERE h.type = $1
+			  AND (h.status = 'Active' OR h.status = 'Approved')
+			  AND (h.created_by = $2 OR creator.role = 'admin')
+			ORDER BY h.created_at DESC
+		`
+		args = []interface{}{headerType, userID}
+	}
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get available headers: %w", err)
+	}
+	defer rows.Close()
+
+	var headers []models.SMSHeader
+	for rows.Next() {
+		var header models.SMSHeader
+		err := rows.Scan(
+			&header.ID, &header.UserID, &header.Header, &header.Provider, &header.Type, &header.Status,
+			&header.CreatedBy, &header.CreatedAt, &header.UpdatedBy, &header.UpdatedAt,
+			&header.CreatedByName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan header: %w", err)
+		}
+		headers = append(headers, header)
+	}
+
+	return headers, nil
 }
 
 // ============================================================
@@ -367,4 +622,172 @@ func (r *SMSMarketingRepository) GetMessageLogsByUserID(userID string, limit int
 	}
 
 	return logs, nil
+}
+
+// ============================================================
+// SMS Header Methods
+// ============================================================
+
+func (r *SMSMarketingRepository) CreateSMSHeader(header *models.SMSHeader) error {
+	query := `
+		INSERT INTO sms_headers (
+			user_id, header, provider, type, status, created_by
+		) VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, created_at, updated_at
+	`
+
+	return r.db.QueryRow(
+		query,
+		header.UserID, header.Header, header.Provider, header.Type, header.Status, header.CreatedBy,
+	).Scan(&header.ID, &header.CreatedAt, &header.UpdatedAt)
+}
+
+func (r *SMSMarketingRepository) GetSMSHeadersByUserID(userID string) ([]models.SMSHeader, error) {
+	query := `
+		SELECT 
+			h.id, h.user_id, h.header, h.provider, h.type, h.status,
+			h.created_by, h.created_at, h.updated_by, h.updated_at,
+			COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.email) as created_by_name
+		FROM sms_headers h
+		LEFT JOIN users u ON h.created_by = u.id
+		WHERE h.user_id = $1
+		ORDER BY h.created_at DESC
+	`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var headers []models.SMSHeader
+	for rows.Next() {
+		var header models.SMSHeader
+		err := rows.Scan(
+			&header.ID, &header.UserID, &header.Header, &header.Provider, &header.Type, &header.Status,
+			&header.CreatedBy, &header.CreatedAt, &header.UpdatedBy, &header.UpdatedAt,
+			&header.CreatedByName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		headers = append(headers, header)
+	}
+
+	return headers, nil
+}
+
+func (r *SMSMarketingRepository) GetSMSHeaderByID(headerID, userID string) (*models.SMSHeader, error) {
+	query := `
+		SELECT 
+			h.id, h.user_id, h.header, h.provider, h.type, h.status,
+			h.created_by, h.created_at, h.updated_by, h.updated_at,
+			COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.email) as created_by_name
+		FROM sms_headers h
+		LEFT JOIN users u ON h.created_by = u.id
+		WHERE h.id = $1 AND h.user_id = $2
+	`
+
+	var header models.SMSHeader
+	err := r.db.QueryRow(query, headerID, userID).Scan(
+		&header.ID, &header.UserID, &header.Header, &header.Provider, &header.Type, &header.Status,
+		&header.CreatedBy, &header.CreatedAt, &header.UpdatedBy, &header.UpdatedAt,
+		&header.CreatedByName,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &header, nil
+}
+
+func (r *SMSMarketingRepository) UpdateSMSHeader(header *models.SMSHeader) error {
+	query := `
+		UPDATE sms_headers
+		SET header = $1, provider = $2, type = $3, status = $4,
+		    updated_by = $5, updated_at = $6
+		WHERE id = $7 AND user_id = $8
+	`
+
+	header.UpdatedAt = time.Now()
+	_, err := r.db.Exec(
+		query,
+		header.Header, header.Provider, header.Type, header.Status,
+		header.UpdatedBy, header.UpdatedAt, header.ID, header.UserID,
+	)
+
+	return err
+}
+
+func (r *SMSMarketingRepository) DeleteSMSHeader(headerID, userID string) error {
+	query := `DELETE FROM sms_headers WHERE id = $1 AND user_id = $2`
+	_, err := r.db.Exec(query, headerID, userID)
+	return err
+}
+
+// Admin methods for SMS Headers
+func (r *SMSMarketingRepository) GetAllSMSHeaders() ([]models.SMSHeader, error) {
+	query := `
+		SELECT 
+			h.id, h.user_id, h.header, h.provider, h.type, h.status,
+			h.created_by, h.created_at, h.updated_by, h.updated_at,
+			COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.email) as created_by_name
+		FROM sms_headers h
+		LEFT JOIN users u ON h.created_by = u.id
+		ORDER BY h.created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var headers []models.SMSHeader
+	for rows.Next() {
+		var header models.SMSHeader
+		err := rows.Scan(
+			&header.ID, &header.UserID, &header.Header, &header.Provider, &header.Type, &header.Status,
+			&header.CreatedBy, &header.CreatedAt, &header.UpdatedBy, &header.UpdatedAt,
+			&header.CreatedByName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		headers = append(headers, header)
+	}
+
+	return headers, nil
+}
+
+func (r *SMSMarketingRepository) GetSMSHeaderByIDAdmin(headerID string) (*models.SMSHeader, error) {
+	query := `
+		SELECT 
+			h.id, h.user_id, h.header, h.provider, h.type, h.status,
+			h.created_by, h.created_at, h.updated_by, h.updated_at,
+			COALESCE(CONCAT(u.first_name, ' ', u.last_name), u.email) as created_by_name
+		FROM sms_headers h
+		LEFT JOIN users u ON h.created_by = u.id
+		WHERE h.id = $1
+	`
+
+	var header models.SMSHeader
+	err := r.db.QueryRow(query, headerID).Scan(
+		&header.ID, &header.UserID, &header.Header, &header.Provider, &header.Type, &header.Status,
+		&header.CreatedBy, &header.CreatedAt, &header.UpdatedBy, &header.UpdatedAt,
+		&header.CreatedByName,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &header, nil
 }

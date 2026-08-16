@@ -1311,6 +1311,8 @@ CREATE TABLE IF NOT EXISTS sms_message_logs (
     user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     campaign_id   UUID REFERENCES sms_campaigns(id) ON DELETE SET NULL,
     client_id     UUID REFERENCES clients(id) ON DELETE SET NULL,
+    message_type  VARCHAR(20) NOT NULL DEFAULT 'individual'
+                      CHECK (message_type IN ('individual', 'campaign', 'appointment', 'transactional')),
     phone_number  VARCHAR(20) NOT NULL,
     message_content TEXT NOT NULL,
     status        VARCHAR(20) NOT NULL DEFAULT 'pending'
@@ -1327,7 +1329,35 @@ CREATE INDEX IF NOT EXISTS idx_sms_logs_user ON sms_message_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_campaign ON sms_message_logs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_client ON sms_message_logs(client_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_status ON sms_message_logs(status);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_message_type ON sms_message_logs(message_type);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at DESC);
+
+-- SMS DLT Templates (Distributed Ledger Technology - Regulatory Compliance)
+CREATE TABLE IF NOT EXISTS sms_dlt_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    header VARCHAR(10) NOT NULL,
+    template_id VARCHAR(255) NOT NULL,
+    template_name VARCHAR(255) NOT NULL,
+    template_type VARCHAR(50) NOT NULL CHECK (template_type IN ('Promotional', 'Service')),
+    provider VARCHAR(50) NOT NULL DEFAULT 'MSG91',
+    template_content TEXT NOT NULL,
+    sample_content TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'Registered' CHECK (status IN ('Registered', 'Approved', 'Active', 'Inactive', 'Rejected')),
+    variable_count INTEGER NOT NULL DEFAULT 0,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_user_id ON sms_dlt_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_template_id ON sms_dlt_templates(template_id);
+CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_status ON sms_dlt_templates(status);
+CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_provider ON sms_dlt_templates(provider);
+CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_updated_by ON sms_dlt_templates(updated_by);
+DROP TRIGGER IF EXISTS update_sms_dlt_templates_updated_at ON sms_dlt_templates;
+CREATE TRIGGER update_sms_dlt_templates_updated_at
+    BEFORE UPDATE ON sms_dlt_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 `
 
 	_, err := db.Exec(sql)

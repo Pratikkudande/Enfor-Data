@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Send, TrendingUp, AlertCircle, Clock, CheckCircle } from 'lucide-react';
-import { SMSAccount, getSMSStats, getSMSCampaigns, SMSStats, SMSCampaign } from '../../../services/smsMarketingApi';
+import { SMSAccount, SMSProviderInfo, getSMSStats, getSMSCampaigns, SMSStats, SMSCampaign } from '../../../services/smsMarketingApi';
 
 interface DashboardTabProps {
   account: SMSAccount | null;
   isConnected: boolean;
+  providerInfo?: SMSProviderInfo;
   onRefresh: () => void;
 }
 
-const DashboardTab: React.FC<DashboardTabProps> = ({ account, isConnected }) => {
+const DashboardTab: React.FC<DashboardTabProps> = ({ account, isConnected, providerInfo }) => {
   const [stats, setStats] = useState<SMSStats | null>(null);
   const [campaigns, setCampaigns] = useState<SMSCampaign[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const providerName = providerInfo?.provider || 'MSG91';
 
   useEffect(() => {
     if (isConnected) {
@@ -46,7 +49,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ account, isConnected }) => 
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to SMS Marketing</h2>
           <p className="text-gray-600 mb-6">
-            Connect your MSG91 account to start sending SMS campaigns to your clients.
+            Connect your {providerName} account to start sending SMS campaigns to your clients.
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left">
             <h3 className="font-semibold text-gray-900 mb-3">What you can do:</h3>

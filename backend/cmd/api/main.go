@@ -104,6 +104,7 @@ func main() {
 	businessPostService := service.NewBusinessPostService(businessPostRepo)
 	staffService := service.NewStaffService(staffRepo)
 	adminService := service.NewAdminService(adminRepo, userRepo, authService)
+	adminService.SetSMSMarketingRepo(smsMarketingRepo) // Set SMS marketing repo for DLT template management
 	
 	// Initialize appointment reminder service
 	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
@@ -481,6 +482,7 @@ func main() {
 				// Message Sending
 				smsMarketing.POST("/send", smsMarketingHandler.SendMessage)
 				smsMarketing.POST("/send-bulk", smsMarketingHandler.SendBulkMessage)
+				smsMarketing.POST("/send-dlt", smsMarketingHandler.SendDLTMessage)
 
 				// Campaign Management
 				smsMarketing.POST("/campaigns", smsMarketingHandler.CreateCampaign)
@@ -488,10 +490,21 @@ func main() {
 				smsMarketing.GET("/campaigns/:id", smsMarketingHandler.GetCampaignDetails)
 				smsMarketing.POST("/campaigns/:id/send", smsMarketingHandler.SendCampaign)
 
-				// Templates
-				smsMarketing.GET("/templates", smsMarketingHandler.GetTemplates)
-				smsMarketing.POST("/templates", smsMarketingHandler.CreateTemplate)
-				smsMarketing.DELETE("/templates/:id", smsMarketingHandler.DeleteTemplate)
+				// DLT Templates (Regulatory Compliance)
+				smsMarketing.GET("/dlt-templates", smsMarketingHandler.GetDLTTemplates)
+				smsMarketing.GET("/dlt-templates/available", smsMarketingHandler.GetAvailableTemplates) // For send message tab
+				smsMarketing.POST("/dlt-templates", smsMarketingHandler.CreateDLTTemplate)
+				smsMarketing.GET("/dlt-templates/:id", smsMarketingHandler.GetDLTTemplate)
+				smsMarketing.PUT("/dlt-templates/:id", smsMarketingHandler.UpdateDLTTemplate)
+				smsMarketing.DELETE("/dlt-templates/:id", smsMarketingHandler.DeleteDLTTemplate)
+
+				// SMS Headers
+				smsMarketing.GET("/headers", smsMarketingHandler.GetSMSHeaders)
+				smsMarketing.GET("/headers/available/:type", smsMarketingHandler.GetAvailableHeadersByType) // For dropdown
+				smsMarketing.POST("/headers", smsMarketingHandler.CreateSMSHeader)
+				smsMarketing.GET("/headers/:id", smsMarketingHandler.GetSMSHeader)
+				smsMarketing.PUT("/headers/:id", smsMarketingHandler.UpdateSMSHeader)
+				smsMarketing.DELETE("/headers/:id", smsMarketingHandler.DeleteSMSHeader)
 
 				// Analytics
 				smsMarketing.GET("/logs", smsMarketingHandler.GetMessageLogs)
@@ -565,6 +578,19 @@ func main() {
 				admin.POST("/announcements/:id/send", adminHandler.SendAnnouncement)
 				admin.GET("/feedback", adminHandler.GetFeedback)
 				admin.PUT("/feedback/:id", adminHandler.UpdateFeedback)
+
+				// TeleMarketer Management - DLT Templates
+				admin.GET("/dlt-templates", adminHandler.GetAllDLTTemplates)
+				admin.GET("/dlt-templates/:id", adminHandler.GetDLTTemplate)
+				admin.PUT("/dlt-templates/:id", adminHandler.UpdateDLTTemplate)
+				admin.DELETE("/dlt-templates/:id", adminHandler.DeleteDLTTemplate)
+
+				// TeleMarketer Management - SMS Headers
+				admin.POST("/sms-headers", adminHandler.CreateSMSHeader)
+				admin.GET("/sms-headers", adminHandler.GetAllSMSHeaders)
+				admin.GET("/sms-headers/:id", adminHandler.GetSMSHeader)
+				admin.PUT("/sms-headers/:id", adminHandler.UpdateSMSHeader)
+				admin.DELETE("/sms-headers/:id", adminHandler.DeleteSMSHeader)
 
 				// Contact form submissions from the public landing page
 				admin.GET("/contact-messages", func(c *gin.Context) {

@@ -48,6 +48,7 @@ const AdminDashboard = lazy(() => import('../pages/Admin/AdminDashboard'));
 const UserManagement = lazy(() => import('../pages/Admin/UserManagement'));
 const RevenueManagement = lazy(() => import('../pages/Admin/RevenueManagement'));
 const SMSManagement = lazy(() => import('../pages/Admin/SMSManagement'));
+const TeleMarketerManagement = lazy(() => import('../pages/Admin/TeleMarketerManagement'));
 const DataDownload = lazy(() => import('../pages/Admin/DataDownload'));
 const AnnouncementCenter = lazy(() => import('../pages/Admin/AnnouncementCenter'));
 const FeedbackManagement = lazy(() => import('../pages/Admin/FeedbackManagement'));
@@ -241,6 +242,9 @@ export const AppRoutes: React.FC = () => {
         } />
         <Route path={ROUTES.ADMIN_SMS} element={
           <Suspense fallback={<PageLoader />}><SMSManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_TELEMARKETER} element={
+          <Suspense fallback={<PageLoader />}><TeleMarketerManagement /></Suspense>
         } />
         <Route path={ROUTES.ADMIN_DOWNLOAD} element={
           <Suspense fallback={<PageLoader />}><DataDownload /></Suspense>

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 
+	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -382,4 +383,310 @@ func (h *AdminHandler) SubmitFeedback(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, SuccessResponse{Message: "Feedback submitted successfully"})
+}
+
+// ============================================================
+// TeleMarketer Management - DLT Templates
+// ============================================================
+
+// GET /admin/dlt-templates
+func (h *AdminHandler) GetAllDLTTemplates(c *gin.Context) {
+	templates, err := h.adminService.GetAllDLTTemplates()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to get DLT templates",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "DLT templates retrieved successfully",
+		Data: gin.H{
+			"templates": templates,
+			"total":     len(templates),
+		},
+	})
+}
+
+// GET /admin/dlt-templates/:id
+func (h *AdminHandler) GetDLTTemplate(c *gin.Context) {
+	templateID := c.Param("id")
+
+	template, err := h.adminService.GetDLTTemplateByID(templateID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to get DLT template",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if template == nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{
+			Error:   "Not found",
+			Message: "DLT template not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "DLT template retrieved successfully",
+		Data:    gin.H{"template": template},
+	})
+}
+
+// DELETE /admin/dlt-templates/:id
+func (h *AdminHandler) DeleteDLTTemplate(c *gin.Context) {
+	templateID := c.Param("id")
+	adminID, adminName, ip := h.getAdminInfo(c)
+
+	if err := h.adminService.DeleteDLTTemplate(adminID, adminName, templateID, ip); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to delete DLT template",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "DLT template deleted successfully",
+	})
+}
+
+// PUT /admin/dlt-templates/:id
+func (h *AdminHandler) UpdateDLTTemplate(c *gin.Context) {
+	templateID := c.Param("id")
+	adminID, adminName, ip := h.getAdminInfo(c)
+
+	var req struct {
+		Header          string  `json:"header" binding:"required"`
+		TemplateID      *string `json:"template_id"`
+		TemplateName    string  `json:"template_name" binding:"required"`
+		TemplateType    string  `json:"template_type" binding:"required"`
+		Provider        *string `json:"provider"`
+		TemplateContent string  `json:"template_content" binding:"required"`
+		SampleContent   string  `json:"sample_content"`
+		Status          string  `json:"status" binding:"required"`
+		VariableCount   int     `json:"variable_count"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Get existing template to preserve user_id
+	existingTemplate, err := h.adminService.GetDLTTemplateByID(templateID)
+	if err != nil || existingTemplate == nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{
+			Error:   "Template not found",
+			Message: "DLT template not found",
+		})
+		return
+	}
+
+	// Convert SampleContent to pointer
+	var sampleContentPtr *string
+	if req.SampleContent != "" {
+		sampleContentPtr = &req.SampleContent
+	}
+
+	template := &models.SMSDLTTemplate{
+		ID:              templateID,
+		UserID:          existingTemplate.UserID, // Preserve original owner
+		Header:          req.Header,
+		TemplateID:      req.TemplateID,
+		TemplateName:    req.TemplateName,
+		TemplateType:    req.TemplateType,
+		Provider:        req.Provider,
+		TemplateContent: req.TemplateContent,
+		SampleContent:   sampleContentPtr,
+		Status:          req.Status,
+		VariableCount:   req.VariableCount,
+	}
+
+	if err := h.adminService.UpdateDLTTemplate(adminID, adminName, ip, template); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to update DLT template",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "DLT template updated successfully",
+	})
+}
+
+// ============================================================
+// SMS Headers Management
+// ============================================================
+
+// POST /admin/sms-headers
+func (h *AdminHandler) CreateSMSHeader(c *gin.Context) {
+	adminID, adminName, ip := h.getAdminInfo(c)
+
+	var req struct {
+		Header   string  `json:"header" binding:"required"`
+		Provider *string `json:"provider"`
+		Type     string  `json:"type" binding:"required"`
+		Status   string  `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	header := &models.SMSHeader{
+		Header:    req.Header,
+		Provider:  req.Provider,
+		Type:      req.Type,
+		Status:    req.Status,
+		UserID:    adminID,    // Admin is the owner
+		CreatedBy: adminID,    // Admin is the creator
+	}
+
+	if err := h.adminService.CreateSMSHeader(adminID, adminName, ip, header); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to create SMS header",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, SuccessResponse{
+		Message: "SMS header created successfully",
+		Data: gin.H{
+			"header": header,
+		},
+	})
+}
+
+// GET /admin/sms-headers
+func (h *AdminHandler) GetAllSMSHeaders(c *gin.Context) {
+	headers, err := h.adminService.GetAllSMSHeaders()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Internal server error",
+			Message: "Failed to get SMS headers: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "SMS headers retrieved successfully",
+		Data: gin.H{
+			"headers": headers,
+			"total":   len(headers),
+		},
+	})
+}
+
+// GET /admin/sms-headers/:id
+func (h *AdminHandler) GetSMSHeader(c *gin.Context) {
+	headerID := c.Param("id")
+
+	header, err := h.adminService.GetSMSHeaderByID(headerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Internal server error",
+			Message: "Failed to get SMS header: " + err.Error(),
+		})
+		return
+	}
+
+	if header == nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{
+			Error:   "Not found",
+			Message: "SMS header not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "SMS header retrieved successfully",
+		Data: gin.H{
+			"header": header,
+		},
+	})
+}
+
+// PUT /admin/sms-headers/:id
+func (h *AdminHandler) UpdateSMSHeader(c *gin.Context) {
+	headerID := c.Param("id")
+	adminID, adminName, ip := h.getAdminInfo(c)
+
+	var req struct {
+		Header   string  `json:"header" binding:"required"`
+		Provider *string `json:"provider"`
+		Type     string  `json:"type" binding:"required"`
+		Status   string  `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Invalid request body",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Get existing header to preserve user_id
+	existingHeader, err := h.adminService.GetSMSHeaderByID(headerID)
+	if err != nil || existingHeader == nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{
+			Error:   "Header not found",
+			Message: "SMS header not found",
+		})
+		return
+	}
+
+	header := &models.SMSHeader{
+		ID:        headerID,
+		UserID:    existingHeader.UserID, // Preserve original owner
+		Header:    req.Header,
+		Provider:  req.Provider,
+		Type:      req.Type,
+		Status:    req.Status,
+		CreatedBy: existingHeader.CreatedBy,
+		UpdatedBy: &adminID,
+	}
+
+	if err := h.adminService.UpdateSMSHeader(adminID, adminName, ip, header); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to update SMS header",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "SMS header updated successfully",
+	})
+}
+
+// DELETE /admin/sms-headers/:id
+func (h *AdminHandler) DeleteSMSHeader(c *gin.Context) {
+	headerID := c.Param("id")
+	adminID, adminName, ip := h.getAdminInfo(c)
+
+	if err := h.adminService.DeleteSMSHeader(adminID, adminName, ip, headerID); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "Failed to delete SMS header",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "SMS header deleted successfully",
+	})
 }

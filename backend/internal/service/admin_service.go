@@ -6,13 +6,24 @@ import (
 )
 
 type AdminService struct {
-	adminRepo   *repository.AdminRepository
-	userRepo    *repository.UserRepository
-	authService *AuthService
+	adminRepo          *repository.AdminRepository
+	userRepo           *repository.UserRepository
+	smsMarketingRepo   *repository.SMSMarketingRepository
+	authService        *AuthService
 }
 
 func NewAdminService(adminRepo *repository.AdminRepository, userRepo *repository.UserRepository, authService *AuthService) *AdminService {
-	return &AdminService{adminRepo: adminRepo, userRepo: userRepo, authService: authService}
+	return &AdminService{
+		adminRepo:        adminRepo,
+		userRepo:         userRepo,
+		authService:      authService,
+		smsMarketingRepo: nil, // Will be set separately
+	}
+}
+
+// SetSMSMarketingRepo sets the SMS marketing repository (for DLT template management)
+func (s *AdminService) SetSMSMarketingRepo(repo *repository.SMSMarketingRepository) {
+	s.smsMarketingRepo = repo
 }
 
 func (s *AdminService) GetDashboardStats() (*models.AdminDashboardStats, error) {
@@ -212,4 +223,83 @@ func getStringOrDefault(m map[string]interface{}, key, def string) string {
 		}
 	}
 	return def
+}
+
+
+// ============================================================
+// TeleMarketer Management - DLT Templates
+// ============================================================
+
+func (s *AdminService) GetAllDLTTemplates() ([]models.SMSDLTTemplate, error) {
+	if s.smsMarketingRepo == nil {
+		return []models.SMSDLTTemplate{}, nil
+	}
+	return s.smsMarketingRepo.GetAllDLTTemplates()
+}
+
+func (s *AdminService) GetDLTTemplateByID(templateID string) (*models.SMSDLTTemplate, error) {
+	if s.smsMarketingRepo == nil {
+		return nil, nil
+	}
+	return s.smsMarketingRepo.GetDLTTemplateByIDAdmin(templateID)
+}
+
+func (s *AdminService) DeleteDLTTemplate(adminID, adminName, templateID, ip string) error {
+	if s.smsMarketingRepo == nil {
+		return nil
+	}
+	
+	if err := s.smsMarketingRepo.DeleteDLTTemplateAdmin(templateID); err != nil {
+		return err
+	}
+	
+	s.adminRepo.CreateAuditLog(adminID, adminName, "DLT_TEMPLATE_DELETED", "dlt_template", templateID, "DLT template deleted", ip)
+	return nil
+}
+
+func (s *AdminService) UpdateDLTTemplate(adminID, adminName, ip string, template *models.SMSDLTTemplate) error {
+	if s.smsMarketingRepo == nil {
+		return nil
+	}
+	
+	// Set updated_by to admin ID
+	template.UpdatedBy = &adminID
+	
+	if err := s.smsMarketingRepo.UpdateDLTTemplateAdmin(template); err != nil {
+		return err
+	}
+	
+	s.adminRepo.CreateAuditLog(adminID, adminName, "DLT_TEMPLATE_UPDATED", "dlt_template", template.ID, "DLT template updated", ip)
+	return nil
+}
+
+// SMS Header Admin Methods
+func (s *AdminService) GetAllSMSHeaders() ([]models.SMSHeader, error) {
+	return s.smsMarketingRepo.GetAllSMSHeaders()
+}
+
+func (s *AdminService) GetSMSHeaderByID(headerID string) (*models.SMSHeader, error) {
+	return s.smsMarketingRepo.GetSMSHeaderByIDAdmin(headerID)
+}
+
+func (s *AdminService) CreateSMSHeader(adminID, adminName, ip string, header *models.SMSHeader) error {
+	// Log admin action
+	s.adminRepo.CreateAuditLog(adminID, adminName, "CREATE_SMS_HEADER", "sms_header", "", "Created SMS header: "+header.Header, ip)
+	
+	return s.smsMarketingRepo.CreateSMSHeader(header)
+}
+
+func (s *AdminService) UpdateSMSHeader(adminID, adminName, ip string, header *models.SMSHeader) error {
+	// Log admin action
+	s.adminRepo.CreateAuditLog(adminID, adminName, "UPDATE_SMS_HEADER", "sms_header", header.ID, "Updated SMS header: "+header.Header, ip)
+	
+	return s.smsMarketingRepo.UpdateSMSHeader(header)
+}
+
+func (s *AdminService) DeleteSMSHeader(adminID, adminName, ip, headerID string) error {
+	// Log admin action
+	s.adminRepo.CreateAuditLog(adminID, adminName, "DELETE_SMS_HEADER", "sms_header", headerID, "Deleted SMS header", ip)
+	
+	// Delete using the SMS marketing repo
+	return s.smsMarketingRepo.DeleteSMSHeader(headerID, "")
 }

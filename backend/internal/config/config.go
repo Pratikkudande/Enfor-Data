@@ -10,13 +10,15 @@ import (
 )
 
 type Config struct {
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Server   ServerConfig
-	Upload   UploadConfig
-	MSG91    MSG91Config
-	Razorpay RazorpayConfig
-	Resend   ResendConfig
+	Database   DatabaseConfig
+	JWT        JWTConfig
+	Server     ServerConfig
+	Upload     UploadConfig
+	SMS        SMSConfig
+	MSG91      MSG91Config
+	Fast2SMS   Fast2SMSConfig
+	Razorpay   RazorpayConfig
+	Resend     ResendConfig
 }
 
 type ResendConfig struct {
@@ -50,7 +52,19 @@ type UploadConfig struct {
 	MaxFileSize int64
 }
 
+type SMSConfig struct {
+	Provider string // "msg91" or "fast2sms"
+}
+
 type MSG91Config struct {
+	AuthKey    string
+	SenderID   string
+	Route      string
+	TemplateID string
+	Enabled    bool
+}
+
+type Fast2SMSConfig struct {
 	AuthKey    string
 	SenderID   string
 	Route      string
@@ -125,12 +139,22 @@ func Load() *Config {
 			Path:        getEnv("UPLOAD_PATH", "./uploads"),
 			MaxFileSize: maxFileSize,
 		},
+		SMS: SMSConfig{
+			Provider: getEnv("SMS_PROVIDER", "msg91"), // Default to msg91
+		},
 		MSG91: MSG91Config{
 			AuthKey:    getEnv("MSG91_AUTH_KEY", ""),
 			SenderID:   getEnv("MSG91_SENDER_ID", ""),
 			Route:      getEnv("MSG91_ROUTE", "4"),
 			TemplateID: getEnv("MSG91_TEMPLATE_ID", ""),
 			Enabled:    getEnv("MSG91_ENABLED", "false") == "true",
+		},
+		Fast2SMS: Fast2SMSConfig{
+			AuthKey:    getEnv("FAST2SMS_AUTH_KEY", ""),
+			SenderID:   getEnv("FAST2SMS_SENDER_ID", ""),
+			Route:      getEnv("FAST2SMS_ROUTE", "dlt"),
+			TemplateID: getEnv("FAST2SMS_TEMPLATE_ID", ""),
+			Enabled:    getEnv("FAST2SMS_ENABLED", "false") == "true",
 		},
 		Razorpay: RazorpayConfig{
 			KeyID:         getEnv("RAZORPAY_KEY_ID", ""),

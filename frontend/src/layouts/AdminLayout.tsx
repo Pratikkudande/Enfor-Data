@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, MessageSquare, Download,
   Megaphone, MessageCircle, Activity, RefreshCw, ClipboardList,
-  HardDrive, Settings, Menu, X, LogOut, ChevronRight, Shield, Mail,
+  HardDrive, Settings, Menu, X, LogOut, ChevronRight, Shield, Mail, Phone,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../routes/routePaths';
@@ -13,6 +13,7 @@ const menuItems = [
   { id: 'admin/users', label: 'User Management', icon: Users },
   { id: 'admin/revenue', label: 'Revenue & Subscriptions', icon: DollarSign },
   { id: 'admin/sms', label: 'SMS Management', icon: MessageSquare },
+  { id: 'admin/telemarketer', label: 'TeleMarketer Management', icon: Phone },
   { id: 'admin/download', label: 'Data Download', icon: Download },
   { id: 'admin/announcements', label: 'Announcement Center', icon: Megaphone },
   { id: 'admin/feedback', label: 'Feedback & Suggestions', icon: MessageCircle },
