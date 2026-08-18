@@ -5,6 +5,7 @@ import { apiClient, Appointment as ApiAppointment, AppointmentStats, CreateAppoi
 import { useAuth } from '../../context/AuthContext';
 import AppointmentCard from './AppointmentCard';
 import AppointmentForm from './AppointmentForm';
+import AppointmentDetailModal from './AppointmentDetailModal';
 import AppointmentCalendar from './AppointmentCalendar';
 import LoadingState from '../../components/common/LoadingState';
 import ErrorState from '../../components/common/ErrorState';
@@ -15,7 +16,7 @@ const AppointmentsView: React.FC = () => {
   const [filterDate, setFilterDate] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<ApiAppointment | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -35,7 +36,6 @@ const AppointmentsView: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -58,6 +58,23 @@ const AppointmentsView: React.FC = () => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // Format date as DD/MM/YYYY
+  const formatDisplayDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  // Convert 24-hour time to 12-hour format with AM/PM
+  const formatTime12Hour = (time24: string): string => {
+    if (!time24) return '';
+    const [hours24, minutes] = time24.split(':');
+    const h = parseInt(hours24, 10);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hours12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${hours12}:${minutes} ${period}`;
   };
 
   const fetchAppointments = async () => {
@@ -159,22 +176,13 @@ const AppointmentsView: React.FC = () => {
     try {
       setSubmitting(true);
       setSubmitError(null);
-      const response = selectedAppointment && modalMode === 'edit'
-        ? await apiClient.updateAppointment(selectedAppointment.id, appointmentData)
-        : await apiClient.createAppointment(appointmentData);
+      const response = await apiClient.createAppointment(appointmentData);
 
       if (response.data) {
-        setAppointments((prev) => {
-          if (selectedAppointment && modalMode === 'edit') {
-            return prev.map((item) => (item.id === response.data!.id ? response.data! : item));
-          }
-          return [response.data!, ...prev];
-        });
+        setAppointments((prev) => [response.data!, ...prev]);
         fetchAppointmentStats();
-        showSuccess(selectedAppointment && modalMode === 'edit' ? 'Appointment updated successfully!' : 'Appointment added successfully!');
+        showSuccess('Appointment added successfully!');
         setShowAddModal(false);
-        setSelectedAppointment(null);
-        setModalMode('create');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create appointment';
@@ -186,33 +194,20 @@ const AppointmentsView: React.FC = () => {
   };
 
   const openCreateModal = () => {
-    setModalMode('create');
-    setSelectedAppointment(null);
-    setSubmitError(null);
-    fetchClients(); // load client options for the dropdown on demand
-    setShowAddModal(true);
-  };
-
-  const openEditModal = (appointment: ApiAppointment) => {
-    setModalMode('edit');
-    setSelectedAppointment(appointment);
     setSubmitError(null);
     fetchClients(); // load client options for the dropdown on demand
     setShowAddModal(true);
   };
 
   const openViewModal = (appointment: ApiAppointment) => {
-    setModalMode('view');
     setSelectedAppointment(appointment);
-    setSubmitError(null);
-    setShowAddModal(true);
+    setShowDetailModal(true);
   };
 
   const handleDeleteAppointment = async (appointment: ApiAppointment) => {
     const confirmed = window.confirm(`Delete appointment "${appointment.title}"?`);
     if (!confirmed) return;
     try {
-      setDeletingAppointmentId(appointment.id);
       await apiClient.deleteAppointment(appointment.id);
       setAppointments((prev) => prev.filter((item) => item.id !== appointment.id));
       fetchAppointmentStats();
@@ -221,8 +216,6 @@ const AppointmentsView: React.FC = () => {
       const msg = err instanceof Error ? err.message : 'Failed to delete appointment';
       setError(msg);
       console.error('Error deleting appointment:', err);
-    } finally {
-      setDeletingAppointmentId(null);
     }
   };
 
@@ -253,7 +246,7 @@ const AppointmentsView: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">{appointment.title}</h4>
                   <p className="text-xs text-gray-600">with {appointment.client_name || 'Client'}</p>
-                  <p className="text-xs text-gray-500">{appointment.date} at {appointment.time}</p>
+                  <p className="text-xs text-gray-500">{formatDisplayDate(appointment.date)} at {formatTime12Hour(appointment.time)}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -277,8 +270,9 @@ const AppointmentsView: React.FC = () => {
 
       {error && !loading && <ErrorState message={error} onRetry={fetchAppointments} />}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex flex-col lg:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
@@ -289,14 +283,14 @@ const AppointmentsView: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="flex gap-4">
-            <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <div className="flex flex-wrap gap-3">
+            <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
               <option value="all">All Dates</option>
               <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
               <option value="tomorrow">Tomorrow</option>
             </select>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
               <option value="all">All Status</option>
               <option value="scheduled">Scheduled</option>
               <option value="completed">Completed</option>
@@ -306,7 +300,7 @@ const AppointmentsView: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredAppointments.map((appointment) => (
           <AppointmentCard
             key={appointment.id}
@@ -314,9 +308,7 @@ const AppointmentsView: React.FC = () => {
             getStatusColor={getStatusColor}
             getTypeColor={getTypeColor}
             onView={openViewModal}
-            onEdit={openEditModal}
             onDelete={handleDeleteAppointment}
-            isDeleting={deletingAppointmentId === appointment.id}
           />
         ))}
       </div>
@@ -396,22 +388,26 @@ const AppointmentsView: React.FC = () => {
           loadingClients={loadingClients}
           submitting={submitting}
           submitError={submitError}
-          mode={modalMode}
-          initialData={selectedAppointment ? {
-            title: selectedAppointment.title,
-            description: selectedAppointment.description || '',
-            date: selectedAppointment.date,
-            time: selectedAppointment.time,
-            client_id: selectedAppointment.client_id,
-            property_id: selectedAppointment.property_id,
-            type: selectedAppointment.type,
-          } : undefined}
+          mode="create"
           onSubmit={handleFormSubmit}
           onCancel={() => {
             setShowAddModal(false);
             setSubmitError(null);
+          }}
+        />
+      )}
+
+      {showDetailModal && selectedAppointment && (
+        <AppointmentDetailModal
+          appointment={selectedAppointment}
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
             setSelectedAppointment(null);
-            setModalMode('create');
+          }}
+          onUpdate={() => {
+            fetchAppointments();
+            fetchAppointmentStats();
           }}
         />
       )}

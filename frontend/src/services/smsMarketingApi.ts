@@ -131,6 +131,7 @@ export interface SendDLTMessageRequest {
   variable_values: Record<string, string>;
   client_ids: string[];
   building_contact_ids?: string[]; // Add building contact IDs support
+  property_ids?: string[]; // Add property IDs support
 }
 
 // ============================================================

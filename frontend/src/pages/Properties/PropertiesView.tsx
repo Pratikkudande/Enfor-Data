@@ -139,6 +139,7 @@ const PropertiesView: React.FC = () => {
     const propertyData: CreatePropertyRequest = {
       title: formData.title.trim(), type: formData.type, listing_type: formData.listingType,
       price: parseFloat(formData.price), area: parseFloat(formData.area),
+      measurement_unit: formData.measurementUnit,
       location: formData.location.trim(), address: formData.address.trim(),
       city: formData.city.trim(), state: formData.state,
       description: formData.description.trim(), amenities: selectedAmenities,
@@ -146,6 +147,9 @@ const PropertiesView: React.FC = () => {
     if (formData.clientId) propertyData.client_id = formData.clientId;
     if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
     if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
+    if (formData.buildupArea) propertyData.buildup_area = parseFloat(formData.buildupArea);
+    if (formData.carpetArea) propertyData.carpet_area = parseFloat(formData.carpetArea);
+    if (formData.deposit && formData.listingType === 'rent') propertyData.deposit = parseFloat(formData.deposit);
     return propertyData;
   };
 
@@ -153,6 +157,7 @@ const PropertiesView: React.FC = () => {
     const propertyData: UpdatePropertyRequest = {
       title: formData.title.trim(), type: formData.type, listing_type: formData.listingType,
       status: formData.status, price: parseFloat(formData.price), area: parseFloat(formData.area),
+      measurement_unit: formData.measurementUnit,
       location: formData.location.trim(), address: formData.address.trim(),
       city: formData.city.trim(), state: formData.state,
       description: formData.description.trim(), amenities: selectedAmenities,
@@ -160,6 +165,9 @@ const PropertiesView: React.FC = () => {
     propertyData.client_id = formData.clientId || undefined;
     if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
     if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
+    if (formData.buildupArea) propertyData.buildup_area = parseFloat(formData.buildupArea);
+    if (formData.carpetArea) propertyData.carpet_area = parseFloat(formData.carpetArea);
+    if (formData.deposit && formData.listingType === 'rent') propertyData.deposit = parseFloat(formData.deposit);
     return propertyData;
   };
 

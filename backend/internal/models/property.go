@@ -23,8 +23,12 @@ type Property struct {
 	ListingType string `json:"listing_type" db:"listing_type"` // sale, rent
 
 	// Pricing and Size
-	Price float64 `json:"price" db:"price"`
-	Area  float64 `json:"area" db:"area"`
+	Price      float64  `json:"price" db:"price"`
+	Area       float64  `json:"area" db:"area"`
+	BuildupArea *float64 `json:"buildup_area,omitempty" db:"buildup_area"`
+	CarpetArea  *float64 `json:"carpet_area,omitempty" db:"carpet_area"`
+	MeasurementUnit string `json:"measurement_unit" db:"measurement_unit"` // sq_ft, sq_meter, acre, guntha
+	Deposit     *float64 `json:"deposit,omitempty" db:"deposit"`
 
 	// Property Details (optional for commercial/plot)
 	Bedrooms  *int `json:"bedrooms,omitempty" db:"bedrooms"`

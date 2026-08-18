@@ -7,6 +7,10 @@ export type PropertyFormData = {
   area: string;
   bedrooms: string;
   bathrooms: string;
+  buildupArea: string;
+  carpetArea: string;
+  measurementUnit: 'sq_ft' | 'sq_meter' | 'acre' | 'guntha';
+  deposit: string;
   location: string;
   address: string;
   city: string;

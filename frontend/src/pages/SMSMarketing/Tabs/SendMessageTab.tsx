@@ -69,9 +69,12 @@ const SendMessageTab: React.FC<SendMessageTabProps> = ({ onRefresh }) => {
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h4 className="font-semibold text-gray-900">{template.template_name}</h4>
-                        <div className="flex gap-2 mt-1">
+                        <div className="flex gap-2 mt-1 flex-wrap">
                           <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800">
                             {template.template_type}
+                          </span>
+                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                            {template.category.replace(/_/g, ' ')}
                           </span>
                           <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-800">
                             {template.status}

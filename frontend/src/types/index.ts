@@ -31,6 +31,10 @@ export interface Property {
   area: number;
   bedrooms?: number;
   bathrooms?: number;
+  buildup_area?: number;
+  carpet_area?: number;
+  measurement_unit: 'sq_ft' | 'sq_meter' | 'acre' | 'guntha';
+  deposit?: number;
   location: string;
   address: string;
   city: string;
@@ -341,6 +345,10 @@ export interface CreatePropertyRequest {
   area: number;
   bedrooms?: number;
   bathrooms?: number;
+  buildup_area?: number;
+  carpet_area?: number;
+  measurement_unit: 'sq_ft' | 'sq_meter' | 'acre' | 'guntha';
+  deposit?: number;
   location: string;
   address: string;
   city: string;
@@ -359,6 +367,10 @@ export interface UpdatePropertyRequest {
   area?: number;
   bedrooms?: number;
   bathrooms?: number;
+  buildup_area?: number;
+  carpet_area?: number;
+  measurement_unit?: 'sq_ft' | 'sq_meter' | 'acre' | 'guntha';
+  deposit?: number;
   location?: string;
   address?: string;
   city?: string;

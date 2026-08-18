@@ -1,4 +1,5 @@
 import React from 'react';
+import { Edit2, Save, X } from 'lucide-react';
 
 export interface BuildingFormData {
   ownerName: string;
@@ -17,6 +18,8 @@ interface BuildingFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  onEditToggle?: () => void;
+  onCancelEdit?: () => void;
 }
 
 const BuildingForm: React.FC<BuildingFormProps> = ({
@@ -28,10 +31,12 @@ const BuildingForm: React.FC<BuildingFormProps> = ({
   onInputChange,
   onSubmit,
   onCancel,
+  onEditToggle,
+  onCancelEdit,
 }) => {
   const inputCls = (disabled = false) =>
-    `w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-      disabled ? 'bg-gray-50 text-gray-500' : ''
+    `w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+      disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
     }`;
 
   const label = (text: string, required = false) => (
@@ -46,16 +51,51 @@ const BuildingForm: React.FC<BuildingFormProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              {isViewOnly ? 'View Building Contact' : editingId ? 'Edit Building Contact' : 'Add Building Contact'}
+              {editingId ? (isViewOnly ? 'View Building Contact' : 'Edit Building Contact') : 'Add Building Contact'}
             </h2>
-            <button
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Edit button in view mode */}
+              {editingId && isViewOnly && onEditToggle && (
+                <button
+                  onClick={onEditToggle}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Edit
+                </button>
+              )}
+              
+              {/* Save and Cancel buttons in edit mode */}
+              {editingId && !isViewOnly && onCancelEdit && (
+                <>
+                  <button
+                    onClick={onCancelEdit}
+                    disabled={submitting}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onSubmit}
+                    disabled={submitting}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {submitting ? 'Saving...' : 'Save'}
+                  </button>
+                </>
+              )}
+              
+              <button
+                onClick={onCancel}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
@@ -131,32 +171,33 @@ const BuildingForm: React.FC<BuildingFormProps> = ({
               </div>
             )}
 
-            <div className="flex space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={onCancel}
-                disabled={submitting}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm font-medium"
-              >
-                {isViewOnly ? 'Close' : 'Cancel'}
-              </button>
-              {!isViewOnly && (
+            {/* Only show footer buttons when adding new contact */}
+            {!editingId && (
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  disabled={submitting}
+                  className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm font-medium"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-orange-600 text-white py-2.5 px-4 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 flex items-center justify-center text-sm font-medium"
+                  className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center text-sm font-medium"
                 >
                   {submitting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      {editingId ? 'Updating…' : 'Adding…'}
+                      Adding…
                     </>
                   ) : (
-                    editingId ? 'Update Contact' : 'Add Contact'
+                    'Add Contact'
                   )}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </form>
         </div>
       </div>

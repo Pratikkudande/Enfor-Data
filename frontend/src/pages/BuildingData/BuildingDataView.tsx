@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Building2, CheckCircle, XCircle, Upload, Loader2, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Building2, CheckCircle, XCircle, Upload, Loader2 } from 'lucide-react';
 import { buildingApi, BuildingContact } from '../../services/buildingApi';
 import { API_CONFIG } from '../../config/api';
 import LoadingState from '../../components/common/LoadingState';
 import ErrorState from '../../components/common/ErrorState';
 import BuildingForm, { BuildingFormData } from './BuildingForm';
+import BuildingCard from './BuildingCard';
 
 const emptyForm: BuildingFormData = {
   ownerName: '',
@@ -68,24 +69,41 @@ const BuildingDataView: React.FC = () => {
     setFormError(null);
   };
 
+  const [originalFormData, setOriginalFormData] = useState<BuildingFormData | null>(null);
+
   const openAddModal = () => { resetForm(); setShowModal(true); };
   const closeModal = () => { setShowModal(false); resetForm(); };
 
   const openEditModal = (contact: BuildingContact) => {
     setIsViewMode(false);
     setEditingId(contact.id);
-    setFormData({
+    const formDataObj = {
       ownerName: contact.owner_name ?? '',
       mobileNumber: contact.mobile_number,
       buildingName: contact.building_name ?? '',
       area: contact.area ?? '',
       notes: contact.notes ?? '',
-    });
+    };
+    setFormData(formDataObj);
+    setOriginalFormData(formDataObj);
     setShowModal(true);
   };
 
   const openViewModal = (contact: BuildingContact) => {
     openEditModal(contact);
+    setIsViewMode(true);
+  };
+
+  const handleEditToggle = () => {
+    setIsViewMode(false);
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form data to original values
+    if (originalFormData) {
+      setFormData(originalFormData);
+    }
+    // Switch back to view mode
     setIsViewMode(true);
   };
 
@@ -124,12 +142,15 @@ const BuildingDataView: React.FC = () => {
         const res = await buildingApi.updateContact(editingId, payload);
         setContacts(prev => prev.map(c => c.id === editingId ? res.data : c));
         showSuccess('Building contact updated successfully!');
+        // After saving, switch back to view mode instead of closing
+        setIsViewMode(true);
+        setOriginalFormData(formData); // Update original data
       } else {
         const res = await buildingApi.createContact(payload);
         setContacts(prev => [res.data, ...prev]);
         showSuccess('Building contact added successfully!');
+        closeModal();
       }
-      closeModal();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to save contact';
       setFormError(msg);
@@ -161,14 +182,17 @@ const BuildingDataView: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Building Data</h1>
           <p className="text-gray-600 mt-1">Store building owner contacts for marketing and lead generation</p>
         </div>
-        <div className="mt-4 sm:mt-0 flex gap-2">
+        <div className="mt-4 sm:mt-0 flex items-center gap-3">
           <button
             onClick={openAddModal}
-            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center"
+            className="btn-primary px-4 py-2 flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" /> Add Contact
           </button>
-          <button onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/building-contacts-sample`)} className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
+          <button 
+            onClick={() => window.open(`${API_CONFIG.BASE_URL}/download/building-contacts-sample`)} 
+            className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+          >
             Download Sample Excel
           </button>
           <input
@@ -205,36 +229,31 @@ const BuildingDataView: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {uploading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4 mr-2" />
-            )}
-            {uploading ? 'Uploading…' : 'Upload Excel'}
+            {uploading ? 'Uploading...' : 'Upload Excel'}
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex flex-col lg:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              placeholder="Search by owner, mobile, building, or area…"
+              placeholder="Search by owner, mobile, building, or area..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <select
               value={filterArea}
               onChange={e => setFilterArea(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
               <option value="">All Areas</option>
               {uniqueAreas.map(a => <option key={a} value={a}>{a}</option>)}
@@ -242,7 +261,7 @@ const BuildingDataView: React.FC = () => {
             <select
               value={filterBuilding}
               onChange={e => setFilterBuilding(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
               <option value="">All Buildings</option>
               {uniqueBuildings.map(b => <option key={b} value={b}>{b}</option>)}
@@ -251,105 +270,37 @@ const BuildingDataView: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Building2 className="h-4 w-4" />
-        <span>
-          {filteredContacts.length} contact{filteredContacts.length !== 1 ? 's' : ''}
-          {(searchTerm || filterArea || filterBuilding) ? ' matching filters' : ' total'}
-        </span>
-      </div>
-
       {loading && <LoadingState message="Loading building contacts…" />}
       {error && !loading && <ErrorState message={error} onRetry={fetchContacts} />}
 
       {!loading && !error && (
-        filteredContacts.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 text-center py-12">
-            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Building2 className="h-8 w-8 text-orange-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredContacts.map((contact) => (
+            <BuildingCard
+              key={contact.id}
+              contact={contact}
+              onView={openViewModal}
+              onEdit={openEditModal}
+              onDelete={handleDelete}
+              isDeleting={deletingId === contact.id}
+            />
+          ))}
+
+          {filteredContacts.length === 0 && (
+            <div className="col-span-full text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No building contacts found</h3>
+              <p className="text-gray-600 mb-4">
+                {searchTerm || filterArea || filterBuilding
+                  ? 'Try adjusting your search or filters'
+                  : 'Get started by adding your first building contact'}
+              </p>
+              <button onClick={openAddModal} className="btn-primary px-6 py-2">Add Contact</button>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No building contacts found</h3>
-            <p className="text-gray-500 mb-4">
-              {searchTerm || filterArea || filterBuilding
-                ? 'Try adjusting your search or filters'
-                : 'Start building your database by adding the first contact'}
-            </p>
-            {!searchTerm && !filterArea && !filterBuilding && (
-              <button
-                onClick={openAddModal}
-                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors"
-              >
-                Add Contact
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  <th className="px-4 py-3">Building</th>
-                  <th className="px-4 py-3">Owner</th>
-                  <th className="px-4 py-3">Mobile</th>
-                  <th className="px-4 py-3">Area</th>
-                  <th className="px-4 py-3">Notes</th>
-                  <th className="px-4 py-3">Added</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredContacts.map(contact => (
-                  <tr key={contact.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center">
-                        <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Building2 className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <div className="ml-3">
-                          <div className="font-semibold text-gray-900">
-                            {contact.building_name || <span className="text-gray-400 italic">No Building Name</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{contact.owner_name || <span className="text-gray-400">—</span>}</td>
-                    <td className="px-4 py-3 font-medium text-gray-700">{contact.mobile_number}</td>
-                    <td className="px-4 py-3 text-gray-700">{contact.area || <span className="text-gray-400">—</span>}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{contact.notes || <span className="text-gray-400">—</span>}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{new Date(contact.created_at).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openViewModal(contact)}
-                          className="bg-blue-50 text-blue-700 p-2 rounded-lg hover:bg-blue-100 transition-colors"
-                          title="View"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => openEditModal(contact)}
-                          className="bg-gray-50 text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(contact)}
-                          disabled={deletingId === contact.id}
-                          className="bg-red-50 text-red-700 p-2 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
+          )}
+        </div>
       )}
 
       {showModal && (
@@ -366,6 +317,8 @@ const BuildingDataView: React.FC = () => {
           }}
           onSubmit={handleSubmit}
           onCancel={closeModal}
+          onEditToggle={handleEditToggle}
+          onCancelEdit={handleCancelEdit}
         />
       )}
 

@@ -49,6 +49,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     return `${year}-${month}-${day}`;
   };
 
+  // Convert 24-hour time to 12-hour format with AM/PM
+  const convertTo12Hour = (time24: string): { hours: string; minutes: string; period: 'AM' | 'PM' } => {
+    if (!time24) return { hours: '', minutes: '', period: 'AM' };
+    const [hours24, minutes] = time24.split(':');
+    const h = parseInt(hours24, 10);
+    const period: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM';
+    const hours12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return { hours: String(hours12).padStart(2, '0'), minutes: minutes || '00', period };
+  };
+
+  // Convert 12-hour time to 24-hour format
+  const convertTo24Hour = (hours: string, minutes: string, period: 'AM' | 'PM'): string => {
+    let h = parseInt(hours, 10);
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${minutes}`;
+  };
+
+  const initialTime = initialData?.time ? convertTo12Hour(initialData.time) : { hours: '', minutes: '', period: 'AM' as const };
+
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
@@ -58,6 +78,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     propertyId: initialData?.property_id || '',
     type: (initialData?.type || 'site_visit') as 'site_visit' | 'meeting' | 'call'
   });
+
+  const [timeData, setTimeData] = useState(initialTime);
 
   const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
@@ -84,6 +106,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     if (formError) setFormError(null);
+  };
+
+  const handleTimeChange = (field: 'hours' | 'minutes' | 'period', value: string) => {
+    if (isViewOnly) return;
+    const newTimeData = { ...timeData, [field]: value };
+    setTimeData(newTimeData);
+    
+    // Update formData.time with 24-hour format for backend
+    if (newTimeData.hours && newTimeData.minutes) {
+      const time24 = convertTo24Hour(newTimeData.hours, newTimeData.minutes, newTimeData.period);
+      setFormData({ ...formData, time: time24 });
+    }
+    if (formError) setFormError(null);
+  };
+
+  // Format date for display (DD/MM/YYYY)
+  const formatDisplayDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -244,21 +286,54 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
+                {formData.date && (
+                  <p className="text-xs text-gray-500 mt-1">Selected: {formatDisplayDate(formData.date)}</p>
+                )}
               </div>
               <div>
-                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Time <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="time"
-                  id="time"
-                  name="time"
-                  value={formData.time}
-                  onChange={handleInputChange}
-                  disabled={isViewOnly}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={timeData.hours}
+                    onChange={(e) => handleTimeChange('hours', e.target.value)}
+                    disabled={isViewOnly}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">HH</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                      <option key={h} value={String(h).padStart(2, '0')}>
+                        {String(h).padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={timeData.minutes}
+                    onChange={(e) => handleTimeChange('minutes', e.target.value)}
+                    disabled={isViewOnly}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">MM</option>
+                    {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                      <option key={m} value={String(m).padStart(2, '0')}>
+                        {String(m).padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={timeData.period}
+                    onChange={(e) => handleTimeChange('period', e.target.value)}
+                    disabled={isViewOnly}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
               </div>
             </div>
 

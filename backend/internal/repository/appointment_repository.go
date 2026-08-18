@@ -282,69 +282,37 @@ func (r *AppointmentRepository) GetStats(brokerID string) (*dto.AppointmentStats
 		AppointmentsByType: make(map[string]int),
 	}
 
-	// Query for total this month
+	// Single optimized query to get all statistics at once
 	query := `
-		SELECT COUNT(*) 
+		SELECT 
+			COUNT(*) FILTER (WHERE date >= $2) as total_this_month,
+			COUNT(*) FILTER (WHERE date = $3) as today_appointments,
+			COUNT(*) FILTER (WHERE status = 'scheduled') as scheduled_appointments,
+			COUNT(*) FILTER (WHERE status = 'completed') as completed_appointments,
+			COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled_appointments
 		FROM appointments 
-		WHERE broker_id = $1 AND date >= $2
+		WHERE broker_id = $1
 	`
-	err := r.db.QueryRow(query, brokerID, firstDayOfMonth.Format("2006-01-02")).Scan(&stats.TotalThisMonth)
+	
+	err := r.db.QueryRow(query, brokerID, firstDayOfMonth.Format("2006-01-02"), today).Scan(
+		&stats.TotalThisMonth,
+		&stats.TodayAppointments,
+		&stats.ScheduledAppointments,
+		&stats.CompletedAppointments,
+		&stats.CancelledAppointments,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get total this month: %w", err)
+		return nil, fmt.Errorf("failed to get appointment stats: %w", err)
 	}
 
-	// Query for today's appointments
-	query = `
-		SELECT COUNT(*) 
-		FROM appointments 
-		WHERE broker_id = $1 AND date = $2
-	`
-	err = r.db.QueryRow(query, brokerID, today).Scan(&stats.TodayAppointments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get today appointments: %w", err)
-	}
-
-	// Query for scheduled appointments
-	query = `
-		SELECT COUNT(*) 
-		FROM appointments 
-		WHERE broker_id = $1 AND status = 'scheduled'
-	`
-	err = r.db.QueryRow(query, brokerID).Scan(&stats.ScheduledAppointments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get scheduled appointments: %w", err)
-	}
-
-	// Query for completed appointments
-	query = `
-		SELECT COUNT(*) 
-		FROM appointments 
-		WHERE broker_id = $1 AND status = 'completed'
-	`
-	err = r.db.QueryRow(query, brokerID).Scan(&stats.CompletedAppointments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get completed appointments: %w", err)
-	}
-
-	// Query for cancelled appointments
-	query = `
-		SELECT COUNT(*) 
-		FROM appointments 
-		WHERE broker_id = $1 AND status = 'cancelled'
-	`
-	err = r.db.QueryRow(query, brokerID).Scan(&stats.CancelledAppointments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cancelled appointments: %w", err)
-	}
-
-	// Query for appointments by type
-	query = `
+	// Separate lightweight query for appointments by type
+	typeQuery := `
 		SELECT type, COUNT(*) 
 		FROM appointments 
 		WHERE broker_id = $1 
 		GROUP BY type
 	`
-	rows, err := r.db.Query(query, brokerID)
+	rows, err := r.db.Query(typeQuery, brokerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get appointments by type: %w", err)
 	}

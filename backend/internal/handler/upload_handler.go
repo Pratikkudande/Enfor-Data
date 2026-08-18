@@ -13,6 +13,8 @@ import (
 
 	"enfor-data-backend/internal/config"
 	"enfor-data-backend/internal/dto"
+	"enfor-data-backend/internal/models"
+	"enfor-data-backend/internal/repository"
 	"enfor-data-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -21,20 +23,22 @@ import (
 )
 
 type UploadHandler struct {
-	authService *service.AuthService
-	config      *config.Config
-	clientSvc   *service.ClientService
-	propertySvc *service.PropertyService
-	buildingSvc *service.BuildingService
+	authService         *service.AuthService
+	config              *config.Config
+	clientSvc           *service.ClientService
+	propertySvc         *service.PropertyService
+	buildingSvc         *service.BuildingService
+	clientRequirementRepo *repository.ClientRequirementRepository
 }
 
-func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clientSvc *service.ClientService, propertySvc *service.PropertyService, buildingSvc *service.BuildingService) *UploadHandler {
+func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clientSvc *service.ClientService, propertySvc *service.PropertyService, buildingSvc *service.BuildingService, clientRequirementRepo *repository.ClientRequirementRepository) *UploadHandler {
 	return &UploadHandler{
-		authService: authService,
-		config:      cfg,
-		clientSvc:   clientSvc,
-		propertySvc: propertySvc,
-		buildingSvc: buildingSvc,
+		authService:         authService,
+		config:              cfg,
+		clientSvc:           clientSvc,
+		propertySvc:         propertySvc,
+		buildingSvc:         buildingSvc,
+		clientRequirementRepo: clientRequirementRepo,
 	}
 }
 
@@ -994,6 +998,332 @@ func isValidImageType(filename string) bool {
 		}
 	}
 	return false
+}
+
+// UploadClientRequirementsExcel handles bulk client requirement Excel uploads
+func (h *UploadHandler) UploadClientRequirementsExcel(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No file provided", Message: "Please attach an Excel file"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > h.config.Upload.MaxFileSize {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File too large", Message: fmt.Sprintf("File size must be less than %d MB", h.config.Upload.MaxFileSize/1024/1024)})
+		return
+	}
+
+	buf := bytes.NewBuffer(nil)
+	if _, err := io.Copy(buf, file); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read file", Message: err.Error()})
+		return
+	}
+
+	f, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid Excel file", Message: err.Error()})
+		return
+	}
+	defer f.Close()
+
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Empty Excel file"})
+		return
+	}
+
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Failed to read rows", Message: err.Error()})
+		return
+	}
+
+	if len(rows) < 2 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No data rows found"})
+		return
+	}
+
+	headerRow := rows[0]
+	colIndex := map[string]int{}
+	for i, hname := range headerRow {
+		colIndex[strings.ToLower(strings.TrimSpace(hname))] = i
+	}
+
+	created := 0
+	errorsList := []string{}
+
+	for r := 1; r < len(rows); r++ {
+		row := rows[r]
+		if len(row) == 0 {
+			continue
+		}
+
+		get := func(key string) string {
+			idx, ok := colIndex[key]
+			if !ok || idx >= len(row) {
+				return ""
+			}
+			return strings.TrimSpace(row[idx])
+		}
+
+		clientID := get("client_id")
+		requirementType := get("requirement_type")
+		preferredLocation := get("preferred_location")
+		city := get("city")
+
+		// 1. Skip blank rows
+		if clientID == "" && requirementType == "" && preferredLocation == "" {
+			continue
+		}
+
+		// 2. Skip description rows
+		if strings.Contains(strings.ToLower(clientID), "required:") || strings.Contains(strings.ToLower(requirementType), "required:") {
+			continue
+		}
+
+		// 3. Skip example rows (adjust based on your sample data)
+		if clientID == "abc123" {
+			continue
+		}
+
+		var req dto.CreateClientRequirementRequest
+		req.ClientID = clientID
+		req.RequirementType = strings.ToLower(strings.TrimSpace(requirementType))
+		if preferredLocation != "" {
+			req.PreferredLocation = &preferredLocation
+		}
+		if city != "" {
+			req.City = &city
+		}
+		if v := get("state"); v != "" {
+			req.State = &v
+		}
+		if v := get("postal_code"); v != "" {
+			req.PostalCode = &v
+		}
+		if v := get("enquiry"); v != "" {
+			req.Enquiry = &v
+		}
+		if v := get("notes"); v != "" {
+			req.Notes = &v
+		}
+		req.Status = strings.ToLower(strings.TrimSpace(get("status")))
+		if req.Status == "" {
+			req.Status = "active"
+		}
+
+		if v := get("buildup_area"); v != "" {
+			if iv, err := strconv.Atoi(v); err == nil {
+				req.BuildupArea = &iv
+			}
+		}
+		if v := get("carpet_area"); v != "" {
+			if iv, err := strconv.Atoi(v); err == nil {
+				req.CarpetArea = &iv
+			}
+		}
+		if v := get("measurement_unit"); v != "" {
+			mu := strings.ToLower(strings.TrimSpace(v))
+			req.MeasurementUnit = &mu
+		}
+		if v := get("min_budget"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.MinBudget = &f64
+			}
+		}
+		if v := get("max_budget"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.MaxBudget = &f64
+			}
+		}
+		if v := get("deposit_budget"); v != "" {
+			if f64, err := strconv.ParseFloat(v, 64); err == nil {
+				req.DepositBudget = &f64
+			}
+		}
+
+		// Create the requirement through the handler
+		if err := h.createClientRequirementFromExcel(&req, userID.(string)); err != nil {
+			errorsList = append(errorsList, fmt.Sprintf("row %d: %v", r+1, err))
+			continue
+		}
+		created++
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "Client requirements processed",
+		Data: gin.H{
+			"created": created,
+			"errors":  errorsList,
+		},
+	})
+}
+
+// DownloadClientRequirementsSample generates and serves an Excel template for client requirements
+func (h *UploadHandler) DownloadClientRequirementsSample(c *gin.Context) {
+	f := excelize.NewFile()
+	sheet := f.GetSheetName(0)
+
+	headers := []string{
+		"client_id", "requirement_type", "buildup_area", "carpet_area", "measurement_unit",
+		"min_budget", "max_budget", "deposit_budget", "preferred_location", "city",
+		"state", "postal_code", "enquiry", "notes", "status",
+	}
+
+	// Write headers row 1
+	for i, v := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, v)
+	}
+	lastCol, _ := excelize.CoordinatesToCellName(len(headers), 1)
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"#F3F4F6"}, Pattern: 1},
+	})
+	_ = f.SetCellStyle(sheet, "A1", lastCol, headerStyle)
+
+	// Description row 2
+	descMap := map[string]string{
+		"client_id":          "Required: Existing client ID (UUID)",
+		"requirement_type":   "Required: buy|rent",
+		"buildup_area":       "Optional: Buildup area (numeric)",
+		"carpet_area":        "Optional: Carpet area (numeric)",
+		"measurement_unit":   "Optional: sq_foot|sq_meter|acre|guntha",
+		"min_budget":         "Optional: Minimum budget (numeric)",
+		"max_budget":         "Optional: Maximum budget (numeric)",
+		"deposit_budget":     "Optional: Deposit budget (numeric)",
+		"preferred_location": "Optional: Preferred location/area",
+		"city":               "Optional: City name",
+		"state":              "Optional: State name",
+		"postal_code":        "Optional: Postal code",
+		"enquiry":            "Optional: Property type enquiry (e.g., 2 BHK, Shop)",
+		"notes":              "Optional: Additional notes",
+		"status":             "Optional: active|fulfilled|cancelled (default: active)",
+	}
+	for i, v := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
+		f.SetCellValue(sheet, cell, descMap[v])
+	}
+
+	// Example row 3
+	example := []interface{}{
+		"abc123", "buy", 1200, 950, "sq_foot",
+		5000000, 8000000, "", "Andheri West", "Mumbai",
+		"Maharashtra", "400053", "2 BHK Apartment", "Near metro station", "active",
+	}
+	for i, v := range example {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 3)
+		f.SetCellValue(sheet, cell, v)
+	}
+
+	// Dropdown for requirement_type column (B)
+	dvType := &excelize.DataValidation{
+		Type:         "list",
+		Formula1:     `"buy,rent"`,
+		ShowDropDown: true,
+	}
+	_ = f.AddDataValidation(sheet+"!B3:B1000", dvType)
+
+	// Dropdown for measurement_unit column (E)
+	dvUnit := &excelize.DataValidation{
+		Type:         "list",
+		Formula1:     `"sq_foot,sq_meter,acre,guntha"`,
+		ShowDropDown: true,
+	}
+	_ = f.AddDataValidation(sheet+"!E3:E1000", dvUnit)
+
+	// Dropdown for status column (O)
+	dvStatus := &excelize.DataValidation{
+		Type:         "list",
+		Formula1:     `"active,fulfilled,cancelled"`,
+		ShowDropDown: true,
+	}
+	_ = f.AddDataValidation(sheet+"!O3:O1000", dvStatus)
+
+	_ = f.SetColWidth(sheet, "A", "O", 22)
+
+	// INSTRUCTIONS sheet
+	instr := "INSTRUCTIONS"
+	f.NewSheet(instr)
+	ins := []string{
+		"How to use this template:",
+		"- Do not change header names in row 1.",
+		"- Row 2 contains field descriptions.",
+		"- Add one record per row starting from row 3.",
+		"- Only client_id and requirement_type are required.",
+		"- You must use existing client IDs from your clients list.",
+		"",
+		"Column guide:",
+	}
+	for i, line := range ins {
+		cell, _ := excelize.CoordinatesToCellName(1, i+1)
+		f.SetCellValue(instr, cell, line)
+	}
+
+	instrDescMap := map[string]string{
+		"client_id":          "Required. Existing client UUID from your clients list.",
+		"requirement_type":   "Required. buy or rent.",
+		"buildup_area":       "Optional. Total buildup area in numeric value.",
+		"carpet_area":        "Optional. Carpet area in numeric value.",
+		"measurement_unit":   "Optional. Unit of measurement: sq_foot, sq_meter, acre, or guntha.",
+		"min_budget":         "Optional. Minimum budget in numeric value.",
+		"max_budget":         "Optional. Maximum budget in numeric value.",
+		"deposit_budget":     "Optional. Expected deposit amount (for rent).",
+		"preferred_location": "Optional. Preferred location or area.",
+		"city":               "Optional. City name.",
+		"state":              "Optional. State name.",
+		"postal_code":        "Optional. Postal/ZIP code.",
+		"enquiry":            "Optional. Property type enquiry (e.g., 2 BHK, Shop, Office Space).",
+		"notes":              "Optional. Additional notes or requirements.",
+		"status":             "Optional. Status: active, fulfilled, or cancelled. Default is active.",
+	}
+	for i, col := range headers {
+		row := len(ins) + i + 2
+		cellH, _ := excelize.CoordinatesToCellName(1, row)
+		cellD, _ := excelize.CoordinatesToCellName(2, row)
+		f.SetCellValue(instr, cellH, col)
+		f.SetCellValue(instr, cellD, instrDescMap[col])
+	}
+	_ = f.SetColWidth(instr, "A", "B", 50)
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to generate sample"})
+		return
+	}
+	c.Header("Content-Disposition", "attachment; filename=client_requirements_sample.xlsx")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+// Helper function to create client requirement from Excel data
+func (h *UploadHandler) createClientRequirementFromExcel(req *dto.CreateClientRequirementRequest, userID string) error {
+	requirement := &models.ClientRequirement{
+		ClientID:          req.ClientID,
+		RequirementType:   req.RequirementType,
+		BuildupArea:       req.BuildupArea,
+		CarpetArea:        req.CarpetArea,
+		MeasurementUnit:   req.MeasurementUnit,
+		MinBudget:         req.MinBudget,
+		MaxBudget:         req.MaxBudget,
+		DepositBudget:     req.DepositBudget,
+		PreferredLocation: req.PreferredLocation,
+		City:              req.City,
+		State:             req.State,
+		PostalCode:        req.PostalCode,
+		Enquiry:           req.Enquiry,
+		Notes:             req.Notes,
+		Status:            req.Status,
+		CreatedBy:         &userID,
+	}
+
+	return h.clientRequirementRepo.CreateRequirement(requirement)
 }
 
 // UploadBuildingContactsExcel handles bulk building contact Excel uploads

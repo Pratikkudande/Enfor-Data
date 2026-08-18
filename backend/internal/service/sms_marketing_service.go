@@ -13,6 +13,7 @@ type SMSMarketingService struct {
 	repo         *repository.SMSMarketingRepository
 	clientRepo   *repository.ClientRepository
 	buildingRepo *repository.BuildingRepository
+	propertyRepo *repository.PropertyRepository
 	smsService   *SMSService
 	config       *config.Config
 }
@@ -21,6 +22,7 @@ func NewSMSMarketingService(
 	repo *repository.SMSMarketingRepository,
 	clientRepo *repository.ClientRepository,
 	buildingRepo *repository.BuildingRepository,
+	propertyRepo *repository.PropertyRepository,
 	smsService *SMSService,
 	config *config.Config,
 ) *SMSMarketingService {
@@ -28,6 +30,7 @@ func NewSMSMarketingService(
 		repo:         repo,
 		clientRepo:   clientRepo,
 		buildingRepo: buildingRepo,
+		propertyRepo: propertyRepo,
 		smsService:   smsService,
 		config:       config,
 	}
@@ -414,7 +417,7 @@ func (s *SMSMarketingService) DeleteDLTTemplate(templateID, userID string) error
 }
 
 // SendDLTMessage sends SMS using a DLT template with variable substitution
-func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variableValues map[string]string, clientIDs []string, buildingContactIDs []string) (int, int, error) {
+func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variableValues map[string]string, clientIDs []string, buildingContactIDs []string, propertyIDs []string) (int, int, error) {
 	// Get DLT template
 	template, err := s.repo.GetDLTTemplateByID(templateID, userID)
 	if err != nil {
@@ -534,7 +537,115 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 		time.Sleep(1 * time.Second)
 	}
 
+	// Send to properties - auto-generate SMS from property data
+	for _, propertyID := range propertyIDs {
+		// Get property details
+		property, err := s.propertyRepo.GetByID(propertyID)
+		if err != nil || property == nil {
+			failed++
+			continue
+		}
+
+		// Verify ownership
+		if property.BrokerID != userID {
+			failed++
+			continue
+		}
+
+		// Auto-map property data to variables based on template category
+		autoVariableValues := s.mapPropertyToVariables(property, template)
+
+		// Build message from template with auto-generated variables
+		message := s.buildMessageFromTemplate(template.TemplateContent, autoVariableValues)
+
+		// Get the client's phone number if available
+		var recipientPhone string
+		if property.ClientID != nil && *property.ClientID != "" {
+			client, err := s.clientRepo.GetByID(*property.ClientID)
+			if err == nil && client != nil && client.BrokerID == userID {
+				recipientPhone = client.Phone
+			}
+		}
+
+		// Skip if no recipient phone found
+		if recipientPhone == "" {
+			failed++
+			continue
+		}
+
+		// Send SMS
+		err = s.smsService.SendSMS(recipientPhone, message)
+		if err != nil {
+			failed++
+			// Log failed message
+			errMsg := err.Error()
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: recipientPhone,
+				Status:         "failed",
+				ErrorMessage:   &errMsg,
+			}
+			s.repo.CreateMessageLog(log)
+		} else {
+			successful++
+			// Log successful message
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: recipientPhone,
+				Status:         "sent",
+			}
+			s.repo.CreateMessageLog(log)
+		}
+
+		// Rate limiting: 1 message per second
+		time.Sleep(1 * time.Second)
+	}
+
 	return successful, failed, nil
+}
+
+// mapPropertyToVariables maps property data to SMS variables
+// VAR1: Bedrooms + Property Type + Location
+// VAR2: Price + Area
+// VAR3: Firm Name + Contact Number
+func (s *SMSMarketingService) mapPropertyToVariables(property *models.Property, template *models.SMSDLTTemplate) map[string]string {
+	variables := make(map[string]string)
+
+	// VAR1: Bedrooms + Property Type + Location
+	var1 := ""
+	if property.Bedrooms != nil && *property.Bedrooms > 0 {
+		var1 = fmt.Sprintf("%d BHK ", *property.Bedrooms)
+	}
+	var1 += property.Type + ", " + property.Location
+	variables["var1"] = var1
+
+	// VAR2: Price + Area
+	priceStr := fmt.Sprintf("₹%.2f Lakh", property.Price/100000)
+	if property.Price >= 10000000 { // 1 Crore or more
+		priceStr = fmt.Sprintf("₹%.2f Cr", property.Price/10000000)
+	}
+	var2 := fmt.Sprintf("%s, %.0f Sq.Ft.", priceStr, property.Area)
+	variables["var2"] = var2
+
+	// VAR3: Firm Name + Contact Number
+	// For now, use broker name and whatsapp if available
+	var3 := ""
+	if property.BrokerName != nil && *property.BrokerName != "" {
+		var3 = *property.BrokerName
+	}
+	if property.BrokerWhatsapp != nil && *property.BrokerWhatsapp != "" {
+		if var3 != "" {
+			var3 += " - "
+		}
+		var3 += *property.BrokerWhatsapp
+	}
+	variables["var3"] = var3
+
+	return variables
 }
 
 // buildMessageFromTemplate replaces {#var#} or {#alp#} placeholders with actual values

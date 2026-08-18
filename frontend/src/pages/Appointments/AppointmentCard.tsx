@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, User, Phone, MapPin, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Phone, MapPin, Eye, Trash2 } from 'lucide-react';
 import { Appointment as ApiAppointment } from '../../services/api';
 
 interface AppointmentCardProps {
@@ -7,9 +7,7 @@ interface AppointmentCardProps {
   getStatusColor: (status: string) => string;
   getTypeColor: (type: string) => string;
   onView: (appointment: ApiAppointment) => void;
-  onEdit: (appointment: ApiAppointment) => void;
   onDelete: (appointment: ApiAppointment) => void;
-  isDeleting: boolean;
 }
 
 const AppointmentCard: React.FC<AppointmentCardProps> = ({
@@ -17,71 +15,86 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   getStatusColor,
   getTypeColor,
   onView,
-  onEdit,
   onDelete,
-  isDeleting,
 }) => {
+  // Convert 24-hour time to 12-hour format with AM/PM
+  const formatTime12Hour = (time24: string): string => {
+    if (!time24) return '';
+    const [hours24, minutes] = time24.split(':');
+    const h = parseInt(hours24, 10);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hours12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${hours12}:${minutes} ${period}`;
+  };
+
+  // Format date as DD/MM/YYYY
+  const formatDisplayDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <h3 className="text-lg font-semibold text-gray-900">{appointment.title}</h3>
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(appointment.type)}`}>
-              {appointment.type.replace('_', ' ').toUpperCase()}
-            </span>
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)}`}>
-              {appointment.status.toUpperCase()}
-            </span>
-          </div>
-          <p className="text-gray-600 mb-3">{appointment.description}</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span>{appointment.date} at {appointment.time}</span>
-            </div>
-            <div className="flex items-center">
-              <User className="h-4 w-4 mr-2" />
-              <span>{appointment.client_name || 'Client'}</span>
-            </div>
-            <div className="flex items-center">
-              <Phone className="h-4 w-4 mr-2" />
-              <span>{appointment.client_phone || 'N/A'}</span>
-            </div>
-          </div>
-          
-          {appointment.property_address && (
-            <div className="flex items-center text-sm text-gray-600 mt-2">
-              <MapPin className="h-4 w-4 mr-2" />
-              <span>{appointment.property_address}</span>
-            </div>
-          )}
+          <h3 className="font-semibold text-gray-900">{appointment.title}</h3>
+          <p className="text-sm text-gray-600">{appointment.client_name || 'Client'}</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onView(appointment)}
+            className="text-blue-600 hover:text-blue-700 transition-colors"
+            title="View details"
+          >
+            <Eye className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => onDelete(appointment)}
+            className="text-red-600 hover:text-red-700 transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
         </div>
       </div>
-      
-      <div className="flex space-x-2">
-        <button
-          onClick={() => onView(appointment)}
-          className="flex-1 bg-blue-50 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          View
-        </button>
-        <button
-          onClick={() => onEdit(appointment)}
-          className="flex-1 bg-gray-50 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
-        >
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </button>
-        <button
-          onClick={() => onDelete(appointment)}
-          disabled={isDeleting}
-          className="bg-red-50 text-red-700 py-2 px-4 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+
+      {/* Badges */}
+      <div className="flex gap-2 mb-3">
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${getTypeColor(appointment.type)}`}>
+          {appointment.type.replace('_', ' ')}
+        </span>
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(appointment.status)}`}>
+          {appointment.status}
+        </span>
+      </div>
+
+      {/* Date & Time */}
+      <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+        <Calendar className="w-4 h-4" />
+        <span>{formatDisplayDate(appointment.date)} at {formatTime12Hour(appointment.time)}</span>
+      </div>
+
+      {/* Phone */}
+      {appointment.client_phone && (
+        <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+          <Phone className="w-4 h-4" />
+          <span>{appointment.client_phone}</span>
+        </div>
+      )}
+
+      {/* Location */}
+      {appointment.property_address && (
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <MapPin className="w-4 h-4" />
+          <span className="truncate">{appointment.property_address}</span>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+        Added {new Date(appointment.created_at).toLocaleDateString()}
       </div>
     </div>
   );

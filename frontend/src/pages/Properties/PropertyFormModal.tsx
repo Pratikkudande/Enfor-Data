@@ -69,27 +69,50 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         </div>
 
         <form onSubmit={handleFormSubmit} className="space-y-6 p-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Property Type</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { value: 'apartment', label: 'Apartment' },
+                { value: 'house', label: 'House' },
+                { value: 'row_house', label: 'Row House' },
+                { value: 'bungalow', label: 'Bungalow' },
+                { value: 'commercial', label: 'Commercial' },
+                { value: 'plot', label: 'Plot' },
+                { value: 'shop', label: 'Shop' },
+                { value: 'pg', label: 'PG' },
+              ].map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => handleTypeChange(type.value as PropertyFormData['type'])}
+                  className={`px-2 py-2 border-2 rounded-lg text-center text-xs font-medium transition-all ${
+                    formData.type === type.value
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">Property Type</label>
-              <div className="grid grid-cols-4 gap-3">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Listing Type</label>
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'apartment', label: 'Apartment' },
-                  { value: 'house', label: 'House' },
-                  { value: 'row_house', label: 'Row House' },
-                  { value: 'bungalow', label: 'Bungalow' },
-                  { value: 'commercial', label: 'Commercial' },
-                  { value: 'plot', label: 'Plot' },
-                  { value: 'shop', label: 'Shop' },
-                  { value: 'pg', label: 'PG' },
+                  { value: 'sale', label: 'For Sale' },
+                  { value: 'rent', label: 'For Rent' },
                 ].map((type) => (
                   <button
                     key={type.value}
                     type="button"
-                    onClick={() => handleTypeChange(type.value as PropertyFormData['type'])}
-                    className={`p-2 border-2 rounded-lg text-center text-xs font-medium leading-tight transition-all ${
-                      formData.type === type.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    onClick={() => setFormData((prev) => ({ ...prev, listingType: type.value as PropertyFormData['listingType'] }))}
+                    className={`p-3 border-2 rounded-lg text-center transition-all ${
+                      formData.listingType === type.value
+                        ? 'border-green-500 bg-green-50 text-green-700'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -98,30 +121,6 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 ))}
               </div>
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Listing Type</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: 'sale', label: 'For Sale' },
-                    { value: 'rent', label: 'For Rent' },
-                  ].map((type) => (
-                    <button
-                      key={type.value}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, listingType: type.value as PropertyFormData['listingType'] }))}
-                      className={`p-3 border-2 rounded-lg text-center transition-all ${
-                        formData.listingType === type.value
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {formMode === 'edit' && (
                 <div>
@@ -144,7 +143,6 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   </select>
                 </div>
               )}
-            </div>
           </div>
 
           <div>
@@ -186,7 +184,7 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
             <div>
               <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
-                Area (sq ft) <span className="text-red-500">*</span>
+                Area <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -201,6 +199,83 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               {validationErrors.area && <p className="mt-1 text-sm text-red-600">{validationErrors.area}</p>}
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="buildupArea" className="block text-sm font-medium text-gray-700 mb-1">
+                Buildup Area
+              </label>
+              <input
+                type="number"
+                id="buildupArea"
+                name="buildupArea"
+                value={formData.buildupArea}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min="0"
+                step="0.01"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="carpetArea" className="block text-sm font-medium text-gray-700 mb-1">
+                Carpet Area
+              </label>
+              <input
+                type="number"
+                id="carpetArea"
+                name="carpetArea"
+                value={formData.carpetArea}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min="0"
+                step="0.01"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="measurementUnit" className="block text-sm font-medium text-gray-700 mb-1">
+                Measurement Unit <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="measurementUnit"
+                name="measurementUnit"
+                value={formData.measurementUnit}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="sq_ft">Square Feet</option>
+                <option value="sq_meter">Square Meter</option>
+                <option value="acre">Acre</option>
+                <option value="guntha">Guntha</option>
+              </select>
+            </div>
+          </div>
+
+          {formData.listingType === 'rent' && (
+            <div>
+              <label htmlFor="deposit" className="block text-sm font-medium text-gray-700 mb-1">
+                Deposit Amount
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                <input
+                  type="number"
+                  id="deposit"
+                  name="deposit"
+                  value={formData.deposit}
+                  onChange={handleInputChange}
+                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  min="0"
+                  step="1"
+                  placeholder="Optional"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Security deposit for rental properties</p>
+            </div>
+          )}
 
           {(formData.type === 'apartment' || formData.type === 'house' || formData.type === 'row_house' || formData.type === 'pg' || formData.type === 'bungalow') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

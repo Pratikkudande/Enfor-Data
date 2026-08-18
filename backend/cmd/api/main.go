@@ -94,7 +94,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo, networkRepo, userRepo)
 	whatsappService := service.NewWhatsAppService(whatsappRepo, clientRepo)
 	whatsappSetupService := service.NewMetaWhatsAppSetupService(whatsappRepo)
-	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, buildingRepo, smsService, cfg)
+	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, buildingRepo, propertyRepo, smsService, cfg)
 	otpService := service.NewOTPService(otpRepo, userRepo, smsService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo, userRepo)
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
@@ -117,7 +117,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, passwordResetService)
-	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService)
+	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService, clientRequirementRepo)
 	propertyHandler := handler.NewPropertyHandler(propertyService, notificationService)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	clientHandler := handler.NewClientHandler(clientService)
@@ -328,6 +328,7 @@ func main() {
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
 			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
 			protected.POST("/upload/properties-excel", uploadHandler.UploadPropertiesExcel)
+			protected.POST("/upload/client-requirements-excel", uploadHandler.UploadClientRequirementsExcel)
 			protected.POST("/upload/building-contacts-excel", uploadHandler.UploadBuildingContactsExcel)
 			protected.POST("/upload/property-photos/:id", uploadHandler.UploadPropertyPhotos)
 			protected.DELETE("/upload/property-photos/:id/:filename", uploadHandler.DeletePropertyPhoto)
@@ -659,6 +660,7 @@ func main() {
 		// Sample download templates
 		api.GET("/download/clients-sample", uploadHandler.DownloadClientsSample)
 		api.GET("/download/properties-sample", uploadHandler.DownloadPropertiesSample)
+		api.GET("/download/client-requirements-sample", uploadHandler.DownloadClientRequirementsSample)
 		api.GET("/download/building-contacts-sample", uploadHandler.DownloadBuildingContactsSample)
 	}
 

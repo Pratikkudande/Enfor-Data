@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Shield, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Shield, Trash2, Eye } from 'lucide-react';
 import {
   getDLTTemplates,
   deleteDLTTemplate,
   SMSDLTTemplate,
 } from '../../../services/smsMarketingApi';
 import AddDLTTemplateModal from '../Components/AddDLTTemplateModal';
+import ViewDLTTemplateModal from '../Components/ViewDLTTemplateModal';
 import { useAuth } from '../../../context/AuthContext';
 
 const TemplatesTab: React.FC = () => {
@@ -15,6 +16,8 @@ const TemplatesTab: React.FC = () => {
   const [dltTemplates, setDltTemplates] = useState<SMSDLTTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDLTModal, setShowDLTModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<SMSDLTTemplate | null>(null);
 
   useEffect(() => {
     loadDLTTemplates();
@@ -43,9 +46,9 @@ const TemplatesTab: React.FC = () => {
     }
   };
 
-  const handleEditDLT = (template: SMSDLTTemplate) => {
-    // TODO: Implement edit functionality if needed
-    console.log('Edit template:', template);
+  const handleViewDLT = (template: SMSDLTTemplate) => {
+    setSelectedTemplate(template);
+    setShowViewModal(true);
   };
 
   const canEditOrDelete = (template: SMSDLTTemplate) => {
@@ -151,15 +154,15 @@ const TemplatesTab: React.FC = () => {
                     )}
                   </div>
                 </div>
-                {canEditOrDelete(template) && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditDLT(template)}
-                      className="text-blue-600 hover:text-blue-700 transition-colors"
-                      title="Edit template"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleViewDLT(template)}
+                    className="text-gray-600 hover:text-gray-700 transition-colors"
+                    title="View template"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  {canEditOrDelete(template) && (
                     <button
                       onClick={() => handleDeleteDLT(template.id)}
                       className="text-red-600 hover:text-red-700 transition-colors"
@@ -167,8 +170,8 @@ const TemplatesTab: React.FC = () => {
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="bg-gray-50 rounded p-3 mb-3">
@@ -207,6 +210,19 @@ const TemplatesTab: React.FC = () => {
         <AddDLTTemplateModal
           isOpen={showDLTModal}
           onClose={() => setShowDLTModal(false)}
+          onSuccess={() => {
+            loadDLTTemplates();
+          }}
+        />
+
+        {/* View DLT Template Modal */}
+        <ViewDLTTemplateModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedTemplate(null);
+          }}
+          template={selectedTemplate}
           onSuccess={() => {
             loadDLTTemplates();
           }}

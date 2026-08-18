@@ -569,6 +569,7 @@ func (h *SMSMarketingHandler) SendDLTMessage(c *gin.Context) {
 		VariableValues      map[string]string `json:"variable_values"`
 		ClientIDs           []string          `json:"client_ids"`
 		BuildingContactIDs  []string          `json:"building_contact_ids"` // Add building contact IDs support
+		PropertyIDs         []string          `json:"property_ids"`         // Add property IDs support
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -580,15 +581,15 @@ func (h *SMSMarketingHandler) SendDLTMessage(c *gin.Context) {
 	}
 
 	// Ensure at least one recipient type is provided
-	if len(req.ClientIDs) == 0 && len(req.BuildingContactIDs) == 0 {
+	if len(req.ClientIDs) == 0 && len(req.BuildingContactIDs) == 0 && len(req.PropertyIDs) == 0 {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Invalid request",
-			Message: "At least one client_id or building_contact_id must be provided",
+			Message: "At least one client_id, building_contact_id, or property_id must be provided",
 		})
 		return
 	}
 
-	successful, failed, err := h.service.SendDLTMessage(userID, req.TemplateID, req.VariableValues, req.ClientIDs, req.BuildingContactIDs)
+	successful, failed, err := h.service.SendDLTMessage(userID, req.TemplateID, req.VariableValues, req.ClientIDs, req.BuildingContactIDs, req.PropertyIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal server error",

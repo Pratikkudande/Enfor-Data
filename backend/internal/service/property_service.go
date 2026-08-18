@@ -53,23 +53,27 @@ func (s *PropertyService) CreateProperty(req *dto.CreatePropertyRequest, brokerI
 
 	// Create property model from request
 	property := &models.Property{
-		Title:       req.Title,
-		Type:        req.Type,
-		ListingType: req.ListingType,
-		Price:       req.Price,
-		Area:        req.Area,
-		Bedrooms:    req.Bedrooms,
-		Bathrooms:   req.Bathrooms,
-		Location:    req.Location,
-		Address:     req.Address,
-		City:        req.City,
-		State:       req.State,
-		Description: req.Description,
-		Amenities:   req.Amenities,
-		Status:      "available", // Default status
-		BrokerID:    brokerID,
-		ClientID:    clientID,
-		ClientName:  clientName,
+		Title:           req.Title,
+		Type:            req.Type,
+		ListingType:     req.ListingType,
+		Price:           req.Price,
+		Area:            req.Area,
+		Bedrooms:        req.Bedrooms,
+		Bathrooms:       req.Bathrooms,
+		BuildupArea:     req.BuildupArea,
+		CarpetArea:      req.CarpetArea,
+		MeasurementUnit: req.MeasurementUnit,
+		Deposit:         req.Deposit,
+		Location:        req.Location,
+		Address:         req.Address,
+		City:            req.City,
+		State:           req.State,
+		Description:     req.Description,
+		Amenities:       req.Amenities,
+		Status:          "available", // Default status
+		BrokerID:        brokerID,
+		ClientID:        clientID,
+		ClientName:      clientName,
 	}
 
 	// Populate broker information
@@ -187,6 +191,18 @@ func (s *PropertyService) UpdateProperty(id string, req *dto.UpdatePropertyReque
 	}
 	if req.Bathrooms != nil {
 		property.Bathrooms = req.Bathrooms
+	}
+	if req.BuildupArea != nil {
+		property.BuildupArea = req.BuildupArea
+	}
+	if req.CarpetArea != nil {
+		property.CarpetArea = req.CarpetArea
+	}
+	if req.MeasurementUnit != nil {
+		property.MeasurementUnit = *req.MeasurementUnit
+	}
+	if req.Deposit != nil {
+		property.Deposit = req.Deposit
 	}
 	if req.Location != nil {
 		property.Location = *req.Location
