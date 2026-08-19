@@ -55,6 +55,7 @@ const BrokerNetworkView: React.FC = () => {
   const [extError, setExtError] = useState<string | null>(null);
   const emptyExtForm = { name: '', mobile_number: '', area: '', location: '', notes: '' };
   const [extForm, setExtForm] = useState<CreateExternalBrokerRequest>(emptyExtForm);
+  const [originalExtForm, setOriginalExtForm] = useState<CreateExternalBrokerRequest | null>(null);
 
   // Refs
   const isSendingRef = useRef(false);
@@ -353,22 +354,44 @@ const BrokerNetworkView: React.FC = () => {
     setShowExtModal(true); 
   };
   const openExtEdit = (b: ExternalBroker) => {
-    setExtForm({ 
+    const formValues = { 
       name: b.name, 
       mobile_number: b.mobile_number, 
       area: b.area ?? '', 
       location: b.location ?? '', 
       notes: b.notes ?? '' 
-    });
+    };
+    setExtForm(formValues);
+    setOriginalExtForm(formValues);
     setEditingExtId(b.id); 
     setExtViewOnly(false); 
     setExtFormError(null); 
     setShowExtModal(true);
   };
 
-  const openExtView = (b: ExternalBroker) => { 
-    openExtEdit(b); 
-    setExtViewOnly(true); 
+  const handleExtEditToggle = () => {
+    setExtViewOnly(false);
+  };
+
+  const handleExtCancelEdit = () => {
+    if (originalExtForm) setExtForm(originalExtForm);
+    setExtViewOnly(true);
+  };
+
+  const openExtView = (b: ExternalBroker) => {
+    const formValues = { 
+      name: b.name, 
+      mobile_number: b.mobile_number, 
+      area: b.area ?? '', 
+      location: b.location ?? '', 
+      notes: b.notes ?? '' 
+    };
+    setExtForm(formValues);
+    setOriginalExtForm(formValues);
+    setEditingExtId(b.id);
+    setExtViewOnly(true);
+    setExtFormError(null);
+    setShowExtModal(true);
   };
 
   const closeExtModal = () => { 
@@ -402,12 +425,15 @@ const BrokerNetworkView: React.FC = () => {
         const res = await externalBrokerApi.update(editingExtId, payload);
         setExtBrokers(prev => prev.map(b => b.id === editingExtId ? res.data : b));
         showExtSuccess('Broker updated successfully!');
+        // Switch back to view mode (like BuildingData)
+        setExtViewOnly(true);
+        setOriginalExtForm(payload);
       } else {
         const res = await externalBrokerApi.create(payload);
         setExtBrokers(prev => [res.data, ...prev]);
         showExtSuccess('Broker added successfully!');
+        closeExtModal();
       }
-      closeExtModal();
     } catch (err) {
       setExtFormError(err instanceof Error ? err.message : 'Failed to save');
     } finally { 
@@ -441,7 +467,7 @@ const BrokerNetworkView: React.FC = () => {
   ] as const;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -457,7 +483,7 @@ const BrokerNetworkView: React.FC = () => {
       </div>
 
       {/* Tab bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 w-full min-w-0">
         <div className="flex overflow-x-auto border-b border-gray-200 px-2 sm:px-4 scrollbar-thin scrollbar-thumb-gray-300">
           {tabs.map(t => {
             const Icon = t.icon;
@@ -482,7 +508,7 @@ const BrokerNetworkView: React.FC = () => {
           })}
         </div>
 
-        <div className="p-4">
+        <div className="p-4 w-full min-w-0">
           {tab === 'discover' && (
             <DiscoverTab
               brokers={brokers}
@@ -579,6 +605,8 @@ const BrokerNetworkView: React.FC = () => {
         onClose={closeExtModal}
         onFormChange={(data) => setExtForm(prev => ({ ...prev, ...data }))}
         onSubmit={handleExtSubmit}
+        onEditToggle={handleExtEditToggle}
+        onCancelEdit={handleExtCancelEdit}
       />
     </div>
   );

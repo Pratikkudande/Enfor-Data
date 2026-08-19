@@ -627,7 +627,7 @@ const LandingPage: React.FC = () => {
       <section id="about" className="py-28 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#030B24' }}>
         <div className="max-w-7xl mx-auto">
           {/* items-stretch makes both columns the same height */}
-          <div className="grid lg:grid-cols-2 gap-16 items-stretch">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-stretch">
 
             {/* ── Left: benefits list ── */}
             <div className="flex flex-col">
@@ -669,12 +669,17 @@ const LandingPage: React.FC = () => {
             </div>
 
             {/* ── Right: image fills 100% of left column height ── */}
-            <div className="relative h-full">
+            {/*
+              On mobile the column has no natural height (children are all absolute),
+              so we give it an explicit min-h. On lg+ the grid stretches it to match
+              the left column via items-stretch + h-full.
+            */}
+            <div className="relative min-h-[420px] sm:min-h-[480px] lg:min-h-0 lg:h-full">
               {/* Glow ring */}
               <div className="absolute -inset-3 rounded-3xl opacity-20 blur-2xl pointer-events-none"
                 style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }} />
 
-              {/* Image — absolute fill so it matches left column exactly */}
+              {/* Image container */}
               <div className="absolute inset-0 rounded-2xl overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=900&q=85"
@@ -683,10 +688,72 @@ const LandingPage: React.FC = () => {
                 />
                 <div className="absolute inset-0"
                   style={{ background: 'linear-gradient(180deg,rgba(3,11,36,0.30) 0%,rgba(3,11,36,0.08) 45%,rgba(3,11,36,0.50) 100%)' }} />
+
+                {/* ── MOBILE card overlay (hidden on lg+) ──
+                    flex-col + justify-between pushes card 1 to top and the
+                    2-card grid row to the bottom. CSS grid handles equal
+                    widths automatically — no absolute-position math. */}
+                <div className="lg:hidden absolute inset-0 flex flex-col justify-between p-3 gap-2">
+
+                  {/* Card 1 — New Lead */}
+                  <div className="self-start animate-float rounded-xl px-3 py-2.5"
+                    style={{ ...glass, boxShadow: '0 8px 32px rgba(59,130,246,0.25)' }}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg,#3B82F6,#6366F1)' }}>
+                        <Users className="w-3 h-3 text-white" />
+                      </div>
+                      <span className="text-xs font-bold text-white">New Lead</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse ml-2 flex-shrink-0" />
+                    </div>
+                    <p className="text-xs font-semibold text-white">2 BHK Inquiry</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Just now · Andheri West</p>
+                  </div>
+
+                  {/* Bottom 2-card grid (equal widths, no overlap) */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Card 2 — Site Visit */}
+                    <div className="rounded-xl px-3 py-2.5 min-w-0"
+                      style={{ ...glass, boxShadow: '0 8px 32px rgba(245,158,11,0.2)',
+                        animation: 'float 4s ease-in-out 0.8s infinite' }}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'linear-gradient(135deg,#F59E0B,#EF4444)' }}>
+                          <Calendar className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-white truncate">Site Visit</span>
+                      </div>
+                      <p className="text-xs font-semibold text-white truncate">Rajesh Sharma</p>
+                      <p className="text-xs text-gray-400 mt-0.5 truncate">Tomorrow · 11 AM</p>
+                    </div>
+
+                    {/* Card 3 — Commission */}
+                    <div className="rounded-xl px-3 py-2.5 min-w-0"
+                      style={{ ...glass, boxShadow: '0 8px 32px rgba(52,211,153,0.25)',
+                        animation: 'float 4s ease-in-out 1.2s infinite' }}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                          <DollarSign className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-white truncate">Commission</span>
+                      </div>
+                      <p className="text-sm font-extrabold truncate" style={{ color: '#34D399' }}>₹49,500</p>
+                      <p className="text-xs text-gray-400 mt-0.5 truncate">Rajesh Sharma</p>
+                      <div className="mt-1.5 h-1 rounded-full overflow-hidden"
+                        style={{ background: 'rgba(52,211,153,0.15)' }}>
+                        <div className="h-full rounded-full"
+                          style={{ width: '72%', background: 'linear-gradient(90deg,#10B981,#34D399)' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Floating card 1 — New Lead (top-left) */}
-              <div className="absolute top-6 left-6 rounded-2xl px-5 py-4 animate-float z-10"
+              {/* ── DESKTOP cards: absolutely positioned (hidden below lg) ── */}
+
+              {/* Card 1 — New Lead (top-left) */}
+              <div className="hidden lg:block absolute top-6 left-6 rounded-2xl px-5 py-4 animate-float z-10"
                 style={{ ...glass, minWidth: '175px', boxShadow: '0 8px 32px rgba(59,130,246,0.25)' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -700,8 +767,8 @@ const LandingPage: React.FC = () => {
                 <p className="text-xs text-gray-400 mt-0.5">Just now · Andheri West</p>
               </div>
 
-              {/* Floating card 2 — Site Visit (bottom-left) */}
-              <div className="absolute bottom-8 left-6 rounded-2xl px-5 py-4 z-10"
+              {/* Card 2 — Site Visit (bottom-left) */}
+              <div className="hidden lg:block absolute bottom-8 left-6 rounded-2xl px-5 py-4 z-10"
                 style={{ ...glass, minWidth: '200px', boxShadow: '0 8px 32px rgba(245,158,11,0.2)',
                   animation: 'float 4s ease-in-out 0.8s infinite' }}>
                 <div className="flex items-center gap-2 mb-2">
@@ -715,8 +782,8 @@ const LandingPage: React.FC = () => {
                 <p className="text-xs text-gray-400 mt-0.5">Tomorrow · 11:00 AM</p>
               </div>
 
-              {/* Floating card 3 — Commission (right, vertically centered) */}
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 rounded-2xl px-5 py-4 z-10"
+              {/* Card 3 — Commission (right, vertically centered) */}
+              <div className="hidden lg:block absolute right-6 top-1/2 -translate-y-1/2 rounded-2xl px-5 py-4 z-10"
                 style={{ ...glass, minWidth: '185px', boxShadow: '0 8px 32px rgba(52,211,153,0.25)',
                   animation: 'float 4s ease-in-out 1.2s infinite' }}>
                 <div className="flex items-center gap-2 mb-2">

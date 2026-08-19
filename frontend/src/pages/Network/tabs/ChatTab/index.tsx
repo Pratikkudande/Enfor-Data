@@ -24,47 +24,38 @@ interface ChatTabProps {
 export const ChatTab: React.FC<ChatTabProps> = (props) => {
   // State to track mobile view - true shows conversation list, false shows chat
   const [showConversationList, setShowConversationList] = useState(true);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const isTransitioningRef = useRef(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scheduleTransitionEnd = useCallback(() => {
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, 350); // Slightly longer than CSS duration to guarantee completion
+  }, []);
 
   const handleSelectConversation = useCallback((conv: Conversation) => {
     // Prevent rapid clicks during transition
-    if (isTransitioning) return;
-    
+    if (isTransitioningRef.current) return;
+
     props.onSelectConversation(conv);
-    
+
     // On mobile, switch to chat view when conversation is selected
-    setIsTransitioning(true);
+    isTransitioningRef.current = true;
     setShowConversationList(false);
-    
-    // Clear any existing timeout
-    if (transitionTimeoutRef.current) {
-      clearTimeout(transitionTimeoutRef.current);
-    }
-    
-    // Set transition complete after animation duration
-    transitionTimeoutRef.current = setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300); // Match CSS transition duration
-  }, [isTransitioning, props]);
+    scheduleTransitionEnd();
+  }, [props.onSelectConversation, scheduleTransitionEnd]);
 
   const handleBackToList = useCallback(() => {
     // Prevent rapid clicks during transition
-    if (isTransitioning) return;
-    
-    setIsTransitioning(true);
+    if (isTransitioningRef.current) return;
+
+    isTransitioningRef.current = true;
     setShowConversationList(true);
-    
-    // Clear any existing timeout
-    if (transitionTimeoutRef.current) {
-      clearTimeout(transitionTimeoutRef.current);
-    }
-    
-    // Set transition complete after animation duration
-    transitionTimeoutRef.current = setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300); // Match CSS transition duration
-  }, [isTransitioning]);
+    scheduleTransitionEnd();
+  }, [scheduleTransitionEnd]);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
@@ -78,10 +69,10 @@ export const ChatTab: React.FC<ChatTabProps> = (props) => {
   return (
     <div className="flex h-[520px] relative bg-white rounded-lg overflow-hidden border border-gray-200">
       {/* Mobile Layout */}
-      <div className="flex w-full h-full lg:hidden relative">
+      <div className="flex w-full h-full lg:hidden relative overflow-hidden">
         {/* Conversation List - Mobile */}
-        <div className={`w-full h-full absolute inset-0 transition-transform duration-300 ease-in-out ${
-          showConversationList ? 'translate-x-0' : '-translate-x-full'
+        <div className={`w-full h-full absolute inset-0 transition-transform duration-300 ease-in-out will-change-transform ${
+          showConversationList ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}>
           <ConversationList
             conversations={props.conversations}
@@ -91,8 +82,8 @@ export const ChatTab: React.FC<ChatTabProps> = (props) => {
         </div>
         
         {/* Chat Area - Mobile */}
-        <div className={`w-full h-full absolute inset-0 transition-transform duration-300 ease-in-out ${
-          !showConversationList ? 'translate-x-0' : 'translate-x-full'
+        <div className={`w-full h-full absolute inset-0 transition-transform duration-300 ease-in-out will-change-transform ${
+          !showConversationList ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}>
           <MessageArea
             conversation={props.activeConv}

@@ -6,14 +6,19 @@ import logo from '../assets/logo.png';
 const AuthLayout: React.FC = () => {
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-10 px-4"
+      className="min-h-screen flex items-stretch lg:items-center justify-center lg:py-10 lg:px-6"
       style={{ backgroundColor: '#030B24' }}
     >
-      <div className="w-full max-w-6xl flex bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[88vh]">
+      {/*
+        Mobile  : full-width, full-height white card (no rounding, no shadow)
+        Tablet  : centered card, rounded corners, scrollable
+        Desktop : two-column layout with max-height cap
+      */}
+      <div className="w-full lg:max-w-6xl flex flex-col lg:flex-row bg-white lg:rounded-2xl lg:shadow-2xl overflow-hidden">
 
-        {/* Left Side — Branding */}
+        {/* ── Left Side — Branding (desktop only) ── */}
         <div
-          className="hidden lg:flex lg:w-1/2 px-8 pt-8 pb-0 items-center justify-center relative overflow-hidden"
+          className="hidden lg:flex lg:w-[45%] xl:w-1/2 px-8 pt-8 pb-0 flex-col items-center justify-center relative overflow-hidden flex-shrink-0"
           style={{ background: 'linear-gradient(160deg, #030B24 0%, #050F2E 60%, #0D1B3E 100%)' }}
         >
           {/* Ambient glow blobs */}
@@ -111,19 +116,42 @@ const AuthLayout: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side — Auth Forms */}
-        <div className="w-full lg:w-1/2 p-8 flex flex-col items-center justify-center bg-white">
-          <div className="w-full overflow-y-auto">
-            <div className="mb-6">
-              <Link
-                to={ROUTES.HOME}
-                className="flex items-center text-sm font-medium transition-colors hover:opacity-80"
-                style={{ color: '#6366F1' }}
-              >
-                ← Back to Home
-              </Link>
+        {/* ── Right Side — Auth Forms ── */}
+        {/*
+          Mobile  : full viewport, white bg, centered, enough padding for content
+          Desktop : right half, centered, scrollable if form is tall
+        */}
+        <div className="flex-1 flex flex-col bg-white">
+          {/* Mobile-only top bar with logo + back link */}
+          <div
+            className="lg:hidden flex items-center justify-between px-5 py-4 border-b border-gray-100"
+            style={{ backgroundColor: '#030B24' }}
+          >
+            <img src={logo} alt="Enfor Data" className="h-9" />
+            <Link
+              to={ROUTES.HOME}
+              className="text-xs font-medium"
+              style={{ color: '#93C5FD' }}
+            >
+              ← Back to Home
+            </Link>
+          </div>
+
+          {/* Scrollable form area */}
+          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 sm:px-10">
+            {/* Desktop back link */}
+            <div className="w-full max-w-md">
+              <div className="hidden lg:block mb-6">
+                <Link
+                  to={ROUTES.HOME}
+                  className="flex items-center text-sm font-medium transition-colors hover:opacity-80"
+                  style={{ color: '#6366F1' }}
+                >
+                  ← Back to Home
+                </Link>
+              </div>
+              <Outlet />
             </div>
-            <Outlet />
           </div>
         </div>
 

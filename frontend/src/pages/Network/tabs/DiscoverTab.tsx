@@ -29,7 +29,7 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
@@ -42,11 +42,11 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBrokers.map(broker => (
             <div key={broker.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200">
               {/* Header: firm name */}
@@ -155,7 +155,15 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
             </div>
           ))}
           {filteredBrokers.length === 0 && !loading && (
-            <div className="col-span-full text-center py-8 text-gray-500">No brokers found</div>
+            <div className="col-span-full text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No brokers found</h3>
+              <p className="text-gray-500">
+                {search ? 'Try adjusting your search.' : 'No other brokers are on the platform yet.'}
+              </p>
+            </div>
           )}
         </div>
       )}

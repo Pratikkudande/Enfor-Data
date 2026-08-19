@@ -30,7 +30,7 @@ const MainLayout: React.FC = () => {
           onSectionChange={handleSectionChange}
         />
 
-        <main className="flex-1 lg:ml-60 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
+        <main className="flex-1 lg:ml-60 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col min-w-0 overflow-x-hidden">
           <Outlet />
         </main>
       </div>

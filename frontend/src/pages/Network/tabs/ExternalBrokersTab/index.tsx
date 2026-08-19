@@ -37,7 +37,7 @@ export const ExternalBrokersTab: React.FC<ExternalBrokersTabProps> = ({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* Sub-header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

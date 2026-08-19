@@ -60,7 +60,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   key={conv.id}
                   onClick={() => onSelectConversation(conv)}
                   className={`w-full flex items-center gap-3 p-4 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 ${
-                    activeConvId === conv.id ? 'bg-green-50 border-r-4 border-green-500' : ''
+                    activeConvId === conv.id ? 'bg-green-50 border-l-4 border-green-500' : 'border-l-4 border-transparent'
                   }`}
                   style={{ 
                     touchAction: 'manipulation', // Prevent double-tap zoom on mobile
