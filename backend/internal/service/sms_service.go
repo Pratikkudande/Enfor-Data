@@ -88,16 +88,30 @@ func (s *SMSService) IsInitialized() bool {
 
 // SendSMS sends an SMS using the configured provider
 func (s *SMSService) SendSMS(to, message string) error {
+	_, err := s.SendSMSWithResult(to, message)
+	return err
+}
+
+// SendSMSWithResult preserves the gateway message ID (Fast2SMS request_id) for delivery tracking.
+func (s *SMSService) SendSMSWithResult(to, message string) (*provider.MessageResult, error) {
 	result, err := s.provider.SendMessage(to, message)
 	if err != nil {
-		return fmt.Errorf("failed to send SMS: %w", err)
+		return nil, fmt.Errorf("failed to send SMS: %w", err)
 	}
 
 	if result.Status == "failed" {
-		return fmt.Errorf("SMS delivery failed: %s", result.Error)
+		return result, fmt.Errorf("SMS delivery failed: %s", result.Error)
 	}
 
-	return nil
+	return result, nil
+}
+
+func (s *SMSService) GetFast2SMSDeliveryReport(requestID string) ([]provider.DeliveryStatus, error) {
+	fast2sms, ok := s.provider.(*provider.Fast2SMSProvider)
+	if !ok {
+		return nil, fmt.Errorf("delivery reports are available only for Fast2SMS")
+	}
+	return fast2sms.GetDeliveryReport(requestID)
 }
 
 // SendAppointmentConfirmation sends appointment confirmation SMS

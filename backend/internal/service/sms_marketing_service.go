@@ -2,11 +2,13 @@ package service
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"enfor-data-backend/internal/config"
 	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/repository"
+	"github.com/google/uuid"
 )
 
 type SMSMarketingService struct {
@@ -43,11 +45,11 @@ func NewSMSMarketingService(
 func (s *SMSMarketingService) GetProviderInfo() map[string]interface{} {
 	providerName := s.smsService.GetProviderName()
 	enabled := s.smsService.IsInitialized()
-	
+
 	// Get additional provider details
 	var senderID string
 	var authKeySet bool
-	
+
 	switch s.config.SMS.Provider {
 	case "fast2sms":
 		senderID = s.config.Fast2SMS.SenderID
@@ -59,7 +61,7 @@ func (s *SMSMarketingService) GetProviderInfo() map[string]interface{} {
 		senderID = s.config.MSG91.SenderID
 		authKeySet = s.config.MSG91.AuthKey != ""
 	}
-	
+
 	return map[string]interface{}{
 		"provider":     providerName,
 		"enabled":      enabled,
@@ -91,7 +93,7 @@ func (s *SMSMarketingService) ConnectAccountWithServerConfig(userID string) erro
 		}
 		// Use server-configured Fast2SMS credentials
 		return s.ConnectAccount(userID, s.config.Fast2SMS.AuthKey, s.config.Fast2SMS.SenderID)
-		
+
 	case "msg91":
 		fallthrough
 	default:
@@ -166,7 +168,7 @@ func (s *SMSMarketingService) SendIndividualMessage(userID, clientID, message st
 	}
 
 	// Send SMS
-	err = s.smsService.SendSMS(client.Phone, message)
+	result, err := s.smsService.SendSMSWithResult(client.Phone, message)
 	if err != nil {
 		// Log failed message
 		errMsg := err.Error()
@@ -186,12 +188,13 @@ func (s *SMSMarketingService) SendIndividualMessage(userID, clientID, message st
 
 	// Log successful message
 	log := &models.SMSMessageLog{
-		UserID:         userID,
-		ClientID:       &clientID,
-		MessageType:    "individual",
-		MessageText:    message,
-		RecipientPhone: client.Phone,
-		Status:         "sent",
+		UserID:            userID,
+		ClientID:          &clientID,
+		MessageType:       "individual",
+		MessageText:       message,
+		RecipientPhone:    client.Phone,
+		Status:            "sent",
+		ProviderMessageID: &result.MessageID,
 	}
 
 	if err := s.repo.CreateMessageLog(log); err != nil {
@@ -317,13 +320,13 @@ func (s *SMSMarketingService) SendCampaign(campaignID, userID string) error {
 			continue
 		}
 
-		err := s.smsService.SendSMS(recipient.RecipientPhone, campaign.MessageText)
+		result, err := s.smsService.SendSMSWithResult(recipient.RecipientPhone, campaign.MessageText)
 		if err != nil {
 			failed++
 			s.repo.UpdateRecipientStatus(recipient.ID, "failed", "")
 		} else {
 			successful++
-			s.repo.UpdateRecipientStatus(recipient.ID, "sent", "")
+			s.repo.UpdateRecipientStatus(recipient.ID, "sent", result.MessageID)
 		}
 
 		// Log the message
@@ -340,6 +343,8 @@ func (s *SMSMarketingService) SendCampaign(campaignID, userID string) error {
 			log.Status = "failed"
 			errMsg := err.Error()
 			log.ErrorMessage = &errMsg
+		} else {
+			log.ProviderMessageID = &result.MessageID
 		}
 		s.repo.CreateMessageLog(log)
 
@@ -434,6 +439,8 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 
 	successful := 0
 	failed := 0
+	batchID := uuid.NewString()
+	category := template.Category
 
 	// Send to clients
 	for _, clientID := range clientIDs {
@@ -454,7 +461,7 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 		message := s.buildMessageFromTemplate(template.TemplateContent, variableValues)
 
 		// Send SMS
-		err = s.smsService.SendSMS(client.Phone, message)
+		result, err := s.smsService.SendSMSWithResult(client.Phone, message)
 		if err != nil {
 			failed++
 			// Log failed message
@@ -466,6 +473,8 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 				MessageText:    message,
 				RecipientPhone: client.Phone,
 				Status:         "failed",
+				BatchID:        &batchID,
+				Category:       &category,
 				ErrorMessage:   &errMsg,
 			}
 			s.repo.CreateMessageLog(log)
@@ -473,12 +482,15 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 			successful++
 			// Log successful message
 			log := &models.SMSMessageLog{
-				UserID:         userID,
-				ClientID:       &clientID,
-				MessageType:    "individual",
-				MessageText:    message,
-				RecipientPhone: client.Phone,
-				Status:         "sent",
+				UserID:            userID,
+				ClientID:          &clientID,
+				MessageType:       "individual",
+				MessageText:       message,
+				RecipientPhone:    client.Phone,
+				Status:            "sent",
+				ProviderMessageID: &result.MessageID,
+				BatchID:           &batchID,
+				Category:          &category,
 			}
 			s.repo.CreateMessageLog(log)
 		}
@@ -506,7 +518,7 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 		message := s.buildMessageFromTemplate(template.TemplateContent, variableValues)
 
 		// Send SMS
-		err = s.smsService.SendSMS(contact.MobileNumber, message)
+		result, err := s.smsService.SendSMSWithResult(contact.MobileNumber, message)
 		if err != nil {
 			failed++
 			// Log failed message
@@ -517,6 +529,8 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 				MessageText:    message,
 				RecipientPhone: contact.MobileNumber,
 				Status:         "failed",
+				BatchID:        &batchID,
+				Category:       &category,
 				ErrorMessage:   &errMsg,
 			}
 			s.repo.CreateMessageLog(log)
@@ -524,11 +538,14 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 			successful++
 			// Log successful message
 			log := &models.SMSMessageLog{
-				UserID:         userID,
-				MessageType:    "individual",
-				MessageText:    message,
-				RecipientPhone: contact.MobileNumber,
-				Status:         "sent",
+				UserID:            userID,
+				MessageType:       "individual",
+				MessageText:       message,
+				RecipientPhone:    contact.MobileNumber,
+				Status:            "sent",
+				ProviderMessageID: &result.MessageID,
+				BatchID:           &batchID,
+				Category:          &category,
 			}
 			s.repo.CreateMessageLog(log)
 		}
@@ -574,7 +591,7 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 		}
 
 		// Send SMS
-		err = s.smsService.SendSMS(recipientPhone, message)
+		result, err := s.smsService.SendSMSWithResult(recipientPhone, message)
 		if err != nil {
 			failed++
 			// Log failed message
@@ -585,6 +602,8 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 				MessageText:    message,
 				RecipientPhone: recipientPhone,
 				Status:         "failed",
+				BatchID:        &batchID,
+				Category:       &category,
 				ErrorMessage:   &errMsg,
 			}
 			s.repo.CreateMessageLog(log)
@@ -592,11 +611,14 @@ func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variable
 			successful++
 			// Log successful message
 			log := &models.SMSMessageLog{
-				UserID:         userID,
-				MessageType:    "individual",
-				MessageText:    message,
-				RecipientPhone: recipientPhone,
-				Status:         "sent",
+				UserID:            userID,
+				MessageType:       "individual",
+				MessageText:       message,
+				RecipientPhone:    recipientPhone,
+				Status:            "sent",
+				ProviderMessageID: &result.MessageID,
+				BatchID:           &batchID,
+				Category:          &category,
 			}
 			s.repo.CreateMessageLog(log)
 		}
@@ -651,7 +673,7 @@ func (s *SMSMarketingService) mapPropertyToVariables(property *models.Property, 
 // buildMessageFromTemplate replaces {#var#} or {#alp#} placeholders with actual values
 func (s *SMSMarketingService) buildMessageFromTemplate(templateContent string, variableValues map[string]string) string {
 	message := templateContent
-	
+
 	// Replace variables sequentially (var1, var2, var3, etc.)
 	// This works for both {#var#} and {#alp#} patterns
 	varIndex := 1
@@ -661,7 +683,7 @@ func (s *SMSMarketingService) buildMessageFromTemplate(templateContent string, v
 		if !exists {
 			break
 		}
-		
+
 		// Try to replace {#alp#} first (most common in DLT templates)
 		if indexOf(message, "{#alp#}") != -1 {
 			message = replaceFirst(message, "{#alp#}", value)
@@ -672,10 +694,10 @@ func (s *SMSMarketingService) buildMessageFromTemplate(templateContent string, v
 			// No more placeholders found
 			break
 		}
-		
+
 		varIndex++
 	}
-	
+
 	return message
 }
 
@@ -723,6 +745,62 @@ func (s *SMSMarketingService) GetMessageLogs(userID string, limit int) ([]models
 		limit = 50
 	}
 	return s.repo.GetMessageLogsByUserID(userID, limit)
+}
+
+// RefreshDeliveryStatus fetches the current Fast2SMS DLR for one recipient.
+// The log is scoped to the authenticated broker before the provider is called.
+func (s *SMSMarketingService) RefreshDeliveryStatus(userID, logID string) (*models.SMSMessageLog, error) {
+	log, err := s.repo.GetMessageLogByID(userID, logID)
+	if err != nil {
+		return nil, err
+	}
+	if log == nil {
+		return nil, fmt.Errorf("message log not found")
+	}
+	if log.ProviderMessageID == nil || *log.ProviderMessageID == "" {
+		return log, nil
+	}
+	statuses, err := s.smsService.GetFast2SMSDeliveryReport(*log.ProviderMessageID)
+	if err != nil {
+		return nil, err
+	}
+	for _, delivery := range statuses {
+		if normalisePhone(string(delivery.Mobile)) != normalisePhone(log.RecipientPhone) {
+			continue
+		}
+		status := strings.ToLower(strings.TrimSpace(delivery.Status))
+		if status == "undelivered" || status == "failed" {
+			status = "failed"
+		}
+		if status == "" {
+			status = log.Status
+		}
+		var deliveredAt *time.Time
+		if status == "delivered" {
+			now := time.Now()
+			deliveredAt = &now
+		}
+		if err := s.repo.UpdateMessageLogDelivery(log.ID, status, delivery.StatusDescription, deliveredAt); err != nil {
+			return nil, err
+		}
+		log.Status, log.StatusDescription, log.DeliveredAt = status, &delivery.StatusDescription, deliveredAt
+		break
+	}
+	return log, nil
+}
+
+func normalisePhone(phone string) string {
+	var digits strings.Builder
+	for _, char := range phone {
+		if char >= '0' && char <= '9' {
+			digits.WriteRune(char)
+		}
+	}
+	value := digits.String()
+	if len(value) > 10 {
+		return value[len(value)-10:]
+	}
+	return value
 }
 
 func (s *SMSMarketingService) GetStats(userID string) (map[string]interface{}, error) {

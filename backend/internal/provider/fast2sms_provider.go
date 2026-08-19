@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -43,8 +44,9 @@ func NewFast2SMSProviderWithTemplate(authKey, senderID, route, templateID string
 
 // Fast2SMSResponse represents Fast2SMS API response
 type Fast2SMSResponse struct {
-	Return  bool     `json:"return"`
-	Message []string `json:"message"`
+	Return    bool     `json:"return"`
+	RequestID string   `json:"request_id"`
+	Message   []string `json:"message"`
 }
 
 func (p *Fast2SMSProvider) SendMessage(to string, message string) (*MessageResult, error) {
@@ -56,38 +58,30 @@ func (p *Fast2SMSProvider) SendMessage(to string, message string) (*MessageResul
 		to = to[1:] // Remove + prefix
 	}
 
-	// Fast2SMS API endpoint
-	apiURL := "https://www.fast2sms.com/dev/bulkV2"
-
-	// Prepare query parameters
-	params := url.Values{}
-	params.Set("route", p.route)
-	params.Set("sender_id", p.senderID)
-	params.Set("numbers", to)
-
-	// For DLT route, use message (template ID) and variables_values
-	if p.route == "dlt" && p.templateID != "" {
-		params.Set("message", p.templateID)
-		// Parse variables from message content
-		// Fast2SMS uses pipe-separated values: "value1|value2|value3"
-		variables := p.extractVariables(message)
-		params.Set("variables_values", variables)
-	} else {
-		// For non-DLT routes, send message directly
-		params.Set("message", message)
+	// Fast2SMS DLT SMS (Single) is a JSON POST to /dev/bulkV2.
+	// Its response contains the request_id used later by /dev/dlr/{request_id}.
+	payload := map[string]string{
+		"route": p.route, "sender_id": p.senderID, "numbers": to,
 	}
-
-	// Build full URL
-	fullURL := fmt.Sprintf("%s?%s", apiURL, params.Encode())
-
-	// Create request
-	req, err := http.NewRequest("GET", fullURL, nil)
+	if p.route == "dlt" && p.templateID != "" {
+		payload["message"] = p.templateID
+		payload["variables_values"] = p.extractVariables(message)
+	} else {
+		payload["message"] = message
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode Fast2SMS request: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, "https://www.fast2sms.com/dev/bulkV2", bytes.NewReader(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set authorization header
-	req.Header.Set("authorization", p.authKey)
+	req.Header.Set("Authorization", p.authKey)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
 	// Send request
 	resp, err := p.client.Do(req)
@@ -116,21 +110,9 @@ func (p *Fast2SMSProvider) SendMessage(to string, message string) (*MessageResul
 	// Parse response
 	var fast2smsResp Fast2SMSResponse
 	if err := json.Unmarshal(body, &fast2smsResp); err != nil {
-		// If JSON parsing fails, check if it's a simple success response
 		bodyStr := string(body)
-		if resp.StatusCode == 200 {
-			fmt.Printf("Status: SUCCESS ✓\n")
-			fmt.Printf("Response: %s\n", bodyStr)
-			fmt.Printf("================\n\n")
-
-			return &MessageResult{
-				MessageID: fmt.Sprintf("fast2sms_%d", time.Now().Unix()),
-				Status:    "sent",
-			}, nil
-		}
-
 		fmt.Printf("Status: FAILED ✗\n")
-		fmt.Printf("Error: Failed to parse response\n")
+		fmt.Printf("Error: Fast2SMS did not return a valid JSON request_id\n")
 		fmt.Printf("Raw Response: %s\n", bodyStr)
 		fmt.Printf("================\n\n")
 		return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -152,6 +134,9 @@ func (p *Fast2SMSProvider) SendMessage(to string, message string) (*MessageResul
 			Error:  errorMsg,
 		}, nil
 	}
+	if strings.TrimSpace(fast2smsResp.RequestID) == "" {
+		return nil, fmt.Errorf("Fast2SMS accepted the request but returned no request_id")
+	}
 
 	fmt.Printf("Status: SUCCESS ✓\n")
 	if len(fast2smsResp.Message) > 0 {
@@ -160,9 +145,60 @@ func (p *Fast2SMSProvider) SendMessage(to string, message string) (*MessageResul
 	fmt.Printf("================\n\n")
 
 	return &MessageResult{
-		MessageID: fmt.Sprintf("fast2sms_%d", time.Now().Unix()),
+		// Fast2SMS returns this value specifically for DLR lookups.  Never
+		// replace it with a locally generated value.
+		MessageID: fast2smsResp.RequestID,
 		Status:    "sent",
 	}, nil
+}
+
+// DeliveryStatus is the per-recipient status returned by Fast2SMS DLR.
+type DeliveryStatus struct {
+	// Fast2SMS returns this as a JSON number in some DLR responses and a string
+	// in others. RawMessage lets us support both without dropping the report.
+	Mobile            json.RawMessage `json:"mobile"`
+	Status            string          `json:"status"`
+	StatusDescription string          `json:"status_description"`
+	DeliveryTime      string          `json:"delivery_time"`
+}
+
+// GetDeliveryReport retrieves the delivery report for an actual Fast2SMS request_id.
+func (p *Fast2SMSProvider) GetDeliveryReport(requestID string) ([]DeliveryStatus, error) {
+	if strings.TrimSpace(requestID) == "" {
+		return nil, fmt.Errorf("Fast2SMS request_id is missing")
+	}
+	req, err := http.NewRequest(http.MethodGet, "https://www.fast2sms.com/dev/dlr/"+url.PathEscape(requestID), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DLR request: %w", err)
+	}
+	req.Header.Set("Authorization", p.authKey)
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve Fast2SMS delivery report: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read delivery report: %w", err)
+	}
+	var payload struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+		Data    []struct {
+			DeliveryStatus []DeliveryStatus `json:"delivery_status"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode Fast2SMS delivery report: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 || !payload.Success {
+		return nil, fmt.Errorf("Fast2SMS delivery report failed: %s", payload.Message)
+	}
+	var statuses []DeliveryStatus
+	for _, item := range payload.Data {
+		statuses = append(statuses, item.DeliveryStatus...)
+	}
+	return statuses, nil
 }
 
 // extractVariables extracts variable values from the filled template message
@@ -171,26 +207,26 @@ func (p *Fast2SMSProvider) SendMessage(to string, message string) (*MessageResul
 func (p *Fast2SMSProvider) extractVariables(message string) string {
 	// Split message by newlines to extract variable values
 	// The message should already have variables replaced by the service layer
-	
+
 	// For DLT templates, we need to extract the actual values from the message
 	// Since the message already has variables replaced, we need to parse them out
-	
+
 	// Common patterns in Indian DLT templates:
 	// Line 1: "Property for Sale: {value1}"
 	// Line 2: "Details: ₹{value2}"
 	// Line 3: "Contact: {value3}"
-	
+
 	lines := strings.Split(message, "\n")
 	var variables []string
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		
+
 		// Skip empty lines and lines with just "ENFOR DATA" or signature
 		if line == "" || line == "ENFOR DATA" || strings.HasPrefix(line, "-") {
 			continue
 		}
-		
+
 		// Extract value after colon
 		parts := strings.SplitN(line, ":", 2)
 		if len(parts) == 2 {
@@ -198,7 +234,7 @@ func (p *Fast2SMSProvider) extractVariables(message string) string {
 			// Remove common prefixes like ₹, emojis, etc.
 			value = strings.TrimPrefix(value, "₹")
 			value = strings.TrimSpace(value)
-			
+
 			// Remove emojis (they're before the colon, not in the value)
 			// Only add non-empty values
 			if value != "" {
@@ -206,15 +242,15 @@ func (p *Fast2SMSProvider) extractVariables(message string) string {
 			}
 		}
 	}
-	
+
 	// Join with pipe separator as required by Fast2SMS
 	result := strings.Join(variables, "|")
-	
+
 	// If no variables found, return empty pipes based on template variable count
 	if result == "" {
 		return "|||" // Default for 3 variables
 	}
-	
+
 	return result
 }
 

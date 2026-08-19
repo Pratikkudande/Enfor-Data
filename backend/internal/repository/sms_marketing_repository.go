@@ -429,9 +429,9 @@ func (r *SMSMarketingRepository) GetAllDLTTemplates() ([]models.SMSDLTTemplate, 
 		var template models.SMSDLTTemplate
 		err := rows.Scan(
 			&template.ID, &template.UserID, &template.CreatedByName,
-			&template.Header, &template.TemplateID, &template.TemplateName, 
-			&template.TemplateType, &template.Category, &template.Provider, &template.TemplateContent, 
-			&template.SampleContent, &template.Status, &template.VariableCount, 
+			&template.Header, &template.TemplateID, &template.TemplateName,
+			&template.TemplateType, &template.Category, &template.Provider, &template.TemplateContent,
+			&template.SampleContent, &template.Status, &template.VariableCount,
 			&template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
 		)
 		if err != nil {
@@ -460,9 +460,9 @@ func (r *SMSMarketingRepository) GetDLTTemplateByIDAdmin(templateID string) (*mo
 
 	err := r.db.QueryRow(query, templateID).Scan(
 		&template.ID, &template.UserID, &template.CreatedByName,
-		&template.Header, &template.TemplateID, &template.TemplateName, 
-		&template.TemplateType, &template.Category, &template.Provider, &template.TemplateContent, 
-		&template.SampleContent, &template.Status, &template.VariableCount, 
+		&template.Header, &template.TemplateID, &template.TemplateName,
+		&template.TemplateType, &template.Category, &template.Provider, &template.TemplateContent,
+		&template.SampleContent, &template.Status, &template.VariableCount,
 		&template.UpdatedBy, &template.CreatedAt, &template.UpdatedAt,
 	)
 
@@ -579,22 +579,23 @@ func (r *SMSMarketingRepository) CreateMessageLog(log *models.SMSMessageLog) err
 	query := `
 		INSERT INTO sms_message_logs (
 			user_id, campaign_id, client_id, message_type, message_text,
-			recipient_phone, status, provider_message_id, error_message
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			recipient_phone, status, provider_message_id, batch_id, category, error_message
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, sent_at
 	`
 
 	return r.db.QueryRow(
 		query,
 		log.UserID, log.CampaignID, log.ClientID, log.MessageType, log.MessageText,
-		log.RecipientPhone, log.Status, log.ProviderMessageID, log.ErrorMessage,
+		log.RecipientPhone, log.Status, log.ProviderMessageID, log.BatchID, log.Category, log.ErrorMessage,
 	).Scan(&log.ID, &log.SentAt)
 }
 
 func (r *SMSMarketingRepository) GetMessageLogsByUserID(userID string, limit int) ([]models.SMSMessageLog, error) {
 	query := `
 		SELECT id, user_id, campaign_id, client_id, message_type, message_text,
-			   recipient_phone, status, provider_message_id, error_message, sent_at
+			   recipient_phone, status, provider_message_id, batch_id, category,
+			   status_description, error_message, COALESCE(sent_at, NOW()) AS sent_at, delivered_at
 		FROM sms_message_logs
 		WHERE user_id = $1
 		ORDER BY sent_at DESC
@@ -613,7 +614,8 @@ func (r *SMSMarketingRepository) GetMessageLogsByUserID(userID string, limit int
 		err := rows.Scan(
 			&log.ID, &log.UserID, &log.CampaignID, &log.ClientID, &log.MessageType,
 			&log.MessageText, &log.RecipientPhone, &log.Status, &log.ProviderMessageID,
-			&log.ErrorMessage, &log.SentAt,
+			&log.BatchID, &log.Category, &log.StatusDescription, &log.ErrorMessage,
+			&log.SentAt, &log.DeliveredAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan message log: %w", err)
@@ -622,6 +624,29 @@ func (r *SMSMarketingRepository) GetMessageLogsByUserID(userID string, limit int
 	}
 
 	return logs, nil
+}
+
+func (r *SMSMarketingRepository) GetMessageLogByID(userID, logID string) (*models.SMSMessageLog, error) {
+	log := &models.SMSMessageLog{}
+	err := r.db.QueryRow(`SELECT id, user_id, campaign_id, client_id, message_type, message_text,
+        recipient_phone, status, provider_message_id, batch_id, category, status_description,
+		error_message, COALESCE(sent_at, NOW()) AS sent_at, delivered_at FROM sms_message_logs WHERE id = $1 AND user_id = $2`, logID, userID).Scan(
+		&log.ID, &log.UserID, &log.CampaignID, &log.ClientID, &log.MessageType, &log.MessageText,
+		&log.RecipientPhone, &log.Status, &log.ProviderMessageID, &log.BatchID, &log.Category,
+		&log.StatusDescription, &log.ErrorMessage, &log.SentAt, &log.DeliveredAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get message log: %w", err)
+	}
+	return log, nil
+}
+
+func (r *SMSMarketingRepository) UpdateMessageLogDelivery(logID, status, description string, deliveredAt *time.Time) error {
+	_, err := r.db.Exec(`UPDATE sms_message_logs SET status = $1, status_description = $2, delivered_at = $3 WHERE id = $4`, status, description, deliveredAt, logID)
+	return err
 }
 
 // ============================================================

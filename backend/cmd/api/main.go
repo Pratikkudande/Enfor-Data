@@ -520,6 +520,7 @@ func main() {
 
 				// Analytics
 				smsMarketing.GET("/logs", smsMarketingHandler.GetMessageLogs)
+				smsMarketing.POST("/logs/:id/refresh-delivery", smsMarketingHandler.RefreshDeliveryStatus)
 				smsMarketing.GET("/stats", smsMarketingHandler.GetStats)
 			}
 

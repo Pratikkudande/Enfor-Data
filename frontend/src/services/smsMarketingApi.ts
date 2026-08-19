@@ -81,8 +81,12 @@ export interface SMSMessageLog {
   recipient_phone: string;
   status: 'sent' | 'delivered' | 'failed';
   provider_message_id?: string;
+	batch_id?: string;
+	category?: string;
+	status_description?: string;
   error_message?: string;
   sent_at: string;
+	delivered_at?: string;
 }
 
 export interface SMSStats {
@@ -273,7 +277,11 @@ export const sendSMSCampaign = async (campaignId: string) => {
 
 export const getSMSMessageLogs = async (): Promise<{ logs: SMSMessageLog[] }> => {
   const response = await api.get('/sms-marketing/logs');
-  return response.data;
+  return response as { logs: SMSMessageLog[] };
+};
+
+export const refreshSMSDeliveryStatus = async (logId: string): Promise<{ log: SMSMessageLog }> => {
+  return api.post<{ log: SMSMessageLog }>(`/sms-marketing/logs/${logId}/refresh-delivery`);
 };
 
 export const getSMSStats = async (): Promise<{ stats: SMSStats }> => {

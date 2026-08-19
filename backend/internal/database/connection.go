@@ -15,18 +15,18 @@ type DB struct {
 }
 
 func NewConnection(cfg *config.Config) (*DB, error) {
-    dsn := cfg.Database.URL
-    if dsn == "" {
-        dsn = fmt.Sprintf(
-            "host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-            cfg.Database.Host,
-            cfg.Database.Port,
-            cfg.Database.User,
-            cfg.Database.Password,
-            cfg.Database.DBName,
-            cfg.Database.SSLMode,
-        )
-    }
+	dsn := cfg.Database.URL
+	if dsn == "" {
+		dsn = fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Database.Host,
+			cfg.Database.Port,
+			cfg.Database.User,
+			cfg.Database.Password,
+			cfg.Database.DBName,
+			cfg.Database.SSLMode,
+		)
+	}
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -1164,11 +1164,7 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_message_logs(cr
 // RunSMSMarketingMigrations creates the SMS marketing tables.
 func (db *DB) RunSMSMarketingMigrations() error {
 	sql := `
--- Drop and recreate to fix any corrupt schema from previous broken migrations
-DROP TABLE IF EXISTS sms_message_logs CASCADE;
-DROP TABLE IF EXISTS sms_campaigns CASCADE;
-DROP TABLE IF EXISTS sms_templates CASCADE;
-DROP TABLE IF EXISTS sms_accounts CASCADE;
+-- Keep existing broker history.  This migration is intentionally additive.
 
 -- SMS account configuration per user (MSG91 only)
 CREATE TABLE IF NOT EXISTS sms_accounts (
@@ -1225,19 +1221,18 @@ CREATE TRIGGER update_sms_templates_updated_at
 CREATE TABLE IF NOT EXISTS sms_campaigns (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    template_id     UUID REFERENCES sms_templates(id) ON DELETE SET NULL,
+    sms_account_id  UUID REFERENCES sms_accounts(id) ON DELETE SET NULL,
     name            VARCHAR(255) NOT NULL,
-    message_content TEXT NOT NULL,
-    target_audience VARCHAR(50) NOT NULL DEFAULT 'all_clients'
-                        CHECK (target_audience IN ('all_clients', 'buyers', 'sellers', 'tenants', 'owners', 'custom')),
-    custom_recipients TEXT[] DEFAULT '{}',
+    message_text TEXT NOT NULL,
     scheduled_at    TIMESTAMP WITH TIME ZONE,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
-                        CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+                        CHECK (status IN ('draft', 'scheduled', 'sending', 'completed', 'failed', 'cancelled')),
     total_recipients INTEGER DEFAULT 0,
-    sent_count      INTEGER DEFAULT 0,
-    delivered_count INTEGER DEFAULT 0,
-    failed_count    INTEGER DEFAULT 0,
+    successful_sends INTEGER DEFAULT 0,
+    failed_sends INTEGER DEFAULT 0,
+    pending_sends INTEGER DEFAULT 0,
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -1249,6 +1244,17 @@ CREATE TRIGGER update_sms_campaigns_updated_at
     BEFORE UPDATE ON sms_campaigns
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TABLE IF NOT EXISTS sms_campaign_recipients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES sms_campaigns(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    recipient_name VARCHAR(255), recipient_phone VARCHAR(20) NOT NULL,
+    send_status VARCHAR(20) NOT NULL DEFAULT 'pending', provider_message_id VARCHAR(255), error_message TEXT,
+    queued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), sent_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE, failed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- SMS message logs
 CREATE TABLE IF NOT EXISTS sms_message_logs (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1257,24 +1263,44 @@ CREATE TABLE IF NOT EXISTS sms_message_logs (
     client_id     UUID REFERENCES clients(id) ON DELETE SET NULL,
     message_type  VARCHAR(20) NOT NULL DEFAULT 'individual'
                       CHECK (message_type IN ('individual', 'campaign', 'appointment', 'transactional')),
-    phone_number  VARCHAR(20) NOT NULL,
-    message_content TEXT NOT NULL,
-    status        VARCHAR(20) NOT NULL DEFAULT 'pending'
-                      CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'undelivered')),
+    recipient_phone  VARCHAR(20) NOT NULL,
+    message_text TEXT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'sent'
+                      CHECK (status IN ('sent', 'delivered', 'failed')),
     error_message TEXT,
     provider_message_id VARCHAR(255),
-    cost_amount   DECIMAL(10, 4),
-    cost_currency VARCHAR(3) DEFAULT 'USD',
-    sent_at       TIMESTAMP WITH TIME ZONE,
-    delivered_at  TIMESTAMP WITH TIME ZONE,
-    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    batch_id UUID,
+    category VARCHAR(100),
+    status_description TEXT,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_sms_logs_user ON sms_message_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_campaign ON sms_message_logs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_client ON sms_message_logs(client_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_status ON sms_message_logs(status);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_message_type ON sms_message_logs(message_type);
-CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(sent_at DESC);
+
+-- Existing installations created by earlier versions receive these columns too.
+-- The first SMS marketing migration used message_content and phone_number.
+-- Rename them once so the repository and historic logs use one stable schema.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_message_logs' AND column_name = 'message_content')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_message_logs' AND column_name = 'message_text') THEN
+        ALTER TABLE sms_message_logs RENAME COLUMN message_content TO message_text;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_message_logs' AND column_name = 'phone_number')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_message_logs' AND column_name = 'recipient_phone') THEN
+        ALTER TABLE sms_message_logs RENAME COLUMN phone_number TO recipient_phone;
+    END IF;
+END $$;
+ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS batch_id UUID;
+ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS status_description TEXT;
+ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE;
 
 -- SMS DLT Templates (Distributed Ledger Technology - Regulatory Compliance)
 CREATE TABLE IF NOT EXISTS sms_dlt_templates (
@@ -1284,6 +1310,7 @@ CREATE TABLE IF NOT EXISTS sms_dlt_templates (
     template_id VARCHAR(255) NOT NULL,
     template_name VARCHAR(255) NOT NULL,
     template_type VARCHAR(50) NOT NULL CHECK (template_type IN ('Promotional', 'Service')),
+    category VARCHAR(50) NOT NULL DEFAULT 'SERVICES',
     provider VARCHAR(50) NOT NULL DEFAULT 'MSG91',
     template_content TEXT NOT NULL,
     sample_content TEXT,
@@ -1298,6 +1325,7 @@ CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_template_id ON sms_dlt_template
 CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_status ON sms_dlt_templates(status);
 CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_provider ON sms_dlt_templates(provider);
 CREATE INDEX IF NOT EXISTS idx_sms_dlt_templates_updated_by ON sms_dlt_templates(updated_by);
+ALTER TABLE sms_dlt_templates ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'SERVICES';
 DROP TRIGGER IF EXISTS update_sms_dlt_templates_updated_at ON sms_dlt_templates;
 CREATE TRIGGER update_sms_dlt_templates_updated_at
     BEFORE UPDATE ON sms_dlt_templates
@@ -1312,7 +1340,6 @@ CREATE TRIGGER update_sms_dlt_templates_updated_at
 	log.Println("SMS marketing migrations completed successfully")
 	return nil
 }
-
 
 // RunBuildingMigrations creates the building_contacts table.
 func (db *DB) RunBuildingMigrations() error {

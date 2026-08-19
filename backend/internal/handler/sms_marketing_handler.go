@@ -477,16 +477,16 @@ func (h *SMSMarketingHandler) UpdateDLTTemplate(c *gin.Context) {
 	if req.SampleContent != nil {
 		template.SampleContent = req.SampleContent
 	}
-	
+
 	// For non-admin users (brokers), always set status to "Created" when updating
 	if userRole != "admin" {
 		template.Status = "Created"
 	} else if req.Status != "" {
 		template.Status = req.Status
 	}
-	
+
 	template.VariableCount = req.VariableCount
-	
+
 	// Set updated_by to current user
 	template.UpdatedBy = &userID
 
@@ -565,11 +565,11 @@ func (h *SMSMarketingHandler) SendDLTMessage(c *gin.Context) {
 	userID := c.GetString("user_id")
 
 	var req struct {
-		TemplateID          string            `json:"template_id" binding:"required"`
-		VariableValues      map[string]string `json:"variable_values"`
-		ClientIDs           []string          `json:"client_ids"`
-		BuildingContactIDs  []string          `json:"building_contact_ids"` // Add building contact IDs support
-		PropertyIDs         []string          `json:"property_ids"`         // Add property IDs support
+		TemplateID         string            `json:"template_id" binding:"required"`
+		VariableValues     map[string]string `json:"variable_values"`
+		ClientIDs          []string          `json:"client_ids"`
+		BuildingContactIDs []string          `json:"building_contact_ids"` // Add building contact IDs support
+		PropertyIDs        []string          `json:"property_ids"`         // Add property IDs support
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -628,6 +628,20 @@ func (h *SMSMarketingHandler) GetMessageLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"logs": logs,
 	})
+}
+
+// POST /api/sms-marketing/logs/:id/refresh-delivery
+func (h *SMSMarketingHandler) RefreshDeliveryStatus(c *gin.Context) {
+	log, err := h.service.RefreshDeliveryStatus(c.GetString("user_id"), c.Param("id"))
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err.Error() == "message log not found" {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, ErrorResponse{Error: "Unable to refresh delivery status", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"log": log})
 }
 
 // GET /api/sms-marketing/stats
