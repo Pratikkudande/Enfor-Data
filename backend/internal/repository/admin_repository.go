@@ -321,15 +321,15 @@ func (r *AdminRepository) GetSubscriptions(page, limit int) ([]models.Subscripti
 func (r *AdminRepository) GetSMSStats() (*models.SMSStats, error) {
 	stats := &models.SMSStats{}
 
-	// Allocated from subscription plans (sum across active subscriptions)
+	// Allocated = plan SMS credits + purchased top-ups; Used = the subscription's
+	// SMS usage counter — summed across active/trial subscriptions.
 	r.db.QueryRow(`
-		SELECT COALESCE(SUM(sp.max_sms_messages_per_month),0)
+		SELECT COALESCE(SUM(COALESCE(sp.sms_credits,0) + COALESCE(us.sms_topup_credits,0)),0),
+		       COALESCE(SUM(COALESCE(us.current_sms_messages_count,0)),0)
 		FROM user_subscriptions us
 		JOIN subscription_plans sp ON sp.id = us.plan_id
-		WHERE us.status IN ('active','trialing')
-	`).Scan(&stats.TotalPurchased)
-
-	r.db.QueryRow(`SELECT COALESCE(SUM(sent_count),0) FROM sms_campaigns`).Scan(&stats.TotalUsed)
+		WHERE us.status IN ('active','trial')
+	`).Scan(&stats.TotalPurchased, &stats.TotalUsed)
 	stats.Remaining = stats.TotalPurchased - stats.TotalUsed
 	if stats.Remaining < 0 {
 		stats.Remaining = 0
@@ -338,14 +338,15 @@ func (r *AdminRepository) GetSMSStats() (*models.SMSStats, error) {
 	rows, err := r.db.Query(`
 		SELECT
 			u.id, CONCAT(u.first_name,' ',u.last_name),
-			COALESCE(sp.max_sms_messages_per_month, 0),
-			COALESCE((SELECT SUM(sent_count) FROM sms_campaigns WHERE user_id = u.id), 0)
+			COALESCE(sp.sms_credits, 0) + COALESCE(us.sms_topup_credits, 0),
+			COALESCE(us.current_sms_messages_count, 0)
 		FROM users u
-		LEFT JOIN user_subscriptions us ON us.user_id = u.id AND us.status IN ('active','trialing')
+		LEFT JOIN user_subscriptions us ON us.user_id = u.id AND us.status IN ('active','trial')
 		LEFT JOIN subscription_plans sp ON sp.id = us.plan_id
 		WHERE u.role IN ('broker','channel_partner')
-		ORDER BY (SELECT COALESCE(SUM(sent_count),0) FROM sms_campaigns WHERE user_id = u.id) DESC
-		LIMIT 20
+		ORDER BY (COALESCE(sp.sms_credits,0) + COALESCE(us.sms_topup_credits,0)) DESC,
+		         COALESCE(us.current_sms_messages_count,0) DESC
+		LIMIT 50
 	`)
 	if err != nil {
 		return stats, nil
