@@ -1304,7 +1304,7 @@ ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS category VARCHAR(100);
 ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS status_description TEXT;
 ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE;
 -- Ensure the constraint exists on fresh and upgraded installs alike
-DO $
+DO $constraint$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
@@ -1314,7 +1314,7 @@ BEGIN
             ADD CONSTRAINT sms_message_logs_message_type_check
             CHECK (message_type IN ('individual', 'campaign', 'appointment', 'transactional'));
     END IF;
-END $;
+END $constraint$;
 
 -- SMS DLT Templates (Distributed Ledger Technology - Regulatory Compliance)
 CREATE TABLE IF NOT EXISTS sms_dlt_templates (
