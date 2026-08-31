@@ -1,5 +1,6 @@
 import React from 'react';
-import { indianStates, enquiryOptions, measurementUnits } from '../../constants/options';
+import { X, Edit2, Save } from 'lucide-react';
+import { indianStates } from '../../constants/options';
 
 export interface ClientFormData {
   firstName: string;
@@ -7,37 +8,29 @@ export interface ClientFormData {
   location: string;
   contactNo: string;
   email: string;
-  address: string;
   city: string;
   state: string;
   postalCode: string;
-  enquiry: string;
   budgetMin: string;
   budgetMax: string;
-  expectedAmount: string;
-  // Sell Property
-  minPrice: string;
-  maxPrice: string;
-  propertyAddress: string;
-  // Area fields
-  buildupArea: string;
-  carpetArea: string;
-  measurementUnit: string;
-  // Rent
-  depositBudget: string;
+  types?: string[]; // Multiple types support
 }
 
 interface ClientFormProps {
   formData: ClientFormData;
   selectedClientType: 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent';
+  selectedClientTypes?: string[]; // Multiple types support
   editingClientId: string | null;
   isViewOnly?: boolean;
   submitting: boolean;
   formError?: string | null;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   onTypeChange: (type: 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent') => void;
+  onTypesChange?: (types: string[]) => void; // Multiple types support
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  onEditToggle?: () => void;
+  onCancelEdit?: () => void;
 }
 
 const typeConfig = {
@@ -50,26 +43,40 @@ const typeConfig = {
 const ClientForm: React.FC<ClientFormProps> = ({
   formData,
   selectedClientType,
+  selectedClientTypes = [],
   editingClientId,
   isViewOnly = false,
   submitting,
   formError,
   onInputChange,
   onTypeChange,
+  onTypesChange,
   onSubmit,
   onCancel,
+  onEditToggle,
+  onCancelEdit,
 }) => {
-  const isBuyer  = selectedClientType === 'buyer';
-  const isSeller = selectedClientType === 'seller';
-  const isTenant = selectedClientType === 'tenant';
-  const isRentList = selectedClientType === 'list_property_for_rent';
+  // Use selectedClientTypes if available, otherwise fall back to single type
+  const activeTypes = selectedClientTypes.length > 0 ? selectedClientTypes : [selectedClientType];
+  
+  const isBuyer  = activeTypes.includes('buyer');
+  const showBudgetRange = isBuyer || activeTypes.includes('tenant');
 
-  const showBudgetRange   = isBuyer || isTenant;
-  const showExpected      = isRentList;
-  const showSellPrices    = isSeller;
-  const showAreaFields    = isBuyer || isSeller || isRentList;
-  const showDeposit       = isTenant || isRentList;
-  const showPropertyAddr  = isSeller;
+  // Handle type toggle for multi-select
+  const handleTypeToggle = (type: 'buyer' | 'seller' | 'tenant' | 'list_property_for_rent') => {
+    if (onTypesChange) {
+      const newTypes = activeTypes.includes(type)
+        ? activeTypes.filter(t => t !== type)
+        : [...activeTypes, type];
+      
+      // Ensure at least one type is selected
+      if (newTypes.length > 0) {
+        onTypesChange(newTypes);
+      }
+    } else {
+      onTypeChange(type);
+    }
+  };
 
   const inputCls = (disabled = false) =>
     `w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${disabled ? 'bg-gray-50 text-gray-500' : ''}`;
@@ -89,39 +96,87 @@ const ClientForm: React.FC<ClientFormProps> = ({
             <h2 className="text-xl font-bold text-gray-900">
               {isViewOnly ? 'View Client' : editingClientId ? 'Edit Client' : 'Add New Client'}
             </h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {editingClientId && isViewOnly && onEditToggle && (
+                <button
+                  onClick={onEditToggle}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit
+                </button>
+              )}
+              {editingClientId && !isViewOnly && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (onCancelEdit) {
+                        onCancelEdit();
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onSubmit}
+                    disabled={submitting}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    {submitting ? 'Saving...' : 'Save'}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={onCancel}
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Client Type Selector */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Client Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Client Type {!isViewOnly && <span className="text-gray-500 text-xs">(Select one or more)</span>}
+            </label>
             {isViewOnly ? (
-              <div className={`p-3 border-2 rounded-lg text-center font-semibold text-sm ${typeConfig[selectedClientType].color}`}>
-                {typeConfig[selectedClientType].label}
+              <div className="flex flex-wrap gap-2">
+                {activeTypes.map((type) => (
+                  <div
+                    key={type}
+                    className={`px-4 py-2 border-2 rounded-lg text-center font-semibold text-sm ${
+                      typeConfig[type as keyof typeof typeConfig].color
+                    }`}
+                  >
+                    {typeConfig[type as keyof typeof typeConfig].label}
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => onTypeChange(t)}
-                    className={`p-3 border-2 rounded-lg text-center text-sm font-semibold transition-all ${
-                      selectedClientType === t ? typeConfig[t].color : typeConfig[t].inactive
-                    }`}
-                  >
-                    {typeConfig[t].label}
-                  </button>
-                ))}
+                {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map((t) => {
+                  const isSelected = activeTypes.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => handleTypeToggle(t)}
+                      className={`p-3 border-2 rounded-lg text-center text-sm font-semibold transition-all ${
+                        isSelected ? typeConfig[t].color : typeConfig[t].inactive
+                      }`}
+                    >
+                      {typeConfig[t].label}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); if (!isViewOnly) onSubmit(e); }} className="space-y-4">
             {/* Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -150,31 +205,13 @@ const ClientForm: React.FC<ClientFormProps> = ({
               </div>
             </div>
 
-            {/* Client Address — optional */}
-            <div>
-              {label('Client Address')}
-              <textarea name="address" value={formData.address} onChange={onInputChange}
-                disabled={isViewOnly} rows={2} className={inputCls(isViewOnly)}
-                placeholder="Client's residential address (optional)" />
-            </div>
-
-            {/* Sell Property: Property Address */}
-            {showPropertyAddr && (
-              <div>
-                {label('Property Address')}
-                <textarea name="propertyAddress" value={formData.propertyAddress} onChange={onInputChange}
-                  disabled={isViewOnly} rows={2} className={inputCls(isViewOnly)}
-                  placeholder="Full address of the property to be sold" />
-              </div>
-            )}
-
             {/* Location + City */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                {label(isBuyer ? 'Preferred Location' : 'Property Location')}
+                {label('Preferred Location')}
                 <input type="text" name="location" value={formData.location} onChange={onInputChange}
                   disabled={isViewOnly} className={inputCls(isViewOnly)}
-                  placeholder={isBuyer ? 'Area/Locality' : 'Property area/location'} />
+                  placeholder="Area/Locality" />
               </div>
               <div>
                 {label('City')}
@@ -200,43 +237,6 @@ const ClientForm: React.FC<ClientFormProps> = ({
               </div>
             </div>
 
-            {/* Enquiry */}
-            <div>
-              {label('Enquiry')}
-              <select name="enquiry" value={formData.enquiry} onChange={onInputChange}
-                disabled={isViewOnly} className={inputCls(isViewOnly)}>
-                <option value="">Select Property Type</option>
-                {enquiryOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-
-            {/* Area fields — Buyer, Seller, Property for Rent */}
-            {showAreaFields && (
-              <div className="border border-gray-100 rounded-lg p-4 bg-gray-50 space-y-3">
-                <p className="text-sm font-semibold text-gray-700">Area Details</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    {label('Buildup Area')}
-                    <input type="number" name="buildupArea" value={formData.buildupArea} onChange={onInputChange}
-                      disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 1200" />
-                  </div>
-                  <div>
-                    {label('Carpet Area')}
-                    <input type="number" name="carpetArea" value={formData.carpetArea} onChange={onInputChange}
-                      disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 950" />
-                  </div>
-                  <div>
-                    {label('Measurement Unit')}
-                    <select name="measurementUnit" value={formData.measurementUnit} onChange={onInputChange}
-                      disabled={isViewOnly} className={inputCls(isViewOnly)}>
-                      <option value="">Select Unit</option>
-                      {measurementUnits.map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Budget Range — Buyer / Tenant */}
             {showBudgetRange && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -253,44 +253,6 @@ const ClientForm: React.FC<ClientFormProps> = ({
               </div>
             )}
 
-            {/* Deposit Budget — Tenant (what they can pay) / Property for Rent (what owner expects) */}
-            {showDeposit && (
-              <div>
-                {label(isTenant ? 'Deposit Budget' : 'Expected Deposit Amount')}
-                <input type="number" name="depositBudget" value={formData.depositBudget} onChange={onInputChange}
-                  disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)}
-                  placeholder={isTenant ? 'e.g. 100000' : 'e.g. 200000'} />
-                <p className="mt-1 text-xs text-gray-400">
-                  {isTenant ? 'Maximum deposit amount the tenant can pay' : 'Security deposit amount expected from tenant'}
-                </p>
-              </div>
-            )}
-
-            {/* Sell Property: Min/Max Price */}
-            {showSellPrices && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  {label('Minimum Price')}
-                  <input type="number" name="minPrice" value={formData.minPrice} onChange={onInputChange}
-                    disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 2000000" />
-                </div>
-                <div>
-                  {label('Maximum Price')}
-                  <input type="number" name="maxPrice" value={formData.maxPrice} onChange={onInputChange}
-                    disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 5000000" />
-                </div>
-              </div>
-            )}
-
-            {/* Expected Amount — Property for Rent */}
-            {showExpected && (
-              <div>
-                {label('Expected Amount', true)}
-                <input type="number" name="expectedAmount" value={formData.expectedAmount} onChange={onInputChange}
-                  disabled={isViewOnly} min="0" step="0.01" className={inputCls(isViewOnly)} placeholder="e.g. 2500000" required />
-              </div>
-            )}
-
             {/* Error */}
             {formError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -298,24 +260,24 @@ const ClientForm: React.FC<ClientFormProps> = ({
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex space-x-3 pt-2">
-              <button type="button" onClick={onCancel} disabled={submitting}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm font-medium">
-                {isViewOnly ? 'Close' : 'Cancel'}
-              </button>
-              {!isViewOnly && (
+            {/* Actions - Only show for Add New Client */}
+            {!isViewOnly && !editingClientId && (
+              <div className="flex space-x-3 pt-2">
+                <button type="button" onClick={onCancel} disabled={submitting}
+                  className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm font-medium">
+                  Cancel
+                </button>
                 <button type="submit" disabled={submitting}
                   className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center text-sm font-medium">
                   {submitting ? (
                     <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      {editingClientId ? 'Updating...' : 'Adding...'}</>
+                      Adding...</>
                   ) : (
-                    editingClientId ? 'Update Client' : 'Add Client'
+                    'Add Client'
                   )}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </form>
         </div>
       </div>

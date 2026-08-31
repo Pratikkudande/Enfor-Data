@@ -186,12 +186,12 @@ const ProfileView: React.FC = () => {
   const readCls = 'flex items-center gap-2 p-3 bg-gray-50 rounded-lg';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <p className="text-gray-600">Manage your personal information and preferences</p>
+          <p className="text-gray-600 text-sm">Manage your personal information and preferences</p>
         </div>
         {!isEditing ? (
           <button onClick={() => setIsEditing(true)}
@@ -214,8 +214,8 @@ const ProfileView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="lg:col-span-1 min-w-0">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 overflow-hidden">
             <div className="text-center">
               {/* Profile Picture */}
               <div className="relative inline-block mb-4">
@@ -254,7 +254,7 @@ const ProfileView: React.FC = () => {
 
               <h2 className="text-xl font-bold text-gray-900 mb-1">{user?.name}</h2>
               <p className="text-blue-600 font-medium mb-2">{getRoleDisplayName(user?.role || '')}</p>
-              <p className="text-gray-500 text-sm">{user?.email}</p>
+              <p className="text-gray-500 text-xs break-all">{user?.email}</p>
               {uploading && (
                 <p className="text-xs text-blue-500 mt-2 animate-pulse">Uploading photo…</p>
               )}
@@ -320,9 +320,9 @@ const ProfileView: React.FC = () => {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                <div className={readCls}>
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-900">{profileData.email}</span>
+                <div className={`${readCls} min-w-0`}>
+                  <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm break-all min-w-0">{profileData.email}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>

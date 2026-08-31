@@ -2,33 +2,74 @@ package service
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"enfor-data-backend/internal/config"
 	"enfor-data-backend/internal/models"
 	"enfor-data-backend/internal/repository"
+	"github.com/google/uuid"
 )
 
 type SMSMarketingService struct {
-	repo       *repository.SMSMarketingRepository
-	clientRepo *repository.ClientRepository
-	smsService *SMSService
+	repo         *repository.SMSMarketingRepository
+	clientRepo   *repository.ClientRepository
+	buildingRepo *repository.BuildingRepository
+	propertyRepo *repository.PropertyRepository
+	smsService   *SMSService
+	config       *config.Config
 }
 
 func NewSMSMarketingService(
 	repo *repository.SMSMarketingRepository,
 	clientRepo *repository.ClientRepository,
+	buildingRepo *repository.BuildingRepository,
+	propertyRepo *repository.PropertyRepository,
 	smsService *SMSService,
+	config *config.Config,
 ) *SMSMarketingService {
 	return &SMSMarketingService{
-		repo:       repo,
-		clientRepo: clientRepo,
-		smsService: smsService,
+		repo:         repo,
+		clientRepo:   clientRepo,
+		buildingRepo: buildingRepo,
+		propertyRepo: propertyRepo,
+		smsService:   smsService,
+		config:       config,
 	}
 }
 
 // ============================================================
 // Account Management
 // ============================================================
+
+func (s *SMSMarketingService) GetProviderInfo() map[string]interface{} {
+	providerName := s.smsService.GetProviderName()
+	enabled := s.smsService.IsInitialized()
+
+	// Get additional provider details
+	var senderID string
+	var authKeySet bool
+
+	switch s.config.SMS.Provider {
+	case "fast2sms":
+		senderID = s.config.Fast2SMS.SenderID
+		authKeySet = s.config.Fast2SMS.AuthKey != ""
+	case "msg91":
+		senderID = s.config.MSG91.SenderID
+		authKeySet = s.config.MSG91.AuthKey != ""
+	default:
+		senderID = s.config.MSG91.SenderID
+		authKeySet = s.config.MSG91.AuthKey != ""
+	}
+
+	return map[string]interface{}{
+		"provider":     providerName,
+		"enabled":      enabled,
+		"sender_id":    senderID,
+		"auth_key_set": authKeySet,
+		"initialized":  enabled,
+	}
+}
 
 func (s *SMSMarketingService) GetAccountStatus(userID string) (*models.SMSAccount, error) {
 	account, err := s.repo.GetAccountByUserID(userID)
@@ -37,6 +78,35 @@ func (s *SMSMarketingService) GetAccountStatus(userID string) (*models.SMSAccoun
 	}
 
 	return account, nil
+}
+
+func (s *SMSMarketingService) ConnectAccountWithServerConfig(userID string) error {
+	// Check which provider is configured
+	switch s.config.SMS.Provider {
+	case "fast2sms":
+		// Check if Fast2SMS is enabled and configured
+		if !s.config.Fast2SMS.Enabled {
+			return fmt.Errorf("Fast2SMS SMS service is not enabled")
+		}
+		if s.config.Fast2SMS.AuthKey == "" || s.config.Fast2SMS.SenderID == "" {
+			return fmt.Errorf("Fast2SMS credentials not configured on server")
+		}
+		// Use server-configured Fast2SMS credentials
+		return s.ConnectAccount(userID, s.config.Fast2SMS.AuthKey, s.config.Fast2SMS.SenderID)
+
+	case "msg91":
+		fallthrough
+	default:
+		// Check if MSG91 is enabled and configured
+		if !s.config.MSG91.Enabled {
+			return fmt.Errorf("MSG91 SMS service is not enabled")
+		}
+		if s.config.MSG91.AuthKey == "" || s.config.MSG91.SenderID == "" {
+			return fmt.Errorf("MSG91 credentials not configured on server")
+		}
+		// Use server-configured MSG91 credentials
+		return s.ConnectAccount(userID, s.config.MSG91.AuthKey, s.config.MSG91.SenderID)
+	}
 }
 
 func (s *SMSMarketingService) ConnectAccount(userID, authKey, senderID string) error {
@@ -98,7 +168,7 @@ func (s *SMSMarketingService) SendIndividualMessage(userID, clientID, message st
 	}
 
 	// Send SMS
-	err = s.smsService.SendSMS(client.Phone, message)
+	result, err := s.smsService.SendSMSWithResult(client.Phone, message)
 	if err != nil {
 		// Log failed message
 		errMsg := err.Error()
@@ -118,12 +188,13 @@ func (s *SMSMarketingService) SendIndividualMessage(userID, clientID, message st
 
 	// Log successful message
 	log := &models.SMSMessageLog{
-		UserID:         userID,
-		ClientID:       &clientID,
-		MessageType:    "individual",
-		MessageText:    message,
-		RecipientPhone: client.Phone,
-		Status:         "sent",
+		UserID:            userID,
+		ClientID:          &clientID,
+		MessageType:       "individual",
+		MessageText:       message,
+		RecipientPhone:    client.Phone,
+		Status:            "sent",
+		ProviderMessageID: &result.MessageID,
 	}
 
 	if err := s.repo.CreateMessageLog(log); err != nil {
@@ -249,13 +320,13 @@ func (s *SMSMarketingService) SendCampaign(campaignID, userID string) error {
 			continue
 		}
 
-		err := s.smsService.SendSMS(recipient.RecipientPhone, campaign.MessageText)
+		result, err := s.smsService.SendSMSWithResult(recipient.RecipientPhone, campaign.MessageText)
 		if err != nil {
 			failed++
 			s.repo.UpdateRecipientStatus(recipient.ID, "failed", "")
 		} else {
 			successful++
-			s.repo.UpdateRecipientStatus(recipient.ID, "sent", "")
+			s.repo.UpdateRecipientStatus(recipient.ID, "sent", result.MessageID)
 		}
 
 		// Log the message
@@ -272,6 +343,8 @@ func (s *SMSMarketingService) SendCampaign(campaignID, userID string) error {
 			log.Status = "failed"
 			errMsg := err.Error()
 			log.ErrorMessage = &errMsg
+		} else {
+			log.ProviderMessageID = &result.MessageID
 		}
 		s.repo.CreateMessageLog(log)
 
@@ -318,28 +391,349 @@ func (s *SMSMarketingService) GetCampaignDetails(campaignID, userID string) (*mo
 }
 
 // ============================================================
-// Templates
+// DLT Templates
 // ============================================================
 
-func (s *SMSMarketingService) CreateTemplate(userID, name, category, text string, variables []string) error {
-	template := &models.SMSMessageTemplate{
-		UserID:       userID,
-		Name:         name,
-		Category:     category,
-		TemplateText: text,
-		Variables:    variables,
-		UsageCount:   0,
+func (s *SMSMarketingService) CreateDLTTemplate(userID string, template *models.SMSDLTTemplate) error {
+	template.UserID = userID
+	template.UpdatedBy = &userID // Set created by user
+	return s.repo.CreateDLTTemplate(template)
+}
+
+func (s *SMSMarketingService) GetDLTTemplates(userID string) ([]models.SMSDLTTemplate, error) {
+	return s.repo.GetDLTTemplatesByUserID(userID)
+}
+
+// GetAvailableTemplatesForSending gets active/approved templates created by admin or the broker for send message tab
+func (s *SMSMarketingService) GetAvailableTemplatesForSending(userID string) ([]models.SMSDLTTemplate, error) {
+	return s.repo.GetAvailableTemplatesForBroker(userID)
+}
+
+func (s *SMSMarketingService) GetDLTTemplateByID(templateID, userID string) (*models.SMSDLTTemplate, error) {
+	return s.repo.GetDLTTemplateByID(templateID, userID)
+}
+
+func (s *SMSMarketingService) UpdateDLTTemplate(template *models.SMSDLTTemplate) error {
+	return s.repo.UpdateDLTTemplate(template)
+}
+
+func (s *SMSMarketingService) DeleteDLTTemplate(templateID, userID string) error {
+	return s.repo.DeleteDLTTemplate(templateID, userID)
+}
+
+// SendDLTMessage sends SMS using a DLT template with variable substitution
+func (s *SMSMarketingService) SendDLTMessage(userID, templateID string, variableValues map[string]string, clientIDs []string, buildingContactIDs []string, propertyIDs []string) (int, int, error) {
+	// Get DLT template
+	template, err := s.repo.GetDLTTemplateByID(templateID, userID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get template: %w", err)
+	}
+	if template == nil {
+		return 0, 0, fmt.Errorf("template not found")
 	}
 
-	return s.repo.CreateTemplate(template)
+	// Check if template is active
+	if template.Status != "Active" && template.Status != "Approved" {
+		return 0, 0, fmt.Errorf("template is not active (status: %s)", template.Status)
+	}
+
+	successful := 0
+	failed := 0
+	batchID := uuid.NewString()
+	category := template.Category
+
+	// Send to clients
+	for _, clientID := range clientIDs {
+		// Get client details
+		client, err := s.clientRepo.GetByID(clientID)
+		if err != nil || client == nil {
+			failed++
+			continue
+		}
+
+		// Verify ownership
+		if client.BrokerID != userID {
+			failed++
+			continue
+		}
+
+		// Build message from template by replacing variables
+		message := s.buildMessageFromTemplate(template.TemplateContent, variableValues)
+
+		// Send SMS
+		result, err := s.smsService.SendSMSWithResult(client.Phone, message)
+		if err != nil {
+			failed++
+			// Log failed message
+			errMsg := err.Error()
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				ClientID:       &clientID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: client.Phone,
+				Status:         "failed",
+				BatchID:        &batchID,
+				Category:       &category,
+				ErrorMessage:   &errMsg,
+			}
+			s.repo.CreateMessageLog(log)
+		} else {
+			successful++
+			// Log successful message
+			log := &models.SMSMessageLog{
+				UserID:            userID,
+				ClientID:          &clientID,
+				MessageType:       "individual",
+				MessageText:       message,
+				RecipientPhone:    client.Phone,
+				Status:            "sent",
+				ProviderMessageID: &result.MessageID,
+				BatchID:           &batchID,
+				Category:          &category,
+			}
+			s.repo.CreateMessageLog(log)
+		}
+
+		// Rate limiting: 1 message per second
+		time.Sleep(1 * time.Second)
+	}
+
+	// Send to building contacts
+	for _, contactID := range buildingContactIDs {
+		// Get building contact details
+		contact, err := s.buildingRepo.GetByID(contactID)
+		if err != nil || contact == nil {
+			failed++
+			continue
+		}
+
+		// Verify ownership
+		if contact.BrokerID != userID {
+			failed++
+			continue
+		}
+
+		// Build message from template by replacing variables
+		message := s.buildMessageFromTemplate(template.TemplateContent, variableValues)
+
+		// Send SMS
+		result, err := s.smsService.SendSMSWithResult(contact.MobileNumber, message)
+		if err != nil {
+			failed++
+			// Log failed message
+			errMsg := err.Error()
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: contact.MobileNumber,
+				Status:         "failed",
+				BatchID:        &batchID,
+				Category:       &category,
+				ErrorMessage:   &errMsg,
+			}
+			s.repo.CreateMessageLog(log)
+		} else {
+			successful++
+			// Log successful message
+			log := &models.SMSMessageLog{
+				UserID:            userID,
+				MessageType:       "individual",
+				MessageText:       message,
+				RecipientPhone:    contact.MobileNumber,
+				Status:            "sent",
+				ProviderMessageID: &result.MessageID,
+				BatchID:           &batchID,
+				Category:          &category,
+			}
+			s.repo.CreateMessageLog(log)
+		}
+
+		// Rate limiting: 1 message per second
+		time.Sleep(1 * time.Second)
+	}
+
+	// Send to properties - auto-generate SMS from property data
+	for _, propertyID := range propertyIDs {
+		// Get property details
+		property, err := s.propertyRepo.GetByID(propertyID)
+		if err != nil || property == nil {
+			failed++
+			continue
+		}
+
+		// Verify ownership
+		if property.BrokerID != userID {
+			failed++
+			continue
+		}
+
+		// Auto-map property data to variables based on template category
+		autoVariableValues := s.mapPropertyToVariables(property, template)
+
+		// Build message from template with auto-generated variables
+		message := s.buildMessageFromTemplate(template.TemplateContent, autoVariableValues)
+
+		// Get the client's phone number if available
+		var recipientPhone string
+		if property.ClientID != nil && *property.ClientID != "" {
+			client, err := s.clientRepo.GetByID(*property.ClientID)
+			if err == nil && client != nil && client.BrokerID == userID {
+				recipientPhone = client.Phone
+			}
+		}
+
+		// Skip if no recipient phone found
+		if recipientPhone == "" {
+			failed++
+			continue
+		}
+
+		// Send SMS
+		result, err := s.smsService.SendSMSWithResult(recipientPhone, message)
+		if err != nil {
+			failed++
+			// Log failed message
+			errMsg := err.Error()
+			log := &models.SMSMessageLog{
+				UserID:         userID,
+				MessageType:    "individual",
+				MessageText:    message,
+				RecipientPhone: recipientPhone,
+				Status:         "failed",
+				BatchID:        &batchID,
+				Category:       &category,
+				ErrorMessage:   &errMsg,
+			}
+			s.repo.CreateMessageLog(log)
+		} else {
+			successful++
+			// Log successful message
+			log := &models.SMSMessageLog{
+				UserID:            userID,
+				MessageType:       "individual",
+				MessageText:       message,
+				RecipientPhone:    recipientPhone,
+				Status:            "sent",
+				ProviderMessageID: &result.MessageID,
+				BatchID:           &batchID,
+				Category:          &category,
+			}
+			s.repo.CreateMessageLog(log)
+		}
+
+		// Rate limiting: 1 message per second
+		time.Sleep(1 * time.Second)
+	}
+
+	return successful, failed, nil
 }
 
-func (s *SMSMarketingService) GetTemplates(userID string) ([]models.SMSMessageTemplate, error) {
-	return s.repo.GetTemplatesByUserID(userID)
+// mapPropertyToVariables maps property data to SMS variables
+// VAR1: Bedrooms + Property Type + Location
+// VAR2: Price + Area
+// VAR3: Firm Name + Contact Number
+func (s *SMSMarketingService) mapPropertyToVariables(property *models.Property, template *models.SMSDLTTemplate) map[string]string {
+	variables := make(map[string]string)
+
+	// VAR1: Bedrooms + Property Type + Location
+	var1 := ""
+	if property.Bedrooms != nil && *property.Bedrooms > 0 {
+		var1 = fmt.Sprintf("%d BHK ", *property.Bedrooms)
+	}
+	var1 += property.Type + ", " + property.Location
+	variables["var1"] = var1
+
+	// VAR2: Price + Area
+	priceStr := fmt.Sprintf("₹%.2f Lakh", property.Price/100000)
+	if property.Price >= 10000000 { // 1 Crore or more
+		priceStr = fmt.Sprintf("₹%.2f Cr", property.Price/10000000)
+	}
+	var2 := fmt.Sprintf("%s, %.0f Sq.Ft.", priceStr, property.Area)
+	variables["var2"] = var2
+
+	// VAR3: Firm Name + Contact Number
+	// For now, use broker name and whatsapp if available
+	var3 := ""
+	if property.BrokerName != nil && *property.BrokerName != "" {
+		var3 = *property.BrokerName
+	}
+	if property.BrokerWhatsapp != nil && *property.BrokerWhatsapp != "" {
+		if var3 != "" {
+			var3 += " - "
+		}
+		var3 += *property.BrokerWhatsapp
+	}
+	variables["var3"] = var3
+
+	return variables
 }
 
-func (s *SMSMarketingService) DeleteTemplate(templateID, userID string) error {
-	return s.repo.DeleteTemplate(templateID, userID)
+// buildMessageFromTemplate replaces {#var#} or {#alp#} placeholders with actual values
+func (s *SMSMarketingService) buildMessageFromTemplate(templateContent string, variableValues map[string]string) string {
+	message := templateContent
+
+	// Replace variables sequentially (var1, var2, var3, etc.)
+	// This works for both {#var#} and {#alp#} patterns
+	varIndex := 1
+	for {
+		varKey := fmt.Sprintf("var%d", varIndex)
+		value, exists := variableValues[varKey]
+		if !exists {
+			break
+		}
+
+		// Try to replace {#alp#} first (most common in DLT templates)
+		if indexOf(message, "{#alp#}") != -1 {
+			message = replaceFirst(message, "{#alp#}", value)
+		} else if indexOf(message, "{#var#}") != -1 {
+			// Fallback to {#var#}
+			message = replaceFirst(message, "{#var#}", value)
+		} else {
+			// No more placeholders found
+			break
+		}
+
+		varIndex++
+	}
+
+	return message
+}
+
+// Helper function to replace all occurrences
+func replaceAll(str, old, new string) string {
+	result := ""
+	remaining := str
+	for {
+		index := indexOf(remaining, old)
+		if index == -1 {
+			result += remaining
+			break
+		}
+		result += remaining[:index] + new
+		remaining = remaining[index+len(old):]
+	}
+	return result
+}
+
+// Helper function to replace first occurrence
+func replaceFirst(str, old, new string) string {
+	index := indexOf(str, old)
+	if index == -1 {
+		return str
+	}
+	return str[:index] + new + str[index+len(old):]
+}
+
+// Helper function to find index of substring
+func indexOf(str, substr string) int {
+	for i := 0; i <= len(str)-len(substr); i++ {
+		if str[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
 
 // ============================================================
@@ -351,6 +745,62 @@ func (s *SMSMarketingService) GetMessageLogs(userID string, limit int) ([]models
 		limit = 50
 	}
 	return s.repo.GetMessageLogsByUserID(userID, limit)
+}
+
+// RefreshDeliveryStatus fetches the current Fast2SMS DLR for one recipient.
+// The log is scoped to the authenticated broker before the provider is called.
+func (s *SMSMarketingService) RefreshDeliveryStatus(userID, logID string) (*models.SMSMessageLog, error) {
+	log, err := s.repo.GetMessageLogByID(userID, logID)
+	if err != nil {
+		return nil, err
+	}
+	if log == nil {
+		return nil, fmt.Errorf("message log not found")
+	}
+	if log.ProviderMessageID == nil || *log.ProviderMessageID == "" {
+		return log, nil
+	}
+	statuses, err := s.smsService.GetFast2SMSDeliveryReport(*log.ProviderMessageID)
+	if err != nil {
+		return nil, err
+	}
+	for _, delivery := range statuses {
+		if normalisePhone(string(delivery.Mobile)) != normalisePhone(log.RecipientPhone) {
+			continue
+		}
+		status := strings.ToLower(strings.TrimSpace(delivery.Status))
+		if status == "undelivered" || status == "failed" {
+			status = "failed"
+		}
+		if status == "" {
+			status = log.Status
+		}
+		var deliveredAt *time.Time
+		if status == "delivered" {
+			now := time.Now()
+			deliveredAt = &now
+		}
+		if err := s.repo.UpdateMessageLogDelivery(log.ID, status, delivery.StatusDescription, deliveredAt); err != nil {
+			return nil, err
+		}
+		log.Status, log.StatusDescription, log.DeliveredAt = status, &delivery.StatusDescription, deliveredAt
+		break
+	}
+	return log, nil
+}
+
+func normalisePhone(phone string) string {
+	var digits strings.Builder
+	for _, char := range phone {
+		if char >= '0' && char <= '9' {
+			digits.WriteRune(char)
+		}
+	}
+	value := digits.String()
+	if len(value) > 10 {
+		return value[len(value)-10:]
+	}
+	return value
 }
 
 func (s *SMSMarketingService) GetStats(userID string) (map[string]interface{}, error) {
@@ -399,4 +849,46 @@ func (s *SMSMarketingService) GetStats(userID string) (map[string]interface{}, e
 	}
 
 	return stats, nil
+}
+
+// ============================================================
+// SMS Header Management
+// ============================================================
+
+func (s *SMSMarketingService) CreateSMSHeader(userID string, header *models.SMSHeader) error {
+	header.UserID = userID
+	header.CreatedBy = userID
+	return s.repo.CreateSMSHeader(header)
+}
+
+func (s *SMSMarketingService) GetSMSHeaders(userID string) ([]models.SMSHeader, error) {
+	return s.repo.GetSMSHeadersByUserID(userID)
+}
+
+func (s *SMSMarketingService) GetSMSHeaderByID(headerID, userID string) (*models.SMSHeader, error) {
+	return s.repo.GetSMSHeaderByID(headerID, userID)
+}
+
+func (s *SMSMarketingService) UpdateSMSHeader(header *models.SMSHeader) error {
+	return s.repo.UpdateSMSHeader(header)
+}
+
+func (s *SMSMarketingService) DeleteSMSHeader(headerID, userID string) error {
+	return s.repo.DeleteSMSHeader(headerID, userID)
+}
+
+// Admin methods
+func (s *SMSMarketingService) GetAllSMSHeaders() ([]models.SMSHeader, error) {
+	return s.repo.GetAllSMSHeaders()
+}
+
+func (s *SMSMarketingService) GetSMSHeaderByIDAdmin(headerID string) (*models.SMSHeader, error) {
+	return s.repo.GetSMSHeaderByIDAdmin(headerID)
+}
+
+// GetAvailableHeadersByType gets available headers for dropdown based on template type
+// For admin: returns all active/approved headers
+// For broker: returns headers created by admin or that broker with active/approved status
+func (s *SMSMarketingService) GetAvailableHeadersByType(userID, userRole, headerType string) ([]models.SMSHeader, error) {
+	return s.repo.GetAvailableHeadersByType(userID, userRole, headerType)
 }

@@ -11,10 +11,11 @@ import (
 )
 
 type MSG91Provider struct {
-	authKey  string
-	senderID string
-	route    string
-	client   *http.Client
+	authKey    string
+	senderID   string
+	route      string
+	templateID string // DLT template ID required by TRAI for India
+	client     *http.Client
 }
 
 func NewMSG91Provider(authKey, senderID, route string) *MSG91Provider {
@@ -22,6 +23,18 @@ func NewMSG91Provider(authKey, senderID, route string) *MSG91Provider {
 		authKey:  authKey,
 		senderID: senderID,
 		route:    route,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+func NewMSG91ProviderWithTemplate(authKey, senderID, route, templateID string) *MSG91Provider {
+	return &MSG91Provider{
+		authKey:    authKey,
+		senderID:   senderID,
+		route:      route,
+		templateID: templateID,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -53,6 +66,12 @@ func (p *MSG91Provider) SendMessage(to string, message string) (*MessageResult, 
 	data.Set("sender", p.senderID)
 	data.Set("route", p.route)
 	data.Set("response", "json")
+
+	// DLT template ID is mandatory in India (TRAI regulation).
+	// Without this, MSG91 accepts the message but telecom operators block delivery.
+	if p.templateID != "" {
+		data.Set("DLT_TE_ID", p.templateID)
+	}
 
 	// Create request
 	req, err := http.NewRequest("POST", apiURL, strings.NewReader(data.Encode()))

@@ -1,31 +1,56 @@
-import React, { useState } from 'react';
-import { X, ExternalLink } from 'lucide-react';
-import { connectSMSAccount, disconnectSMSAccount, SMSAccount } from '../../../services/smsMarketingApi';
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { connectSMSAccount, disconnectSMSAccount, SMSAccount, getSMSAccount, SMSProviderInfo } from '../../../services/smsMarketingApi';
 
 interface SetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
   currentAccount: SMSAccount | null;
+  providerInfo?: SMSProviderInfo;
 }
 
-const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, currentAccount }) => {
-  const [formData, setFormData] = useState({
-    account_sid: currentAccount?.twilio_account_sid || '',
-    auth_token: '',
-    phone_number: currentAccount?.twilio_phone_number || '',
-  });
+const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, currentAccount, providerInfo: providedProviderInfo }) => {
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [providerInfo, setProviderInfo] = useState<SMSProviderInfo>(providedProviderInfo || { provider: 'MSG91', enabled: false });
+
+  useEffect(() => {
+    console.log('🔍 SetupModal - Provider Info Prop:', providedProviderInfo);
+    // Update provider info if provided via props
+    if (providedProviderInfo) {
+      console.log('✅ SetupModal - Using provided provider info:', providedProviderInfo);
+      setProviderInfo(providedProviderInfo);
+    } else if (isOpen) {
+      console.log('⚠️ SetupModal - No provider info provided, loading from API');
+      // Only load if not provided
+      loadProviderInfo();
+    }
+  }, [isOpen, providedProviderInfo]);
+
+  const loadProviderInfo = async () => {
+    try {
+      const data = await getSMSAccount();
+      // Handle response - data is already the correct structure
+      if (data?.provider) {
+        setProviderInfo(data.provider);
+      }
+    } catch (error) {
+      console.error('Failed to load provider info:', error);
+      // Keep default provider info on error
+    }
+  };
 
   if (!isOpen) return null;
 
-  const handleConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const providerName = providerInfo.provider;
+
+  const handleConnect = async () => {
     try {
       setLoading(true);
-      await connectSMSAccount(formData);
-      alert('SMS account connected successfully!');
+      // Send empty object since credentials are configured server-side
+      await connectSMSAccount({});
+      alert(`${providerName} SMS account connected successfully!`);
       onComplete();
     } catch (error: any) {
       alert('Failed to connect: ' + (error.response?.data?.message || error.message));
@@ -64,106 +89,36 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onComplete, cu
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Instructions */}
+          {/* Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">How to get Twilio credentials:</h3>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
-              <li>
-                Sign up for a Twilio account at{' '}
-                <a
-                  href="https://www.twilio.com/try-twilio"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline inline-flex items-center gap-1"
-                >
-                  twilio.com
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
-              <li>Get a phone number from the Twilio console</li>
-              <li>
-                Find your Account SID and Auth Token in the{' '}
-                <a
-                  href="https://console.twilio.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline inline-flex items-center gap-1"
-                >
-                  Twilio Console
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
-              <li>Enter the credentials below</li>
-            </ol>
+            <h3 className="font-semibold text-blue-900 mb-2">{providerName} SMS Service</h3>
+            <p className="text-sm text-blue-800">
+              Your {providerName} SMS service is pre-configured by your administrator. 
+              Click the connect button below to enable SMS messaging for your account.
+            </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleConnect} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Account SID <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.account_sid}
-                onChange={(e) => setFormData({ ...formData, account_sid: e.target.value })}
-                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Auth Token <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                value={formData.auth_token}
-                onChange={(e) => setFormData({ ...formData, auth_token: e.target.value })}
-                placeholder="Your Twilio Auth Token"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={formData.phone_number}
-                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                placeholder="+1234567890"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Include country code (e.g., +1 for US)
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              {currentAccount && currentAccount.status === 'connected' && (
-                <button
-                  type="button"
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                  className="flex-1 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
-                >
-                  {disconnecting ? 'Disconnecting...' : 'Disconnect'}
-                </button>
-              )}
+          {/* Connect/Disconnect Buttons */}
+          <div className="flex gap-3 pt-4">
+            {currentAccount && currentAccount.status === 'connected' && (
               <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg transition-colors"
+                type="button"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="flex-1 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
               >
-                {loading ? 'Connecting...' : 'Connect Account'}
+                {disconnecting ? 'Disconnecting...' : 'Disconnect'}
               </button>
-            </div>
-          </form>
+            )}
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg transition-colors"
+            >
+              {loading ? 'Connecting...' : `Connect ${providerName} Account`}
+            </button>
+          </div>
         </div>
       </div>
     </div>

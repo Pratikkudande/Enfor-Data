@@ -8,8 +8,12 @@ type CreatePropertyRequest struct {
 	ListingType string `json:"listing_type" validate:"required,oneof=sale rent"`
 
 	// Pricing and Size
-	Price float64 `json:"price" validate:"required,gt=0"`
-	Area  float64 `json:"area" validate:"required,gt=0"`
+	Price           float64  `json:"price" validate:"required,gt=0"`
+	Area            float64  `json:"area" validate:"required,gt=0"`
+	BuildupArea     *float64 `json:"buildup_area,omitempty" validate:"omitempty,gte=0"`
+	CarpetArea      *float64 `json:"carpet_area,omitempty" validate:"omitempty,gte=0"`
+	MeasurementUnit string   `json:"measurement_unit" validate:"required,oneof=sq_ft sq_meter acre guntha"`
+	Deposit         *float64 `json:"deposit,omitempty" validate:"omitempty,gte=0"`
 
 	// Property Details (optional for commercial/plot)
 	Bedrooms  *int `json:"bedrooms,omitempty" validate:"omitempty,gte=0"`
@@ -38,8 +42,12 @@ type UpdatePropertyRequest struct {
 	ListingType *string `json:"listing_type,omitempty" validate:"omitempty,oneof=sale rent"`
 
 	// Pricing and Size
-	Price *float64 `json:"price,omitempty" validate:"omitempty,gt=0"`
-	Area  *float64 `json:"area,omitempty" validate:"omitempty,gt=0"`
+	Price           *float64 `json:"price,omitempty" validate:"omitempty,gt=0"`
+	Area            *float64 `json:"area,omitempty" validate:"omitempty,gt=0"`
+	BuildupArea     *float64 `json:"buildup_area,omitempty" validate:"omitempty,gte=0"`
+	CarpetArea      *float64 `json:"carpet_area,omitempty" validate:"omitempty,gte=0"`
+	MeasurementUnit *string  `json:"measurement_unit,omitempty" validate:"omitempty,oneof=sq_ft sq_meter acre guntha"`
+	Deposit         *float64 `json:"deposit,omitempty" validate:"omitempty,gte=0"`
 
 	// Property Details
 	Bedrooms  *int `json:"bedrooms,omitempty" validate:"omitempty,gte=0"`

@@ -1,142 +1,117 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 
 	"enfor-data-backend/internal/config"
+	"enfor-data-backend/internal/provider"
 )
 
 type SMSService struct {
-	config *config.Config
-	client *http.Client
+	config        *config.Config
+	provider      provider.MessagingProvider
+	providerName  string
+	isInitialized bool
 }
 
 func NewSMSService(cfg *config.Config) *SMSService {
+	// Select provider based on configuration
+	var smsProvider provider.MessagingProvider
+	var providerName string
+	var isInitialized bool
+
+	switch cfg.SMS.Provider {
+	case "fast2sms":
+		if cfg.Fast2SMS.Enabled {
+			smsProvider = provider.NewFast2SMSProviderWithTemplate(
+				cfg.Fast2SMS.AuthKey,
+				cfg.Fast2SMS.SenderID,
+				cfg.Fast2SMS.Route,
+				cfg.Fast2SMS.TemplateID,
+			)
+			providerName = "Fast2SMS"
+			isInitialized = true
+			fmt.Println("✅ SMS Service initialized with Fast2SMS provider on startup")
+		}
+	case "msg91":
+		if cfg.MSG91.Enabled {
+			smsProvider = provider.NewMSG91ProviderWithTemplate(
+				cfg.MSG91.AuthKey,
+				cfg.MSG91.SenderID,
+				cfg.MSG91.Route,
+				cfg.MSG91.TemplateID,
+			)
+			providerName = "MSG91"
+			isInitialized = true
+			fmt.Println("✅ SMS Service initialized with MSG91 provider on startup")
+		}
+	default:
+		// Default to MSG91
+		if cfg.MSG91.Enabled {
+			smsProvider = provider.NewMSG91ProviderWithTemplate(
+				cfg.MSG91.AuthKey,
+				cfg.MSG91.SenderID,
+				cfg.MSG91.Route,
+				cfg.MSG91.TemplateID,
+			)
+			providerName = "MSG91"
+			isInitialized = true
+			fmt.Println("✅ SMS Service initialized with MSG91 provider (default) on startup")
+		}
+	}
+
+	// Use mock provider if no provider is configured
+	if smsProvider == nil {
+		smsProvider = &provider.MockProvider{}
+		providerName = "Mock"
+		isInitialized = false
+		fmt.Println("⚠️ SMS Service initialized with Mock provider (no SMS provider configured)")
+	}
+
 	return &SMSService{
-		config: cfg,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		config:        cfg,
+		provider:      smsProvider,
+		providerName:  providerName,
+		isInitialized: isInitialized,
 	}
 }
 
-// MSG91Response represents MSG91 API response
-type MSG91Response struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
+// GetProviderName returns the name of the initialized SMS provider
+func (s *SMSService) GetProviderName() string {
+	return s.providerName
 }
 
-// SendSMS sends an SMS using MSG91
+// IsInitialized returns true if a real SMS provider is initialized
+func (s *SMSService) IsInitialized() bool {
+	return s.isInitialized
+}
+
+// SendSMS sends an SMS using the configured provider
 func (s *SMSService) SendSMS(to, message string) error {
-	// Check if MSG91 is enabled
-	if !s.config.MSG91.Enabled {
-		fmt.Printf("\n=== SMS (DISABLED) ===\n")
-		fmt.Printf("To: %s\n", to)
-		fmt.Printf("Message: %s\n", message)
-		fmt.Printf("Note: MSG91 is disabled. Enable it in config.env\n")
-		fmt.Printf("=====================\n\n")
-		return nil
-	}
+	_, err := s.SendSMSWithResult(to, message)
+	return err
+}
 
-	// Validate configuration
-	if s.config.MSG91.AuthKey == "" || s.config.MSG91.SenderID == "" {
-		return fmt.Errorf("MSG91 configuration incomplete. Please set MSG91_AUTH_KEY and MSG91_SENDER_ID in config.env")
-	}
-
-	// Clean phone number (remove any non-digit characters except +)
-	to = strings.TrimSpace(to)
-	if strings.HasPrefix(to, "+") {
-		to = to[1:] // Remove + prefix as MSG91 expects numbers without +
-	}
-
-	// MSG91 SMS API endpoint
-	apiURL := "https://api.msg91.com/api/sendhttp.php"
-
-	// Prepare form data
-	data := url.Values{}
-	data.Set("authkey", s.config.MSG91.AuthKey)
-	data.Set("mobiles", to)
-	data.Set("message", message)
-	data.Set("sender", s.config.MSG91.SenderID)
-	data.Set("route", s.config.MSG91.Route)
-	data.Set("response", "json")
-
-	// Create request
-	req, err := http.NewRequest("POST", apiURL, strings.NewReader(data.Encode()))
+// SendSMSWithResult preserves the gateway message ID (Fast2SMS request_id) for delivery tracking.
+func (s *SMSService) SendSMSWithResult(to, message string) (*provider.MessageResult, error) {
+	result, err := s.provider.SendMessage(to, message)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to send SMS: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Send request
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response: %w", err)
+	if result.Status == "failed" {
+		return result, fmt.Errorf("SMS delivery failed: %s", result.Error)
 	}
 
-	// Log the SMS details
-	fmt.Printf("\n=== MSG91 SMS ===\n")
-	fmt.Printf("From: %s\n", s.config.MSG91.SenderID)
-	fmt.Printf("To: %s\n", to)
-	fmt.Printf("Message: %s\n", message)
-	fmt.Printf("Route: %s\n", s.config.MSG91.Route)
-	fmt.Printf("Time: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	return result, nil
+}
 
-	// Parse response
-	var msg91Resp MSG91Response
-	if err := json.Unmarshal(body, &msg91Resp); err != nil {
-		// If JSON parsing fails, check if it's a simple success response
-		bodyStr := string(body)
-		if resp.StatusCode == 200 && (strings.Contains(bodyStr, "success") || strings.Contains(bodyStr, "sent")) {
-			fmt.Printf("Status: SUCCESS ✓\n")
-			fmt.Printf("Response: %s\n", bodyStr)
-			fmt.Printf("=================\n\n")
-			return nil
-		}
-
-		fmt.Printf("Status: FAILED ✗\n")
-		fmt.Printf("Error: Failed to parse response\n")
-		fmt.Printf("Raw Response: %s\n", bodyStr)
-		fmt.Printf("=================\n\n")
-		return fmt.Errorf("failed to decode response: %w", err)
+func (s *SMSService) GetFast2SMSDeliveryReport(requestID string) ([]provider.DeliveryStatus, error) {
+	fast2sms, ok := s.provider.(*provider.Fast2SMSProvider)
+	if !ok {
+		return nil, fmt.Errorf("delivery reports are available only for Fast2SMS")
 	}
-
-	// Check response status
-	if resp.StatusCode != 200 || msg91Resp.Type == "error" {
-		errorMsg := msg91Resp.Message
-		if errorMsg == "" {
-			errorMsg = fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body))
-		}
-
-		fmt.Printf("Status: FAILED ✗\n")
-		fmt.Printf("Error: %s\n", errorMsg)
-		fmt.Printf("Error Code: %s\n", msg91Resp.Code)
-		fmt.Printf("=================\n\n")
-
-		return fmt.Errorf("SMS delivery failed: %s", errorMsg)
-	}
-
-	fmt.Printf("Status: SUCCESS ✓\n")
-	fmt.Printf("Message: %s\n", msg91Resp.Message)
-	fmt.Printf("Code: %s\n", msg91Resp.Code)
-	fmt.Printf("=================\n\n")
-
-	return nil
+	return fast2sms.GetDeliveryReport(requestID)
 }
 
 // SendAppointmentConfirmation sends appointment confirmation SMS

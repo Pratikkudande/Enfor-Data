@@ -65,6 +65,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	propertyRepo := repository.NewPropertyRepository(db)
 	clientRepo := repository.NewClientRepository(db)
+	clientRequirementRepo := repository.NewClientRequirementRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
 	networkRepo := repository.NewNetworkRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
@@ -93,7 +94,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo, networkRepo, userRepo)
 	whatsappService := service.NewWhatsAppService(whatsappRepo, clientRepo)
 	whatsappSetupService := service.NewMetaWhatsAppSetupService(whatsappRepo)
-	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, smsService)
+	smsMarketingService := service.NewSMSMarketingService(smsMarketingRepo, clientRepo, buildingRepo, propertyRepo, smsService, cfg)
 	otpService := service.NewOTPService(otpRepo, userRepo, smsService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo, userRepo)
 	paymentService := service.NewPaymentService(paymentRepo, subscriptionRepo, userRepo, cfg)
@@ -104,6 +105,8 @@ func main() {
 	businessPostService := service.NewBusinessPostService(businessPostRepo)
 	staffService := service.NewStaffService(staffRepo)
 	adminService := service.NewAdminService(adminRepo, userRepo, authService)
+	adminService.SetSMSMarketingRepo(smsMarketingRepo) // Set SMS marketing repo for DLT template management
+	adminService.SetSMSMarketingService(smsMarketingService) // Set SMS marketing service for provider info
 	
 	// Initialize appointment reminder service
 	reminderService := service.NewAppointmentReminderService(appointmentRepo, clientRepo, userRepo, smsService)
@@ -114,10 +117,11 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, passwordResetService)
-	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService)
+	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService, clientRequirementRepo)
 	propertyHandler := handler.NewPropertyHandler(propertyService, notificationService)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	clientHandler := handler.NewClientHandler(clientService)
+	clientRequirementHandler := handler.NewClientRequirementHandler(clientRequirementRepo)
 	appointmentHandler := handler.NewAppointmentHandler(appointmentService)
 	networkHandler := handler.NewNetworkHandler(networkService, hub)
 	whatsappHandler := handler.NewWhatsAppHandler(whatsappService, whatsappSetupService)
@@ -324,6 +328,7 @@ func main() {
 			protected.POST("/upload/profile-photo", uploadHandler.UploadProfilePhoto)
 			protected.POST("/upload/clients-excel", uploadHandler.UploadClientsExcel)
 			protected.POST("/upload/properties-excel", uploadHandler.UploadPropertiesExcel)
+			protected.POST("/upload/client-requirements-excel", uploadHandler.UploadClientRequirementsExcel)
 			protected.POST("/upload/building-contacts-excel", uploadHandler.UploadBuildingContactsExcel)
 			protected.POST("/upload/property-photos/:id", uploadHandler.UploadPropertyPhotos)
 			protected.DELETE("/upload/property-photos/:id/:filename", uploadHandler.DeletePropertyPhoto)
@@ -352,6 +357,14 @@ func main() {
 			protected.GET("/clients/:id", clientHandler.GetClient)
 			protected.PUT("/clients/:id", clientHandler.UpdateClient)
 			protected.DELETE("/clients/:id", clientHandler.DeleteClient)
+
+			// Client Requirement routes
+			protected.GET("/client-requirements", clientRequirementHandler.GetRequirements)
+			protected.POST("/client-requirements", clientRequirementHandler.CreateRequirement)
+			protected.GET("/client-requirements/:id", clientRequirementHandler.GetRequirement)
+			protected.GET("/client-requirements/client/:clientId", clientRequirementHandler.GetRequirementsByClient)
+			protected.PUT("/client-requirements/:id", clientRequirementHandler.UpdateRequirement)
+			protected.DELETE("/client-requirements/:id", clientRequirementHandler.DeleteRequirement)
 
 			// Appointment routes (accessible to all authenticated users)
 			protected.POST("/appointments", appointmentHandler.CreateAppointment)
@@ -481,6 +494,7 @@ func main() {
 				// Message Sending
 				smsMarketing.POST("/send", smsMarketingHandler.SendMessage)
 				smsMarketing.POST("/send-bulk", smsMarketingHandler.SendBulkMessage)
+				smsMarketing.POST("/send-dlt", smsMarketingHandler.SendDLTMessage)
 
 				// Campaign Management
 				smsMarketing.POST("/campaigns", smsMarketingHandler.CreateCampaign)
@@ -488,13 +502,25 @@ func main() {
 				smsMarketing.GET("/campaigns/:id", smsMarketingHandler.GetCampaignDetails)
 				smsMarketing.POST("/campaigns/:id/send", smsMarketingHandler.SendCampaign)
 
-				// Templates
-				smsMarketing.GET("/templates", smsMarketingHandler.GetTemplates)
-				smsMarketing.POST("/templates", smsMarketingHandler.CreateTemplate)
-				smsMarketing.DELETE("/templates/:id", smsMarketingHandler.DeleteTemplate)
+				// DLT Templates (Regulatory Compliance)
+				smsMarketing.GET("/dlt-templates", smsMarketingHandler.GetDLTTemplates)
+				smsMarketing.GET("/dlt-templates/available", smsMarketingHandler.GetAvailableTemplates) // For send message tab
+				smsMarketing.POST("/dlt-templates", smsMarketingHandler.CreateDLTTemplate)
+				smsMarketing.GET("/dlt-templates/:id", smsMarketingHandler.GetDLTTemplate)
+				smsMarketing.PUT("/dlt-templates/:id", smsMarketingHandler.UpdateDLTTemplate)
+				smsMarketing.DELETE("/dlt-templates/:id", smsMarketingHandler.DeleteDLTTemplate)
+
+				// SMS Headers
+				smsMarketing.GET("/headers", smsMarketingHandler.GetSMSHeaders)
+				smsMarketing.GET("/headers/available/:type", smsMarketingHandler.GetAvailableHeadersByType) // For dropdown
+				smsMarketing.POST("/headers", smsMarketingHandler.CreateSMSHeader)
+				smsMarketing.GET("/headers/:id", smsMarketingHandler.GetSMSHeader)
+				smsMarketing.PUT("/headers/:id", smsMarketingHandler.UpdateSMSHeader)
+				smsMarketing.DELETE("/headers/:id", smsMarketingHandler.DeleteSMSHeader)
 
 				// Analytics
 				smsMarketing.GET("/logs", smsMarketingHandler.GetMessageLogs)
+				smsMarketing.POST("/logs/:id/refresh-delivery", smsMarketingHandler.RefreshDeliveryStatus)
 				smsMarketing.GET("/stats", smsMarketingHandler.GetStats)
 			}
 
@@ -559,12 +585,26 @@ func main() {
 				admin.POST("/users/:id/login-as", adminHandler.LoginAsBroker)
 				admin.GET("/revenue", adminHandler.GetRevenue)
 				admin.GET("/sms", adminHandler.GetSMS)
+				admin.GET("/sms/provider-status", adminHandler.GetSMSProviderStatus)
 				admin.GET("/audit-logs", adminHandler.GetAuditLogs)
 				admin.GET("/announcements", adminHandler.GetAnnouncements)
 				admin.POST("/announcements", adminHandler.CreateAnnouncement)
 				admin.POST("/announcements/:id/send", adminHandler.SendAnnouncement)
 				admin.GET("/feedback", adminHandler.GetFeedback)
 				admin.PUT("/feedback/:id", adminHandler.UpdateFeedback)
+
+				// TeleMarketer Management - DLT Templates
+				admin.GET("/dlt-templates", adminHandler.GetAllDLTTemplates)
+				admin.GET("/dlt-templates/:id", adminHandler.GetDLTTemplate)
+				admin.PUT("/dlt-templates/:id", adminHandler.UpdateDLTTemplate)
+				admin.DELETE("/dlt-templates/:id", adminHandler.DeleteDLTTemplate)
+
+				// TeleMarketer Management - SMS Headers
+				admin.POST("/sms-headers", adminHandler.CreateSMSHeader)
+				admin.GET("/sms-headers", adminHandler.GetAllSMSHeaders)
+				admin.GET("/sms-headers/:id", adminHandler.GetSMSHeader)
+				admin.PUT("/sms-headers/:id", adminHandler.UpdateSMSHeader)
+				admin.DELETE("/sms-headers/:id", adminHandler.DeleteSMSHeader)
 
 				// Contact form submissions from the public landing page
 				admin.GET("/contact-messages", func(c *gin.Context) {
@@ -621,6 +661,7 @@ func main() {
 		// Sample download templates
 		api.GET("/download/clients-sample", uploadHandler.DownloadClientsSample)
 		api.GET("/download/properties-sample", uploadHandler.DownloadPropertiesSample)
+		api.GET("/download/client-requirements-sample", uploadHandler.DownloadClientRequirementsSample)
 		api.GET("/download/building-contacts-sample", uploadHandler.DownloadBuildingContactsSample)
 	}
 

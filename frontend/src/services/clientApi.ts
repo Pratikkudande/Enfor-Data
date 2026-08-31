@@ -10,14 +10,10 @@ export interface Client {
   status: string;
   budget_min?: number;
   budget_max?: number;
-  expected_amount?: number;
   preferred_location: string;
-  address: string;
   city: string;
   state: string;
   postal_code: string;
-  requirements: string;
-  notes?: string;
   broker_id: string;
   created_at: string;
   updated_at: string;

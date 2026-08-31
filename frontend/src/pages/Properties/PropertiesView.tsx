@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Building } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { Property } from '../../types';
 import { apiClient, ClientOption, CreatePropertyRequest, UpdatePropertyRequest } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const PropertiesView: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
   const currentUserId = user?.id ?? '';
 
@@ -56,7 +57,15 @@ const PropertiesView: React.FC = () => {
       nextParams.delete('openAdd');
       setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams]);
+    
+    // Check if we're coming from client card with pre-filled client info
+    const state = location.state as { openAdd?: boolean; clientId?: string; clientName?: string } | null;
+    if (state?.openAdd && state?.clientId) {
+      handleOpenCreateModalWithClient(state.clientId);
+      // Clear the state after using it
+      window.history.replaceState({}, document.title);
+    }
+  }, [searchParams, location.state]);
 
   const showTimedSuccessMessage = (message: string) => {
     setSuccessMessage(message);
@@ -130,6 +139,7 @@ const PropertiesView: React.FC = () => {
     const propertyData: CreatePropertyRequest = {
       title: formData.title.trim(), type: formData.type, listing_type: formData.listingType,
       price: parseFloat(formData.price), area: parseFloat(formData.area),
+      measurement_unit: formData.measurementUnit,
       location: formData.location.trim(), address: formData.address.trim(),
       city: formData.city.trim(), state: formData.state,
       description: formData.description.trim(), amenities: selectedAmenities,
@@ -137,6 +147,9 @@ const PropertiesView: React.FC = () => {
     if (formData.clientId) propertyData.client_id = formData.clientId;
     if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
     if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
+    if (formData.buildupArea) propertyData.buildup_area = parseFloat(formData.buildupArea);
+    if (formData.carpetArea) propertyData.carpet_area = parseFloat(formData.carpetArea);
+    if (formData.deposit && formData.listingType === 'rent') propertyData.deposit = parseFloat(formData.deposit);
     return propertyData;
   };
 
@@ -144,6 +157,7 @@ const PropertiesView: React.FC = () => {
     const propertyData: UpdatePropertyRequest = {
       title: formData.title.trim(), type: formData.type, listing_type: formData.listingType,
       status: formData.status, price: parseFloat(formData.price), area: parseFloat(formData.area),
+      measurement_unit: formData.measurementUnit,
       location: formData.location.trim(), address: formData.address.trim(),
       city: formData.city.trim(), state: formData.state,
       description: formData.description.trim(), amenities: selectedAmenities,
@@ -151,6 +165,9 @@ const PropertiesView: React.FC = () => {
     propertyData.client_id = formData.clientId || undefined;
     if (formData.bedrooms) propertyData.bedrooms = parseInt(formData.bedrooms, 10);
     if (formData.bathrooms) propertyData.bathrooms = parseInt(formData.bathrooms, 10);
+    if (formData.buildupArea) propertyData.buildup_area = parseFloat(formData.buildupArea);
+    if (formData.carpetArea) propertyData.carpet_area = parseFloat(formData.carpetArea);
+    if (formData.deposit && formData.listingType === 'rent') propertyData.deposit = parseFloat(formData.deposit);
     return propertyData;
   };
 
@@ -219,6 +236,14 @@ const PropertiesView: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     fetchClients(); resetFormState(); setFormMode('create'); setShowFormModal(true);
+  };
+
+  const handleOpenCreateModalWithClient = async (clientId: string) => {
+    await fetchClients();
+    resetFormState();
+    setFormData((prev) => ({ ...prev, clientId }));
+    setFormMode('create');
+    setShowFormModal(true);
   };
 
   const handleViewProperty = async (propertyId: string) => {

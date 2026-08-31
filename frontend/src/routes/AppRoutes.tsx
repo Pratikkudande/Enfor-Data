@@ -20,6 +20,7 @@ const BrokerDashboard = lazy(() => import('../pages/Dashboard/BrokerDashboard'))
 const PropertiesView = lazy(() => import('../pages/Properties/PropertiesView'));
 const SMSMarketingView = lazy(() => import('../pages/SMSMarketing/SMSMarketingView'));
 const ClientsView = lazy(() => import('../pages/Clients/ClientsView'));
+const ClientRequirementsView = lazy(() => import('../pages/ClientRequirements/ClientRequirementsView'));
 const AppointmentsView = lazy(() => import('../pages/Appointments/AppointmentsView'));
 const BrokerNetworkView = lazy(() => import('../pages/Network/BrokerNetworkView'));
 const ChannelPartnersView = lazy(() => import('../pages/ChannelPartners/ChannelPartnersView'));
@@ -48,6 +49,7 @@ const AdminDashboard = lazy(() => import('../pages/Admin/AdminDashboard'));
 const UserManagement = lazy(() => import('../pages/Admin/UserManagement'));
 const RevenueManagement = lazy(() => import('../pages/Admin/RevenueManagement'));
 const SMSManagement = lazy(() => import('../pages/Admin/SMSManagement'));
+const TeleMarketerManagement = lazy(() => import('../pages/Admin/TeleMarketerManagement'));
 const DataDownload = lazy(() => import('../pages/Admin/DataDownload'));
 const AnnouncementCenter = lazy(() => import('../pages/Admin/AnnouncementCenter'));
 const FeedbackManagement = lazy(() => import('../pages/Admin/FeedbackManagement'));
@@ -126,6 +128,11 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.CLIENTS} element={
           <Suspense fallback={<PageLoader />}>
             <ClientsView />
+          </Suspense>
+        } />
+        <Route path={ROUTES.CLIENT_REQUIREMENTS} element={
+          <Suspense fallback={<PageLoader />}>
+            <ClientRequirementsView />
           </Suspense>
         } />
         <Route path={ROUTES.APPOINTMENTS} element={
@@ -241,6 +248,9 @@ export const AppRoutes: React.FC = () => {
         } />
         <Route path={ROUTES.ADMIN_SMS} element={
           <Suspense fallback={<PageLoader />}><SMSManagement /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_TELEMARKETER} element={
+          <Suspense fallback={<PageLoader />}><TeleMarketerManagement /></Suspense>
         } />
         <Route path={ROUTES.ADMIN_DOWNLOAD} element={
           <Suspense fallback={<PageLoader />}><DataDownload /></Suspense>

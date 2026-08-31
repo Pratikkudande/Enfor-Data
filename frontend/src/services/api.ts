@@ -74,6 +74,10 @@ class ApiService {
     return apiClient.upload('/upload/properties-excel', file, 'file');
   }
 
+  async uploadClientRequirementsExcel(file: File): Promise<ApiResponse> {
+    return apiClient.upload('/upload/client-requirements-excel', file, 'file');
+  }
+
   async uploadBuildingContactsExcel(file: File): Promise<ApiResponse> {
     return apiClient.upload('/upload/building-contacts-excel', file, 'file');
   }

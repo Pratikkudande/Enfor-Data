@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { notificationApi, Notification, NotificationStats } from '../services/notificationApi';
+import { useAuth } from './AuthContext';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -28,10 +29,11 @@ interface NotificationProviderProps {
 }
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [stats, setStats] = useState<NotificationStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const refreshNotifications = useCallback(async () => {
     try {
@@ -56,15 +58,24 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  // Load initial notifications and stats
+  // Only fetch and poll notifications when the user is authenticated.
+  // Clear state immediately on logout so stale data is never shown.
   useEffect(() => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
     refreshNotifications();
     
     // Set up periodic refresh (every 30 seconds)
     const interval = setInterval(refreshNotifications, 30000);
     
     return () => clearInterval(interval);
-  }, [refreshNotifications]);
+  }, [isAuthenticated, refreshNotifications]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
