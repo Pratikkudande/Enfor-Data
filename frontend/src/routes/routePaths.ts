@@ -50,4 +50,5 @@ export const ROUTES = {
   ADMIN_AUDIT_LOGS: '/admin/audit-logs',
   ADMIN_STORAGE: '/admin/storage',
   ADMIN_CONFIG: '/admin/config',
+  ADMIN_EXTERNAL_BROKERS: '/admin/external-brokers',
 } as const;

@@ -32,6 +32,7 @@ export interface UpdateExternalBrokerRequest {
 
 interface ListResponse { message: string; data: ExternalBroker[]; }
 interface SingleResponse { message: string; data: ExternalBroker; }
+interface UploadResponse { message: string; data: { created: number; duplicates: number; errors: string[] }; }
 
 export const externalBrokerApi = {
   getAll: (filters?: { area?: string; location?: string }): Promise<ListResponse> => {
@@ -50,4 +51,18 @@ export const externalBrokerApi = {
 
   delete: (id: string): Promise<{ message: string }> =>
     apiClient.request(`/external-brokers/${id}`, { method: 'DELETE' }),
+
+  adminDelete: (id: string): Promise<{ message: string }> =>
+    apiClient.request(`/admin/external-brokers/${id}`, { method: 'DELETE' }),
+
+  uploadExcel: (file: File): Promise<UploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.request('/upload/external-brokers-excel', { method: 'POST', body: formData });
+  },
+
+  downloadSample: (): string => {
+    const token = localStorage.getItem('enfor_token');
+    return `${import.meta.env.VITE_API_URL || ''}/api/upload/external-brokers-sample?token=${token}`;
+  },
 };

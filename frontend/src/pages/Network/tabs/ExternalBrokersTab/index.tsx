@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Plus, UserX } from 'lucide-react';
+import { Search, UserX } from 'lucide-react';
 import { ExternalBroker } from '../../../../services/externalBrokerApi';
 import { ExternalBrokerCard } from './ExternalBrokerCard';
 
@@ -9,7 +9,7 @@ interface ExternalBrokersTabProps {
   search: string;
   currentUserId?: string;
   onSearchChange: (value: string) => void;
-  onAdd: () => void;
+  onAdd: () => void;          // kept for interface compat — not used in this tab
   onEdit: (broker: ExternalBroker) => void;
   onView: (broker: ExternalBroker) => void;
   onDelete: (broker: ExternalBroker) => void;
@@ -22,10 +22,9 @@ export const ExternalBrokersTab: React.FC<ExternalBrokersTabProps> = ({
   search,
   currentUserId,
   onSearchChange,
-  onAdd,
-  onEdit,
   onView,
   onDelete,
+  onEdit,
   deletingId,
 }) => {
   const filteredBrokers = brokers.filter(b => {
@@ -38,20 +37,12 @@ export const ExternalBrokersTab: React.FC<ExternalBrokersTabProps> = ({
 
   return (
     <div className="space-y-4 min-w-0">
-      {/* Sub-header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-gray-900">Non-EnforData Brokers</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Brokers not yet on EnforData — auto-removed when they join the platform
-          </p>
-        </div>
-        <button
-          onClick={onAdd}
-          className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4" /> Add Broker
-        </button>
+      {/* Sub-header — view only for normal users */}
+      <div>
+        <h2 className="text-base sm:text-lg font-bold text-gray-900">Non-EnforData Brokers</h2>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+          Brokers not yet on EnforData — auto-removed when they join the platform
+        </p>
       </div>
 
       {/* Search */}
@@ -100,14 +91,9 @@ export const ExternalBrokersTab: React.FC<ExternalBrokersTabProps> = ({
                 <UserX className="h-8 w-8 text-indigo-300" />
               </div>
               <h3 className="font-medium text-gray-900 mb-1">No external brokers found</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {search ? 'Try adjusting your search' : 'Add brokers who are not yet on EnforData'}
+              <p className="text-sm text-gray-500">
+                {search ? 'Try adjusting your search' : 'No external brokers have been added yet'}
               </p>
-              {!search && (
-                <button onClick={onAdd} className="btn-primary px-5 py-2">
-                  Add External Broker
-                </button>
-              )}
             </div>
           )}
         </div>

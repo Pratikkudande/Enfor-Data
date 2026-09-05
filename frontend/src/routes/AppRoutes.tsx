@@ -59,6 +59,7 @@ const RenewalMonitoring = lazy(() => import('../pages/Admin/RenewalMonitoring'))
 const AuditLogs = lazy(() => import('../pages/Admin/AuditLogs'));
 const StorageMonitoring = lazy(() => import('../pages/Admin/StorageMonitoring'));
 const SystemConfiguration = lazy(() => import('../pages/Admin/SystemConfiguration'));
+const ExternalBrokerManagement = lazy(() => import('../pages/Admin/ExternalBrokerManagement'));
 
 // Loading Fallback
 const PageLoader = () => (
@@ -278,6 +279,9 @@ export const AppRoutes: React.FC = () => {
         } />
         <Route path={ROUTES.ADMIN_CONFIG} element={
           <Suspense fallback={<PageLoader />}><SystemConfiguration /></Suspense>
+        } />
+        <Route path={ROUTES.ADMIN_EXTERNAL_BROKERS} element={
+          <Suspense fallback={<PageLoader />}><ExternalBrokerManagement /></Suspense>
         } />
         <Route path="/admin" element={<Navigate to={ROUTES.ADMIN_DASHBOARD} replace />} />
         <Route path="/admin/*" element={<Navigate to={ROUTES.ADMIN_DASHBOARD} replace />} />

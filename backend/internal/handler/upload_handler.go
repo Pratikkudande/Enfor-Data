@@ -29,9 +29,10 @@ type UploadHandler struct {
 	propertySvc         *service.PropertyService
 	buildingSvc         *service.BuildingService
 	clientRequirementRepo *repository.ClientRequirementRepository
+	externalBrokerSvc   *service.ExternalBrokerService
 }
 
-func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clientSvc *service.ClientService, propertySvc *service.PropertyService, buildingSvc *service.BuildingService, clientRequirementRepo *repository.ClientRequirementRepository) *UploadHandler {
+func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clientSvc *service.ClientService, propertySvc *service.PropertyService, buildingSvc *service.BuildingService, clientRequirementRepo *repository.ClientRequirementRepository, externalBrokerSvc *service.ExternalBrokerService) *UploadHandler {
 	return &UploadHandler{
 		authService:         authService,
 		config:              cfg,
@@ -39,6 +40,7 @@ func NewUploadHandler(authService *service.AuthService, cfg *config.Config, clie
 		propertySvc:         propertySvc,
 		buildingSvc:         buildingSvc,
 		clientRequirementRepo: clientRequirementRepo,
+		externalBrokerSvc:   externalBrokerSvc,
 	}
 }
 
@@ -1551,5 +1553,180 @@ func (h *UploadHandler) DownloadBuildingContactsSample(c *gin.Context) {
 		return
 	}
 	c.Header("Content-Disposition", "attachment; filename=building_contacts_sample.xlsx")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+// UploadExternalBrokersExcel handles bulk external broker Excel uploads
+func (h *UploadHandler) UploadExternalBrokersExcel(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No file provided", Message: "Please attach an Excel file"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > h.config.Upload.MaxFileSize {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File too large"})
+		return
+	}
+
+	buf := bytes.NewBuffer(nil)
+	if _, err := io.Copy(buf, file); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read file", Message: err.Error()})
+		return
+	}
+
+	f, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid Excel file", Message: err.Error()})
+		return
+	}
+	defer f.Close()
+
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Empty Excel file"})
+		return
+	}
+
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Failed to read rows", Message: err.Error()})
+		return
+	}
+	if len(rows) < 2 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No data rows found"})
+		return
+	}
+
+	headerRow := rows[0]
+	colIndex := map[string]int{}
+	for i, h := range headerRow {
+		colIndex[strings.ToLower(strings.TrimSpace(h))] = i
+	}
+
+	var items []dto.CreateExternalBrokerRequest
+	parseErrors := []string{}
+
+	for r := 1; r < len(rows); r++ {
+		row := rows[r]
+		if len(row) == 0 {
+			continue
+		}
+		get := func(key string) string {
+			idx, ok := colIndex[key]
+			if !ok || idx >= len(row) {
+				return ""
+			}
+			return strings.TrimSpace(row[idx])
+		}
+
+		name := get("name")
+		mobile := get("mobile_number")
+		area := get("area")
+		location := get("location")
+		notes := get("notes")
+
+		if name == "" && mobile == "" {
+			continue
+		}
+		if strings.Contains(strings.ToLower(name), "required:") || strings.Contains(strings.ToLower(mobile), "required:") {
+			continue
+		}
+		if name == "Rajesh Sharma" && mobile == "9876543210" {
+			continue
+		}
+
+		if mobile == "" {
+			parseErrors = append(parseErrors, fmt.Sprintf("row %d: mobile number is required", r+1))
+			continue
+		}
+		if name == "" {
+			parseErrors = append(parseErrors, fmt.Sprintf("row %d: name is required", r+1))
+			continue
+		}
+
+		req := dto.CreateExternalBrokerRequest{Name: name, MobileNumber: mobile}
+		if area != "" {
+			req.Area = &area
+		}
+		if location != "" {
+			req.Location = &location
+		}
+		if notes != "" {
+			req.Notes = &notes
+		}
+		items = append(items, req)
+	}
+
+	created, duplicates, bulkErrors := h.externalBrokerSvc.BulkCreate(items, userID.(string))
+	allErrors := append(parseErrors, bulkErrors...)
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Message: "External brokers processed",
+		Data: gin.H{
+			"created":    created,
+			"duplicates": duplicates,
+			"errors":     allErrors,
+		},
+	})
+}
+
+// DownloadExternalBrokersSample generates and serves an Excel template for external brokers
+func (h *UploadHandler) DownloadExternalBrokersSample(c *gin.Context) {
+	f := excelize.NewFile()
+	sheet := f.GetSheetName(0)
+
+	headers := []string{"name", "mobile_number", "area", "location", "notes"}
+	for i, v := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, v)
+	}
+	lastCol, _ := excelize.CoordinatesToCellName(len(headers), 1)
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"#F3F4F6"}, Pattern: 1},
+	})
+	_ = f.SetCellStyle(sheet, "A1", lastCol, headerStyle)
+
+	// Description row
+	descs := []string{
+		"Required: Broker full name",
+		"Required: Mobile number (10 digits)",
+		"Optional: Operating area (e.g. Andheri West)",
+		"Optional: City/region",
+		"Optional: Additional notes",
+	}
+	for i, v := range descs {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
+		f.SetCellValue(sheet, cell, v)
+	}
+	descStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Italic: true, Color: "808080"},
+	})
+	_ = f.SetCellStyle(sheet, "A2", lastCol, descStyle)
+
+	// Sample row
+	samples := []string{"Rajesh Sharma", "9876543210", "Andheri West", "Mumbai", "Residential specialist"}
+	for i, v := range samples {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 3)
+		f.SetCellValue(sheet, cell, v)
+	}
+
+	// Column widths
+	widths := map[string]float64{"A": 25, "B": 20, "C": 25, "D": 20, "E": 35}
+	for col, w := range widths {
+		_ = f.SetColWidth(sheet, col, col, w)
+	}
+
+	buf, _ := f.WriteToBuffer()
+	c.Header("Content-Disposition", "attachment; filename=external_brokers_sample.xlsx")
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }

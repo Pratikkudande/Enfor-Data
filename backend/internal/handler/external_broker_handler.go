@@ -121,3 +121,17 @@ func (h *ExternalBrokerHandler) Delete(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, SuccessResponse{Message: "External broker deleted successfully"})
 }
+
+// DELETE /api/admin/external-brokers/:id  (admin only — no ownership check)
+func (h *ExternalBrokerHandler) AdminDelete(c *gin.Context) {
+	err := h.svc.AdminDelete(c.Param("id"))
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, ErrorResponse{Error: "Not found", Message: err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to delete", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, SuccessResponse{Message: "External broker deleted successfully"})
+}
