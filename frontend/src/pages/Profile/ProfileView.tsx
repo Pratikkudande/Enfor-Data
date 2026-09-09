@@ -221,27 +221,12 @@ const ProfileView: React.FC = () => {
               <div className="relative inline-block mb-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center">
                   {photoUrl ? (
-                    <img 
-                      src={photoUrl} 
-                      alt={user?.name} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Hide broken image and show initials fallback
-                        e.currentTarget.style.display = 'none';
-                        const parent = e.currentTarget.parentElement;
-                        if (parent) {
-                          const fallback = parent.querySelector('.profile-fallback');
-                          if (fallback) {
-                            (fallback as HTMLElement).style.display = 'flex';
-                          }
-                        }
-                      }}
-                    />
-                  ) : null}
-                  <span className={`profile-fallback text-white font-bold text-2xl ${photoUrl ? 'absolute inset-0 items-center justify-center' : 'flex'}`}
-                        style={{ display: photoUrl ? 'none' : 'flex' }}>
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </span>
+                    <img src={photoUrl} alt={user?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white font-bold text-2xl">
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
 
                 {/* Camera button — always visible */}

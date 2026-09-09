@@ -1,7 +1,6 @@
 import React from 'react';
 import { Home, MapPin, Bed, Bath, Square, ExternalLink } from 'lucide-react';
 import { getPropertyImageUrl } from '../../../Properties/PropertyCard';
-import ImageErrorBoundary from '../../../../components/ImageErrorBoundary';
 
 interface PropertyReferenceCardProps {
   property: any;
@@ -20,16 +19,7 @@ export const PropertyReferenceCard: React.FC<PropertyReferenceCardProps> = ({
     return (
       <div className="flex items-start gap-3">
         <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
-          <ImageErrorBoundary>
-            <img 
-              src={getPropertyImageUrl(property)} 
-              alt={property.title} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
-              }}
-            />
-          </ImageErrorBoundary>
+          <img src={getPropertyImageUrl(property)} alt={property.title} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0 pr-6">
           <p className="text-xs font-semibold text-blue-900 uppercase mb-1">Property Reference</p>
@@ -51,17 +41,7 @@ export const PropertyReferenceCard: React.FC<PropertyReferenceCardProps> = ({
     >
       <div className="flex items-start gap-3">
         <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
-          <ImageErrorBoundary>
-            <img 
-              src={getPropertyImageUrl(property)} 
-              alt={property.title} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
-              }}
-            />
-          </ImageErrorBoundary>
-        </div>
+          <img src={getPropertyImageUrl(property)} alt={property.title} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 mb-1">

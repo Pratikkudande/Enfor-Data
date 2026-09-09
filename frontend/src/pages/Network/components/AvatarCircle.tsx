@@ -15,34 +15,11 @@ const resolveImgUrl = (img?: string | null): string | null => {
 
 const avatar = (name: string, img?: string | null) => {
   const src = resolveImgUrl(img);
-  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  
   return src ? (
-    <>
-      <img 
-        src={src} 
-        alt={name} 
-        className="w-full h-full object-cover rounded-full"
-        onError={(e) => {
-          // Hide broken image and show initials fallback
-          e.currentTarget.style.display = 'none';
-          const parent = e.currentTarget.parentElement;
-          if (parent) {
-            const fallback = parent.querySelector('.avatar-fallback');
-            if (fallback) {
-              (fallback as HTMLElement).style.display = 'flex';
-            }
-          }
-        }}
-      />
-      <span className="avatar-fallback text-sm font-bold text-white absolute inset-0 items-center justify-center" 
-            style={{ display: 'none' }}>
-        {initials}
-      </span>
-    </>
+    <img src={src} alt={name} className="w-full h-full object-cover rounded-full" />
   ) : (
     <span className="text-sm font-bold text-white">
-      {initials}
+      {name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
     </span>
   );
 };
@@ -52,7 +29,7 @@ export const AvatarCircle: React.FC<AvatarCircleProps> = ({
   img,
   size = 'w-10 h-10'
 }) => (
-  <div className={`${size} rounded-full bg-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0 relative`}>
+  <div className={`${size} rounded-full bg-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0`}>
     {avatar(name, img)}
   </div>
 );

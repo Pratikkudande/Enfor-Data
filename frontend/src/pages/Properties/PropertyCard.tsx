@@ -6,14 +6,21 @@ import { getStatusColor, formatPrice, formatTimeAgo } from './utils';
 import { networkApi } from '../../services/networkApi';
 import { ROUTES } from '../../routes/routePaths';
 import { API_CONFIG } from '../../config/api';
-import { getOptimizedImageUrl } from '../../utils/imageUtils';
-import ImageErrorBoundary from '../../components/ImageErrorBoundary';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 export const getPropertyImageUrl = (property: Property) => {
   const photo = property.photos?.[0] || property.images?.[0];
-  const fallbackUrl = 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
-  
-  return getOptimizedImageUrl(photo, fallbackUrl, API_CONFIG.BASE_URL);
+
+  if (!photo) return '';
+
+  if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:')) {
+    return photo;
+  }
+
+  // Uploaded property photos are served by the API at /api/uploads/:filename.
+  // Keep externally hosted and data URLs unchanged, while normalizing stored paths.
+  const filename = photo.split('/').pop();
+  return `${API_CONFIG.BASE_URL}/uploads/${filename}`;
 };
 
 interface PropertyCardProps {
@@ -130,7 +137,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
     }`}>
       {/* Image */}
       <div className="relative h-48 bg-gray-50 flex items-center justify-center border-b border-gray-100">
-        <ImageErrorBoundary>
+        <ErrorBoundary>
           {hasImage ? (
             <img
               src={getPropertyImageUrl(property)}
@@ -166,7 +173,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
             <Building className="h-10 w-10 stroke-[1.2] mb-1 text-gray-300" />
             <span className="text-[10px] font-semibold tracking-wider text-gray-400">NO PHOTO UPLOADED</span>
           </div>
-        </ImageErrorBoundary>
+        </ErrorBoundary>
         <div className="absolute top-3 right-3 z-10">
           {isOwner ? (
             <select
