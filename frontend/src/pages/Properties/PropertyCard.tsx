@@ -2,29 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Eye, CreditCard as Edit, Trash2, MapPin, Bed, Bath, Square, Phone, Mail, User, Building, MessageSquare, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Property } from '../../types';
-import { getStatusColor, formatPrice } from './utils';
+import { getStatusColor, formatPrice, formatTimeAgo } from './utils';
 import { networkApi } from '../../services/networkApi';
 import { ROUTES } from '../../routes/routePaths';
-
 import { API_CONFIG } from '../../config/api';
+import { getOptimizedImageUrl } from '../../utils/imageUtils';
+import ImageErrorBoundary from '../../components/ImageErrorBoundary';
 
 export const getPropertyImageUrl = (property: Property) => {
   const photo = property.photos?.[0] || property.images?.[0];
-  if (!photo) {
-    return 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
-  }
-  if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:')) {
-    return photo;
-  }
-  // If it already has base URL or upload path
-  if (photo.startsWith('/uploads/') || photo.startsWith('uploads/')) {
-    const filename = photo.split('/').pop();
-    return `${API_CONFIG.BASE_URL}/uploads/${filename}`;
-  }
-  if (photo.includes('/uploads/')) {
-    return photo;
-  }
-  return `${API_CONFIG.BASE_URL}/uploads/${photo}`;
+  const fallbackUrl = 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg';
+  
+  return getOptimizedImageUrl(photo, fallbackUrl, API_CONFIG.BASE_URL);
 };
 
 interface PropertyCardProps {
@@ -141,18 +130,43 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
     }`}>
       {/* Image */}
       <div className="relative h-48 bg-gray-50 flex items-center justify-center border-b border-gray-100">
-        {hasImage ? (
-          <img
-            src={getPropertyImageUrl(property)}
-            alt={property.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center text-gray-400 select-none">
+        <ImageErrorBoundary>
+          {hasImage ? (
+            <img
+              src={getPropertyImageUrl(property)}
+              alt={property.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Hide broken image and show fallback
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const fallback = parent.querySelector('.image-fallback');
+                  if (fallback) {
+                    (fallback as HTMLElement).style.display = 'flex';
+                  }
+                }
+              }}
+              onLoad={(e) => {
+                // Ensure fallback is hidden when image loads successfully
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const fallback = parent.querySelector('.image-fallback');
+                  if (fallback) {
+                    (fallback as HTMLElement).style.display = 'none';
+                  }
+                }
+              }}
+            />
+          ) : null}
+          
+          {/* Fallback content - shown when no image or image fails to load */}
+          <div className={`image-fallback flex flex-col items-center justify-center text-gray-400 select-none ${hasImage ? 'absolute inset-0' : ''}`} 
+               style={{ display: hasImage ? 'none' : 'flex' }}>
             <Building className="h-10 w-10 stroke-[1.2] mb-1 text-gray-300" />
             <span className="text-[10px] font-semibold tracking-wider text-gray-400">NO PHOTO UPLOADED</span>
           </div>
-        )}
+        </ImageErrorBoundary>
         <div className="absolute top-3 right-3 z-10">
           {isOwner ? (
             <select
@@ -194,6 +208,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, currentUserId, is
         <div className="flex items-center text-gray-500 mb-3 text-sm">
           <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
           <span className="truncate">{property.location}, {property.city}</span>
+        </div>
+
+        {/* Time Added */}
+        <div className="text-xs text-gray-400 mb-3">
+          Added {formatTimeAgo(property.created_at)}
         </div>
 
         {/* Specs */}
