@@ -117,7 +117,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, passwordResetService)
-	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService, clientRequirementRepo)
+	uploadHandler := handler.NewUploadHandler(authService, cfg, clientService, propertyService, buildingService, clientRequirementRepo, externalBrokerService)
 	propertyHandler := handler.NewPropertyHandler(propertyService, notificationService)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	clientHandler := handler.NewClientHandler(clientService)
@@ -388,6 +388,9 @@ func main() {
 			protected.PUT("/external-brokers/:id", externalBrokerHandler.Update)
 			protected.DELETE("/external-brokers/:id", externalBrokerHandler.Delete)
 
+			// External broker Excel upload (any authenticated user)
+			protected.POST("/upload/external-brokers-excel", uploadHandler.UploadExternalBrokersExcel)
+			protected.GET("/upload/external-brokers-sample", uploadHandler.DownloadExternalBrokersSample)
 			// Building Contact routes
 			protected.GET("/building-contacts", buildingHandler.GetBuildingContacts)
 			protected.POST("/building-contacts", buildingHandler.CreateBuildingContact)
@@ -606,6 +609,9 @@ func main() {
 				admin.PUT("/sms-headers/:id", adminHandler.UpdateSMSHeader)
 				admin.DELETE("/sms-headers/:id", adminHandler.DeleteSMSHeader)
 
+				// Admin External Broker management
+				admin.DELETE("/external-brokers/:id", externalBrokerHandler.AdminDelete)
+
 				// Contact form submissions from the public landing page
 				admin.GET("/contact-messages", func(c *gin.Context) {
 					rows, err := db.Query(`SELECT id, name, email, COALESCE(phone,''), message, is_read, created_at
@@ -663,6 +669,7 @@ func main() {
 		api.GET("/download/properties-sample", uploadHandler.DownloadPropertiesSample)
 		api.GET("/download/client-requirements-sample", uploadHandler.DownloadClientRequirementsSample)
 		api.GET("/download/building-contacts-sample", uploadHandler.DownloadBuildingContactsSample)
+		api.GET("/download/external-brokers-sample", uploadHandler.DownloadExternalBrokersSample)
 	}
 
 	// Start server

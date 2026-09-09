@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, LogOut, Menu, User, Settings } from 'lucide-react';
+import { Bell, LogOut, Menu, User, Settings, HelpCircle } from 'lucide-react';
+import HelpDrawer from '../components/help/HelpDrawer';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +74,8 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
   };
 
   return (
+    <>
+    <HelpDrawer isOpen={showHelp} onClose={() => setShowHelp(false)} />
     <nav
       className="fixed w-full top-0 z-50 h-20"
       style={{
@@ -94,6 +98,15 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Help */}
+          <button
+            onClick={() => setShowHelp(true)}
+            title="Help & Guide"
+            className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <HelpCircle className="h-5 w-5 text-gray-300" />
+          </button>
+
           {/* Notifications */}
           <div className="relative" ref={notificationRef}>
             <button
@@ -186,6 +199,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuToggle, isSidebarOpen }) => {
         </div>
       </div>
     </nav>
+    </>
   );
 };
 

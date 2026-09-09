@@ -59,7 +59,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           </button>
         </div>
       </div>
-
       {/* Badges */}
       <div className="flex gap-2 mb-3">
         <span className={`text-xs px-2 py-1 rounded-full font-medium ${getTypeColor(appointment.type)}`}>

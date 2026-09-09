@@ -155,6 +155,11 @@ func (h *PropertyHandler) CreateProperty(c *gin.Context) {
 		return
 	}
 
+	// Default measurement_unit to sq_ft if not provided (backward compatibility)
+	if req.MeasurementUnit == "" {
+		req.MeasurementUnit = "sq_ft"
+	}
+
 	// Validate request using go-playground/validator
 	if err := h.validator.Struct(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{

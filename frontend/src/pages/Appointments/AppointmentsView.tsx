@@ -172,7 +172,7 @@ const AppointmentsView: React.FC = () => {
     });
   }, [appointments, searchTerm, filterStatus, filterDate]);
 
-  const handleFormSubmit = async (appointmentData: CreateAppointmentRequest) => {
+  const handleFormSubmit = async (appointmentData: CreateAppointmentRequest, status?: 'scheduled' | 'completed' | 'cancelled') => {
     try {
       setSubmitting(true);
       setSubmitError(null);

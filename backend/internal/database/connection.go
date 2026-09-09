@@ -1280,7 +1280,6 @@ CREATE INDEX IF NOT EXISTS idx_sms_logs_user ON sms_message_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_campaign ON sms_message_logs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_client ON sms_message_logs(client_id);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_status ON sms_message_logs(status);
-CREATE INDEX IF NOT EXISTS idx_sms_logs_message_type ON sms_message_logs(message_type);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_message_logs(sent_at DESC);
 
 -- Existing installations created by earlier versions receive these columns too.
@@ -1297,10 +1296,25 @@ BEGIN
         ALTER TABLE sms_message_logs RENAME COLUMN phone_number TO recipient_phone;
     END IF;
 END $$;
+ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) NOT NULL DEFAULT 'individual';
+-- Index on message_type must come after the column is guaranteed to exist
+CREATE INDEX IF NOT EXISTS idx_sms_logs_message_type ON sms_message_logs(message_type);
 ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS batch_id UUID;
 ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS category VARCHAR(100);
 ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS status_description TEXT;
 ALTER TABLE sms_message_logs ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE;
+-- Ensure the constraint exists on fresh and upgraded installs alike
+DO $constraint$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'sms_message_logs_message_type_check'
+    ) THEN
+        ALTER TABLE sms_message_logs
+            ADD CONSTRAINT sms_message_logs_message_type_check
+            CHECK (message_type IN ('individual', 'campaign', 'appointment', 'transactional'));
+    END IF;
+END $constraint$;
 
 -- SMS DLT Templates (Distributed Ledger Technology - Regulatory Compliance)
 CREATE TABLE IF NOT EXISTS sms_dlt_templates (

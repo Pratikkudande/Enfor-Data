@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 
 	"enfor-data-backend/internal/dto"
 	"enfor-data-backend/internal/models"
@@ -101,4 +102,33 @@ func (s *ExternalBrokerService) Delete(id, requestorID string) error {
 		return fmt.Errorf("access denied: only the broker who added this record can delete it")
 	}
 	return s.repo.Delete(id)
+}
+
+// AdminDelete allows an admin to delete any external broker record.
+func (s *ExternalBrokerService) AdminDelete(id string) error {
+	_, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	return s.repo.Delete(id)
+}
+
+// BulkCreate inserts multiple external brokers, skipping duplicates silently.
+// Returns (created, duplicates, errors).
+func (s *ExternalBrokerService) BulkCreate(items []dto.CreateExternalBrokerRequest, addedBy string) (int, int, []string) {
+	created, duplicates := 0, 0
+	var errs []string
+	for i, req := range items {
+		_, err := s.Create(&req, addedBy)
+		if err != nil {
+			if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "belongs to an existing") {
+				duplicates++
+			} else {
+				errs = append(errs, fmt.Sprintf("row %d: %v", i+2, err))
+			}
+		} else {
+			created++
+		}
+	}
+	return created, duplicates, errs
 }
